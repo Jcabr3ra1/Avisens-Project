@@ -6,8 +6,14 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
+  Max,
   Min,
 } from 'class-validator';
+import {
+  PESO_MAXIMO_POLLO_G,
+  VALOR_MAXIMO_MOVIMIENTO_COP,
+} from '../../../common/avicultura/vocabulario';
+import { AVES_MAXIMO_LOTE } from '../../../common/validation/texto';
 
 export class CerrarLoteDto {
   @ApiProperty({
@@ -23,6 +29,7 @@ export class CerrarLoteDto {
   })
   @IsInt()
   @Min(0)
+  @Max(AVES_MAXIMO_LOTE)
   cantidad_aves_vendidas: number;
 
   @ApiProperty({
@@ -31,6 +38,7 @@ export class CerrarLoteDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G)
   peso_promedio_final_g: number;
 
   @ApiPropertyOptional({
@@ -41,6 +49,7 @@ export class CerrarLoteDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   valor_venta_total_cop?: number;
 
   @ApiPropertyOptional({
@@ -51,6 +60,7 @@ export class CerrarLoteDto {
   @IsOptional()
   @IsNumber()
   @IsPositive()
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   precio_venta_kg_cop?: number;
 
   @ApiPropertyOptional({

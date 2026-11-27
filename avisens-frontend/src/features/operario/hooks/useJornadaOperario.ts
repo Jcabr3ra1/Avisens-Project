@@ -51,13 +51,14 @@ export function useJornadaOperario() {
   const registrarMortalidad = useCallback(async (
     loteId: number,
     registro: RegistroMortalidadOperario,
+    foto?: File | null,
   ) => {
     setGuardando(true)
     setError('')
     setMensaje('')
 
     try {
-      await registrarMortalidadOperario(loteId, registro)
+      await registrarMortalidadOperario(loteId, registro, foto)
       setMensaje('Mortalidad registrada correctamente.')
     } catch (err) {
       const mensajeError = mensajeDeError(err, 'No fue posible registrar la mortalidad.')

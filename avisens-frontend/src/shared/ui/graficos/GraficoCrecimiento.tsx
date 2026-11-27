@@ -171,26 +171,26 @@ function GraficoCrecimiento({
             {hayMarca && (
               <Line
                 dataKey="marca_g"
-                stroke="#cbd5e1"
+                stroke="var(--border-strong)"
                 strokeWidth={1.5}
                 strokeDasharray="3 3"
                 dot={false}
                 connectNulls
                 isAnimationActive={animar}
                 activeDot={false}
-                label={crearEtiquetaFinal(etiquetaMarca ?? 'Alimento', '#94a3b8', idxFinMarca)}
+                label={crearEtiquetaFinal(etiquetaMarca ?? 'Alimento', 'var(--text-muted)', idxFinMarca)}
               />
             )}
             {hayEstandar && (
               <Line
                 dataKey="estandar_g"
-                stroke="#94a3b8"
+                stroke="var(--text-muted)"
                 strokeWidth={1.8}
                 dot={false}
                 connectNulls
                 isAnimationActive={animar}
                 activeDot={false}
-                label={crearEtiquetaFinal(etiquetaEstandar ?? 'Estándar', '#64748b', idxFinEstandar, despEstandar)}
+                label={crearEtiquetaFinal(etiquetaEstandar ?? 'Estándar', 'var(--text-secondary)', idxFinEstandar, despEstandar)}
               />
             )}
             {mostrarProyeccion && <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={3} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--primary)' }}

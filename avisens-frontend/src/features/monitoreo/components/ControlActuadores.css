@@ -5,11 +5,29 @@
    oscuro se aplica solo. */
 .ctl-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
 }
 
-.ctl-card { display: flex; flex-direction: column; gap: 0.7rem; padding: 1rem; min-width: 0; }
+@media (max-width: 720px) {
+  .ctl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ctl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.05rem;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: 0 4px 14px -10px color-mix(in srgb, var(--avisens-ink) 22%, transparent);
+}
 .ctl-cabecera { display: flex; align-items: center; gap: 0.6rem; }
 .ctl-icono {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;

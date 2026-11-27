@@ -6,19 +6,27 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { PESO_MAXIMO_POLLO_G } from '../../../common/avicultura/vocabulario';
+import {
+  DIA_CICLO_MAXIMO,
+  FCR_MAXIMO,
+} from '../../../common/validation/texto';
 
 export class PuntoCurvaGeneticaDto {
   @ApiProperty({ example: 7, description: 'Día de vida (1 = primer día)' })
   @IsInt()
   @Min(1)
+  @Max(DIA_CICLO_MAXIMO)
   dia: number;
 
   @ApiProperty({ example: 211, description: 'Peso esperado ese día (g)' })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G)
   peso_esperado_g: number;
 
   @ApiPropertyOptional({
@@ -27,6 +35,7 @@ export class PuntoCurvaGeneticaDto {
   })
   @IsNumber()
   @Min(0)
+  @Max(50_000)
   @IsOptional()
   consumo_diario_g?: number;
 
@@ -36,12 +45,14 @@ export class PuntoCurvaGeneticaDto {
   })
   @IsNumber()
   @Min(0)
+  @Max(50_000)
   @IsOptional()
   consumo_acumulado_g?: number;
 
   @ApiPropertyOptional({ example: 0.78, description: 'FCR objetivo acumulado' })
   @IsNumber()
   @IsPositive()
+  @Max(FCR_MAXIMO)
   @IsOptional()
   fcr_objetivo?: number;
 }

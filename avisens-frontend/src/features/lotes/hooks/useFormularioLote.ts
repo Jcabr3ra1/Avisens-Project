@@ -21,9 +21,9 @@ export function useFormularioLote(alGuardar: GuardarLote) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  function abrirCrear(galponId: number, proveedorId: number | null = null) {
+  function abrirCrear(galponId: number) {
     setEditandoId(null)
-    setForm(crearFormularioLote(galponId, proveedorId))
+    setForm(crearFormularioLote(galponId))
     setError('')
     setAbierto(true)
   }

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, Min } from 'class-validator';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class AsignarGalponDto {
   @ApiProperty({ example: 1, description: 'ID del galpón que se asigna' })
@@ -11,8 +12,7 @@ export class AsignarGalponDto {
     example: 'Responsable de alimentación',
     description: 'Función específica del operario dentro del galpón',
   })
-  @IsString()
-  @MaxLength(100)
   @IsOptional()
+  @TextoSeguro('La función asignada', 100)
   rol_asignacion?: string;
 }

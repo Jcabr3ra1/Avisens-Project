@@ -6,6 +6,7 @@ import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 interface ListaAlertasProps {
   alertas: Alerta[]
   hayAlertas: boolean
+  embebida?: boolean
   onLimpiarFiltros: () => void
   actualizandoId: number | null
   onAtender: (id: number) => void
@@ -16,21 +17,33 @@ function fecha(fechaIso: string): string {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fechaIso))
 }
 
-function ListaAlertas({ alertas, hayAlertas, onLimpiarFiltros, actualizandoId, onAtender, onVerDetalle }: ListaAlertasProps) {
+function ListaAlertas({
+  alertas,
+  hayAlertas,
+  embebida = false,
+  onLimpiarFiltros,
+  actualizandoId,
+  onAtender,
+  onVerDetalle,
+}: ListaAlertasProps) {
   if (alertas.length === 0) {
     return hayAlertas ? (
-      <EstadoVacio
-        className="ale-vacio"
-        titulo="Sin coincidencias"
-        texto="Ninguna alerta coincide con estos filtros."
-        accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={onLimpiarFiltros}>Limpiar filtros</button>}
-      />
+      <div className="ale-vacio-card">
+        <EstadoVacio
+          className="ale-vacio"
+          titulo="Sin coincidencias"
+          texto="Ninguna alerta coincide con estos filtros."
+          accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={onLimpiarFiltros}>Limpiar filtros</button>}
+        />
+      </div>
     ) : (
-      <EstadoVacio
-        className="ale-vacio"
-        titulo="Todo en orden"
-        texto="Los sensores no han detectado situaciones fuera de rango."
-      />
+      <div className="ale-vacio-card">
+        <EstadoVacio
+          className="ale-vacio"
+          titulo="Todo en orden"
+          texto="Los sensores no han detectado situaciones fuera de rango."
+        />
+      </div>
     )
   }
 
@@ -43,22 +56,33 @@ function ListaAlertas({ alertas, hayAlertas, onLimpiarFiltros, actualizandoId, o
             <span className="ale-card-barra" aria-hidden="true" />
             <div className="ale-card-contenido">
               <div className="ale-card-encabezado">
-                <span className={`ale-prioridad ale-prioridad--${alerta.criticidad}`}><IcAlert size={14} /> {etiquetaCriticidad(alerta.criticidad)}</span>
-                <span className="ale-estado"><IcClock size={14} /> {etiquetaEstado(alerta.estado)}</span>
+                <span className={`ale-prioridad ale-prioridad--${alerta.criticidad}`}><IcAlert size={13} aria-hidden="true" /> {etiquetaCriticidad(alerta.criticidad)}</span>
+                <span className={`ale-estado ale-estado--${alerta.estado}`}><IcClock size={13} aria-hidden="true" /> {etiquetaEstado(alerta.estado)}</span>
                 <time>{fecha(alerta.fecha_creacion)}</time>
               </div>
-              <h2>{alerta.tipo} · {alerta.galpon.nombre}</h2>
+              <h2>{embebida ? alerta.tipo : `${alerta.tipo} · ${alerta.galpon.nombre}`}</h2>
               <p>{alerta.mensaje ?? 'Se detectó una lectura fuera del rango configurado.'}</p>
               <dl className="ale-datos">
                 <div><dt>Lectura</dt><dd>{alerta.valor_detectado ?? '—'}</dd></div>
                 <div><dt>Límite</dt><dd>{alerta.valor_umbral ?? '—'}</dd></div>
-                <div><dt>Sensor</dt><dd>{alerta.sensor?.codigo ?? 'Sin sensor asociado'}</dd></div>
+                <div><dt>Sensor</dt><dd>{alerta.sensor?.codigo ?? 'Sin sensor'}</dd></div>
                 <div><dt>Responsable</dt><dd>{alerta.responsable?.nombre_completo ?? 'Sin asignar'}</dd></div>
               </dl>
             </div>
             <div className="ale-card-acciones">
-              <button type="button" className="ale-btn ale-btn--secundario" onClick={() => onVerDetalle(alerta)}><IcEye size={15} /> Detalle</button>
-              {alerta.estado === 'abierta' && <button type="button" className="ale-btn ale-btn--principal" onClick={() => onAtender(alerta.id)} disabled={actualizando}><IcCheck size={15} /> {actualizando ? 'Tomando…' : 'Atender'}</button>}
+              <button type="button" className="adm-btn adm-btn--secundario" onClick={() => onVerDetalle(alerta)}>
+                <IcEye size={14} aria-hidden="true" /> Detalle
+              </button>
+              {alerta.estado === 'abierta' && (
+                <button
+                  type="button"
+                  className="adm-btn adm-btn--primario"
+                  onClick={() => onAtender(alerta.id)}
+                  disabled={actualizando}
+                >
+                  <IcCheck size={14} aria-hidden="true" /> {actualizando ? 'Tomando…' : 'Atender'}
+                </button>
+              )}
             </div>
           </article>
         )

@@ -52,6 +52,7 @@ function ModalDatos<T>({ id, titulo, subtitulo, preparar, enviar, mensajeExito, 
 
   return (
     <Modal
+      variante="lateral"
       titulo={titulo}
       subtitulo={subtitulo}
       onCerrar={onCerrar}
@@ -158,10 +159,9 @@ export function ModalDatosGranja({ granja, ...base }: Base & { granja: Granja })
   )
 }
 
-export function ModalDatosLote({ lote, lineasGeneticas, proveedores, ...base }: Base & {
+export function ModalDatosLote({ lote, lineasGeneticas, ...base }: Base & {
   lote: Lote
   lineasGeneticas: LineaGenetica[]
-  proveedores: { id: number; nombre: string }[]
 }) {
   const [form, setForm] = useState<FormDatosLote>(() => formDatosLote(lote))
   const cambiar = (campo: keyof FormDatosLote) => (valor: string) => setForm((actual) => ({ ...actual, [campo]: valor }))
@@ -202,12 +202,6 @@ export function ModalDatosLote({ lote, lineasGeneticas, proveedores, ...base }: 
           </select>
         </Campo>
       </div>
-      <Campo etiqueta="Proveedor de los pollitos">
-        <select value={form.proveedor_id} onChange={(e) => cambiar('proveedor_id')(e.target.value)}>
-          <option value="">Elige el proveedor</option>
-          {proveedores.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
-        </select>
-      </Campo>
     </ModalDatos>
   )
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { listarUsuarios } from '@features/usuarios/api/usuarios'
 import type { Usuario } from '@shared/api'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import { descargarBlob, nombreConFecha } from '@shared/utils/descargas'
 import {
@@ -32,30 +33,34 @@ export function useProspectos() {
     }
   }, [])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  const cargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
 
     try {
       const lista = await listarTodosLosProspectos()
       if (montado.current) setProspectos(lista.map(aProspectoVista))
     } catch {
-      if (montado.current) setError('No se pudieron cargar los prospectos.')
+      if (montado.current && !silencioso) setError('No se pudieron cargar los prospectos.')
     } finally {
-      if (montado.current) setCargando(false)
+      if (montado.current && !silencioso) setCargando(false)
     }
 
     try {
       const usuarios = await listarUsuarios()
       if (montado.current) setAsesores(asesoresPosibles(usuarios))
     } catch {
-      if (montado.current) setAsesores([])
+      if (montado.current && !silencioso) setAsesores([])
     }
   }, [])
 
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRefetchOnFocus(() => {
+    void cargar(true)
+  })
 
   const asignar = useCallback(async (prospectoId: number, asesorId: number) => {
     setAsignandoId(prospectoId)
@@ -94,7 +99,7 @@ export function useProspectos() {
     payload: ConvertirProspectoPayload,
   ) => {
     const resultado = await convertirProspecto(prospectoId, payload)
-    await cargar()
+    await cargar(true)
     toast.success(
       `${resultado.usuario.nombre_completo} ya es cliente · ${resultado.usuario.organizacion.nombre}`,
     )
@@ -104,7 +109,7 @@ export function useProspectos() {
   const descartar = useCallback(async (prospectoId: number, motivo: string) => {
     try {
       await cerrarProspecto(prospectoId, { resultado: 'perdido', motivo })
-      await cargar()
+      await cargar(true)
       toast.success('Prospecto marcado como perdido')
       return true
     } catch (problema) {

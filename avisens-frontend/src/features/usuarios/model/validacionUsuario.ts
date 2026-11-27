@@ -1,10 +1,11 @@
 import type { CrearUsuarioPayload } from '@shared/api'
+import { validarNombreEntidad, validarNombrePersona } from '@shared/utils/validacion'
 
 // Reglas del formulario de usuarios (QA 17-nov). Son las mismas del backend
 // (create-usuario.dto.ts): la pantalla avisa en el campo antes de enviar y el
 // servidor protege a quien llame la API directamente.
 
-export type CampoValidado = 'cedula' | 'telefono' | 'email'
+export type CampoValidado = 'nombre_completo' | 'organizacion_nombre' | 'cedula' | 'telefono' | 'email'
 export type ErroresUsuario = Partial<Record<CampoValidado, string>>
 
 // Cédula colombiana: solo dígitos, de 6 a 10.
@@ -19,8 +20,24 @@ export function limpiarTelefono(valor: string): string {
   return valor.replace(/[\s\-()]/g, '')
 }
 
-export function erroresDeUsuario(form: Pick<CrearUsuarioPayload, 'cedula' | 'telefono' | 'email'>): ErroresUsuario {
+export function erroresDeUsuario(
+  form: Pick<CrearUsuarioPayload, 'cedula' | 'telefono' | 'email'> &
+    Partial<Pick<CrearUsuarioPayload, 'nombre_completo' | 'organizacion_nombre'>>,
+): ErroresUsuario {
   const errores: ErroresUsuario = {}
+
+  if (form.nombre_completo !== undefined) {
+    const errorNombre = validarNombrePersona(form.nombre_completo, 'El nombre completo', 120)
+    if (errorNombre) errores.nombre_completo = errorNombre
+  }
+
+  if (form.organizacion_nombre) {
+    const errorOrg = validarNombreEntidad(form.organizacion_nombre, 'El nombre de la organización', {
+      requerido: false,
+      max: 150,
+    })
+    if (errorOrg) errores.organizacion_nombre = errorOrg
+  }
 
   const cedula = form.cedula.trim()
   if (!cedula) errores.cedula = 'Escribe la cédula.'
@@ -30,7 +47,7 @@ export function erroresDeUsuario(form: Pick<CrearUsuarioPayload, 'cedula' | 'tel
   const telefono = limpiarTelefono(form.telefono ?? '')
   if (telefono && !TELEFONO_VALIDO.test(telefono)) {
     errores.telefono = /^\+?\d+$/.test(telefono)
-      ? 'El teléfono debe tener al menos 10 dígitos.'
+      ? 'El teléfono debe tener entre 10 y 13 dígitos.'
       : 'El teléfono solo lleva números.'
   }
 

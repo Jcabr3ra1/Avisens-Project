@@ -7,6 +7,7 @@ import {
   porcentajeDeStock,
   resumirInventario,
   signoDeMovimiento,
+  siguienteInsumo,
   textoBodegaVacia,
 } from './inventario'
 import { permisosDeInsumo, ROL_ADMIN, ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
@@ -21,7 +22,6 @@ function insumo(parcial: Partial<Insumo>): Insumo {
     stock_actual: 100,
     stock_minimo: 50,
     precio_unitario_cop: 2000,
-    proveedor_habitual_id: null,
     ubicacion_almacen: null,
     fecha_vencimiento: null,
     activo: true,
@@ -178,6 +178,27 @@ describe('filtrarInsumos', () => {
     expect(filtrarInsumos(sinDatos, 'suelto', 'todos')).toHaveLength(1)
     expect(filtrarInsumos(sinDatos, 'bodega', 'todos')).toHaveLength(0)
   })
+
+  it('el filtro agotados muestra solo insumos activos sin stock y la búsqueda ignora tildes', () => {
+    const conAgotado = [
+      ...catalogo,
+      insumo({ id: 4, nombre: 'Vitaminas', stock_actual: 0, stock_minimo: 10 }),
+    ]
+    expect(filtrarInsumos(conAgotado, '', 'agotados').map((i) => i.id)).toEqual([4])
+    expect(filtrarInsumos(conAgotado, 'iniciacion', 'todos').map((i) => i.id)).toEqual([1])
+  })
+})
+
+describe('siguienteInsumo', () => {
+  const lista = [insumo({ id: 10 }), insumo({ id: 20 }), insumo({ id: 30 })]
+
+  it('navega con flechas, Home y End', () => {
+    expect(siguienteInsumo(lista, 10, 'ArrowDown')).toBe(20)
+    expect(siguienteInsumo(lista, 10, 'ArrowUp')).toBe(10)
+    expect(siguienteInsumo(lista, 10, 'End')).toBe(30)
+    expect(siguienteInsumo(lista, 30, 'Home')).toBe(10)
+    expect(siguienteInsumo(lista, 10, 'Enter')).toBeNull()
+  })
 })
 
 describe('signoDeMovimiento', () => {
@@ -200,8 +221,10 @@ describe('QA-06: texto de la bodega vacía por rol', () => {
     expect(texto).toMatch(/Registra el primero/)
   })
 
-  it('el operario conserva su texto de salidas', () => {
-    expect(textoBodegaVacia(permisosDeInsumo(ROL_OPERARIO))).toMatch(/lo que saques para tu galpón/)
+  it('el operario recibe un texto de consulta, sin registrar nada', () => {
+    const texto = textoBodegaVacia(permisosDeInsumo(ROL_OPERARIO))
+    expect(texto).toMatch(/stock y su mínimo/)
+    expect(texto).not.toMatch(/Registra|anotar|saques/)
   })
 
   it('el administrador recibe la invitación a registrar el primero', () => {

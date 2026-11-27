@@ -46,11 +46,15 @@ export function filasFlota(galpones: Galpon[], dispositivos: Dispositivo[], ahor
     })
 }
 
+function normalizar(texto: string): string {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
 export function agruparPorOrganizacion(filas: FilaFlota[], busqueda = ''): GrupoFlota[] {
-  const termino = busqueda.trim().toLowerCase()
+  const termino = normalizar(busqueda)
   const visibles = termino
     ? filas.filter((fila) => [fila.organizacion, fila.granja, fila.galpon.nombre, fila.galpon.codigo,
-        ...fila.controladores.map((d) => d.codigo_topic)].some((texto) => texto.toLowerCase().includes(termino)))
+        ...fila.controladores.map((d) => d.codigo_topic)].some((texto) => normalizar(texto).includes(termino)))
     : filas
   const grupos = new Map<string, FilaFlota[]>()
   for (const fila of visibles) grupos.set(fila.organizacion, [...(grupos.get(fila.organizacion) ?? []), fila])
@@ -144,4 +148,21 @@ export function granjasParaMaqueta(filas: FilaFlota[], sensoresPorGalpon: Map<nu
     granjas.set(granja.id, actual)
   }
   return [...granjas.values()]
+}
+
+export function siguienteGalponId(
+  ids: number[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (ids.length === 0) return null
+  if (tecla === 'Home') return ids[0]
+  if (tecla === 'End') return ids[ids.length - 1]
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = actualId === null ? -1 : ids.indexOf(actualId)
+  if (indice === -1) return ids[0]
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(indice + 1, ids.length - 1)
+    : Math.max(indice - 1, 0)
+  return ids[siguiente]
 }

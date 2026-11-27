@@ -1,17 +1,24 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import Modal from '@shared/ui/Modal/Modal'
-import { IcChevronDown, IcChevronRight, IcRefresh } from '@shared/ui/icons/icons'
-import { hayFiltros, rangoValido, type RegistroAuditoria } from './model/auditoria'
+import { IcCheck, IcChevronDown, IcChevronRight, IcClock, IcClose, IcDoc, IcGrid, IcUsers } from '@shared/ui/icons/icons'
+import {
+  contarFiltrosActivos,
+  extraerCambios,
+  hayFiltros,
+  periodoActivo,
+  rangoDePeriodo,
+  rangoValido,
+  resumirNavegador,
+  type PeriodoRapido,
+  type RegistroAuditoria,
+} from './model/auditoria'
 import { useAuditoria } from './hooks/useAuditoria'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './AuditoriaPage.css'
 
-// Las acciones con estilo propio. Cualquier otra cae en 'otra', que existe en
-// el CSS: antes se fabricaba la clase con el valor crudo, así que una acción
-// nueva del backend —como 'consultar', que apareció al empezar a registrar las
-// lecturas— salía sin formato, como texto suelto dentro de la tabla.
 const ACCIONES_CON_ESTILO = [
   'crear', 'create', 'registro',
   'actualizar', 'update', 'edicion',
@@ -46,9 +53,15 @@ const ENTIDADES_ETIQUETA: Record<string, string> = {
   sensores: 'Sensores',
   auth: 'Sesión',
   organizaciones: 'Organizaciones',
-  proveedores: 'Proveedores',
   prospectos: 'Prospectos',
 }
+
+const PERIODOS: Array<{ id: PeriodoRapido; etiqueta: string }> = [
+  { id: 'todo', etiqueta: 'Todo' },
+  { id: 'hoy', etiqueta: 'Hoy' },
+  { id: '7d', etiqueta: 'Últimos 7 días' },
+  { id: '30d', etiqueta: 'Últimos 30 días' },
+]
 
 function etiquetaAccion(accion: string): string {
   const normalizada = accion.trim().toLowerCase()
@@ -58,6 +71,11 @@ function etiquetaAccion(accion: string): string {
 function etiquetaEntidad(entidad: string): string {
   const texto = ENTIDADES_ETIQUETA[entidad] ?? entidad.replace(/[_-]/g, ' ')
   return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+function etiquetaCampo(campo: string): string {
+  const limpio = campo.replace(/[_-]/g, ' ')
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1)
 }
 
 function hace(fecha: string): string {
@@ -79,16 +97,182 @@ function formatearFecha(fecha: string) {
 const FECHA_CORTA = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
 const HORA_CORTA = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' })
 
+function limpiarIp(ip: string | null): string {
+  return ip?.replace(/^::ffff:/, '') ?? '—'
+}
+
 function aJsonBonito(valor: unknown): string {
   return JSON.stringify(valor, null, 2)
+}
+
+function PanelDetalleAuditoria({
+  registro,
+  onCerrar,
+}: {
+  registro: RegistroAuditoria
+  onCerrar: () => void
+}) {
+  const [vista, setVista] = useState<'resumen' | 'json'>('resumen')
+  const [copiado, setCopiado] = useState(false)
+
+  const tienePayload = registro.datos_antes != null || registro.datos_despues != null
+  const cambios = useMemo(
+    () => extraerCambios(registro.datos_antes, registro.datos_despues),
+    [registro.datos_antes, registro.datos_despues],
+  )
+  const esComparativa = registro.datos_antes != null && registro.datos_despues != null
+
+  async function copiarJson() {
+    const contenido = aJsonBonito({
+      evento_id: registro.id,
+      accion: registro.accion,
+      entidad: registro.entidad_afectada,
+      registro_id: registro.registro_id,
+      fecha_hora: registro.fecha_hora,
+      usuario: registro.usuario,
+      ip_origen: limpiarIp(registro.ip_origen),
+      datos_antes: registro.datos_antes,
+      datos_despues: registro.datos_despues,
+    })
+    try {
+      await navigator.clipboard.writeText(contenido)
+      setCopiado(true)
+      toast.success('Detalle JSON copiado')
+      window.setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      toast.error('No se pudo copiar al portapapeles.')
+    }
+  }
+
+  return (
+    <Modal
+      variante="lateral"
+      ancho="ancho"
+      titulo={`${etiquetaAccion(registro.accion)} · ${etiquetaEntidad(registro.entidad_afectada)}`}
+      subtitulo={`Evento #${registro.id}${registro.registro_id !== null ? ` · Registro #${registro.registro_id}` : ''}`}
+      onCerrar={onCerrar}
+    >
+      <div className="aud-panel-contenido">
+        <div className="aud-panel-estado">
+          <span className={`aud-accion aud-accion--${claseDeAccion(registro.accion)}`}>
+            <span className="aud-accion-punto" aria-hidden="true" />
+            {etiquetaAccion(registro.accion)}
+          </span>
+          <span className="aud-panel-cuando">{hace(registro.fecha_hora)}</span>
+        </div>
+
+        <dl className="aud-datos">
+          <div>
+            <dt>Usuario</dt>
+            <dd>
+              <strong>{registro.usuario?.nombre_completo ?? 'Sistema o acción anónima'}</strong>
+              {registro.usuario?.email && <span className="aud-datos-sub">{registro.usuario.email}</span>}
+            </dd>
+          </div>
+          <div>
+            <dt>Fecha y hora</dt>
+            <dd>{formatearFecha(registro.fecha_hora)}</dd>
+          </div>
+          <div>
+            <dt>Dirección IP</dt>
+            <dd className="aud-mono">{limpiarIp(registro.ip_origen)}</dd>
+          </div>
+          <div>
+            <dt>Navegador</dt>
+            <dd title={registro.user_agent ?? undefined}>{resumirNavegador(registro.user_agent)}</dd>
+          </div>
+        </dl>
+
+        {tienePayload ? (
+          <section className="aud-payload">
+            <div className="aud-payload-barra">
+              <div className="aud-payload-tabs" role="tablist" aria-label="Vista del cambio">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === 'resumen'}
+                  className={`aud-payload-tab${vista === 'resumen' ? ' is-activa' : ''}`}
+                  onClick={() => setVista('resumen')}
+                >
+                  {esComparativa ? `Cambios (${cambios.length})` : `Datos (${cambios.length})`}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === 'json'}
+                  className={`aud-payload-tab${vista === 'json' ? ' is-activa' : ''}`}
+                  onClick={() => setVista('json')}
+                >
+                  JSON técnico
+                </button>
+              </div>
+
+              <button type="button" className="aud-copiar" onClick={() => void copiarJson()}>
+                {copiado ? <IcCheck size={14} aria-hidden="true" /> : <IcDoc size={14} aria-hidden="true" />}
+                {copiado ? 'Copiado' : 'Copiar JSON'}
+              </button>
+            </div>
+
+            {vista === 'resumen' ? (
+              cambios.length > 0 ? (
+                <ul className="aud-cambios">
+                  {cambios.map((cambio) => (
+                    <li key={cambio.campo} className={`aud-cambio aud-cambio--${cambio.tipo}`}>
+                      <span className="aud-cambio-campo">{etiquetaCampo(cambio.campo)}</span>
+                      <div className="aud-cambio-valores">
+                        {cambio.antes !== null && (
+                          <span className="aud-cambio-antes" title={cambio.antes}>{cambio.antes}</span>
+                        )}
+                        {cambio.antes !== null && cambio.despues !== null && (
+                          <span className="aud-cambio-flecha" aria-hidden="true">→</span>
+                        )}
+                        {cambio.despues !== null && (
+                          <span className="aud-cambio-despues" title={cambio.despues}>{cambio.despues}</span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="aud-sin-json">
+                  {esComparativa
+                    ? 'No hubo diferencias en los campos comparados.'
+                    : 'Consulta la pestaña «JSON técnico» para ver el detalle completo.'}
+                </p>
+              )
+            ) : (
+              <div className="aud-json-grupo">
+                {registro.datos_antes != null && (
+                  <section className="aud-json-seccion">
+                    <h3>Estado anterior</h3>
+                    <pre>{aJsonBonito(registro.datos_antes)}</pre>
+                  </section>
+                )}
+                {registro.datos_despues != null && (
+                  <section className="aud-json-seccion">
+                    <h3>Estado resultante</h3>
+                    <pre>{aJsonBonito(registro.datos_despues)}</pre>
+                  </section>
+                )}
+              </div>
+            )}
+          </section>
+        ) : (
+          <p className="aud-sin-json">Este registro no guarda datos del cambio.</p>
+        )}
+      </div>
+    </Modal>
+  )
 }
 
 function AuditoriaPage() {
   const {
     registros,
     pagina,
+    porPagina,
     total,
     totalPaginas,
+    ultimaActividad,
     cargando,
     error,
     filtros,
@@ -98,9 +282,15 @@ function AuditoriaPage() {
     limpiarFiltros,
     recargar,
   } = useAuditoria()
+
   const filtrando = hayFiltros(filtros)
+  const filtrosActivos = contarFiltrosActivos(filtros)
   const rangoMal = !rangoValido(filtros)
+  const periodo = periodoActivo(filtros)
   const [detalle, setDetalle] = useState<RegistroAuditoria | null>(null)
+
+  const desdeIndice = total === 0 ? 0 : (pagina - 1) * porPagina + 1
+  const hastaIndice = Math.min(pagina * porPagina, total)
 
   return (
     <div className="page-container aud-page adm-page">
@@ -113,60 +303,153 @@ function AuditoriaPage() {
           <h1 className="aud-titulo">Auditoría</h1>
           <p className="aud-subtitulo">Quién hizo cada cambio, sobre qué y cuándo.</p>
         </div>
-        <button className="aud-boton-cabecera" type="button" onClick={recargar} disabled={cargando}>
-          <IcRefresh size={17} aria-hidden="true" />
-          {cargando ? 'Actualizando…' : 'Actualizar'}
-        </button>
       </header>
 
-      <ul className="aud-indicadores" aria-label="Resumen de auditoría">
-        <li><span>{filtrando ? 'Eventos encontrados' : 'Eventos registrados'}</span><strong>{cargando && total === 0 ? '—' : total.toLocaleString('es-CO')}</strong><small>{filtrando ? 'Con los filtros aplicados' : 'Desde que se activó la bitácora'}</small></li>
-        <li><span>Última actividad</span><strong>{pagina === 1 && registros[0] ? hace(registros[0].fecha_hora) : '—'}</strong><small>{pagina === 1 && registros[0] ? formatearFecha(registros[0].fecha_hora) : 'Vuelve a la primera página'}</small></li>
-        <li><span>Página</span><strong>{pagina} / {totalPaginas}</strong><small>{registros.length} eventos en esta página</small></li>
+      <ul className="adm-kpis" aria-label="Resumen de auditoría">
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">{filtrando ? 'Eventos filtrados' : 'Eventos registrados'}</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcDoc size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{cargando && total === 0 ? '—' : total.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">{filtrando ? `${filtrosActivos} ${filtrosActivos === 1 ? 'filtro activo' : 'filtros activos'}` : 'Historial completo'}</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Última actividad</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcClock size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor adm-kpi-valor--texto">{ultimaActividad ? hace(ultimaActividad) : '—'}</strong>
+            <span className="adm-kpi-nota">{ultimaActividad ? formatearFecha(ultimaActividad) : 'Sin registros todavía'}</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Usuarios con actividad</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcUsers size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{opciones.usuarios.length}</strong>
+            <span className="adm-kpi-nota">{opciones.usuarios.length === 1 ? 'Persona registrada' : 'Personas registradas'}</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Módulos auditados</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{opciones.entidades.length}</strong>
+            <span className="adm-kpi-nota">{opciones.acciones.length} {opciones.acciones.length === 1 ? 'tipo de acción' : 'tipos de acción'}</span>
+          </div>
+        </li>
       </ul>
 
-      <div className="aud-filtros" role="search" aria-label="Filtrar la bitácora">
-        <label className="aud-filtro">
-          <span>Acción</span>
-          <span className="aud-selector">
-            <select value={filtros.accion ?? ''} onChange={(evento) => cambiarFiltros({ accion: evento.target.value || undefined })}>
-              <option value="">Todas</option>
-              {opciones.acciones.map((accion) => <option key={accion} value={accion}>{etiquetaAccion(accion)}</option>)}
-            </select>
-            <IcChevronDown size={16} aria-hidden="true" />
-          </span>
-        </label>
-        <label className="aud-filtro">
-          <span>Entidad</span>
-          <span className="aud-selector">
-            <select value={filtros.entidad ?? ''} onChange={(evento) => cambiarFiltros({ entidad: evento.target.value || undefined })}>
-              <option value="">Todas</option>
-              {opciones.entidades.map((entidad) => <option key={entidad} value={entidad}>{etiquetaEntidad(entidad)}</option>)}
-            </select>
-            <IcChevronDown size={16} aria-hidden="true" />
-          </span>
-        </label>
-        <label className="aud-filtro">
-          <span>Usuario</span>
-          <span className="aud-selector">
-            <select value={filtros.usuario_id ?? ''} onChange={(evento) => cambiarFiltros({ usuario_id: evento.target.value ? Number(evento.target.value) : undefined })}>
-              <option value="">Todos</option>
-              {opciones.usuarios.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.nombre_completo}</option>)}
-            </select>
-            <IcChevronDown size={16} aria-hidden="true" />
-          </span>
-        </label>
-        <label className="aud-filtro">
-          <span>Desde</span>
-          <input type="date" value={filtros.desde ?? ''} max={filtros.hasta} onChange={(evento) => cambiarFiltros({ desde: evento.target.value || undefined })} aria-invalid={rangoMal || undefined} />
-        </label>
-        <label className="aud-filtro">
-          <span>Hasta</span>
-          <input type="date" value={filtros.hasta ?? ''} min={filtros.desde} onChange={(evento) => cambiarFiltros({ hasta: evento.target.value || undefined })} aria-invalid={rangoMal || undefined} />
-        </label>
-        {filtrando && <button type="button" className="aud-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>}
-        {rangoMal && <p className="aud-filtros-aviso" role="alert">La fecha «Desde» debe ser anterior a «Hasta».</p>}
-      </div>
+      <section className="aud-filtros-bloque" role="search" aria-label="Filtrar la bitácora">
+        <div className="aud-filtros-top">
+          <div className="aud-periodos" role="group" aria-label="Periodo rápido">
+            {PERIODOS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={periodo === item.id}
+                className={`aud-periodo${periodo === item.id ? ' is-activo' : ''}`}
+                onClick={() => cambiarFiltros(rangoDePeriodo(item.id))}
+              >
+                {item.etiqueta}
+              </button>
+            ))}
+          </div>
+
+          {filtrando && (
+            <button type="button" className="aud-limpiar" onClick={limpiarFiltros}>
+              <IcClose size={14} aria-hidden="true" />
+              Limpiar ({filtrosActivos})
+            </button>
+          )}
+        </div>
+
+        <div className="aud-filtros">
+          <label className="aud-filtro">
+            <span>Acción</span>
+            <span className="aud-selector">
+              <select
+                value={filtros.accion ?? ''}
+                onChange={(evento) => cambiarFiltros({ accion: evento.target.value || undefined })}
+              >
+                <option value="">Todas</option>
+                {opciones.acciones.map((accion) => (
+                  <option key={accion} value={accion}>{etiquetaAccion(accion)}</option>
+                ))}
+              </select>
+              <IcChevronDown size={15} aria-hidden="true" />
+            </span>
+          </label>
+
+          <label className="aud-filtro">
+            <span>Entidad</span>
+            <span className="aud-selector">
+              <select
+                value={filtros.entidad ?? ''}
+                onChange={(evento) => cambiarFiltros({ entidad: evento.target.value || undefined })}
+              >
+                <option value="">Todas</option>
+                {opciones.entidades.map((entidad) => (
+                  <option key={entidad} value={entidad}>{etiquetaEntidad(entidad)}</option>
+                ))}
+              </select>
+              <IcChevronDown size={15} aria-hidden="true" />
+            </span>
+          </label>
+
+          <label className="aud-filtro">
+            <span>Usuario</span>
+            <span className="aud-selector">
+              <select
+                value={filtros.usuario_id ?? ''}
+                onChange={(evento) => cambiarFiltros({ usuario_id: evento.target.value ? Number(evento.target.value) : undefined })}
+              >
+                <option value="">Todos</option>
+                {opciones.usuarios.map((usuario) => (
+                  <option key={usuario.id} value={usuario.id}>{usuario.nombre_completo}</option>
+                ))}
+              </select>
+              <IcChevronDown size={15} aria-hidden="true" />
+            </span>
+          </label>
+
+          <label className="aud-filtro">
+            <span>Desde</span>
+            <input
+              type="date"
+              value={filtros.desde ?? ''}
+              max={filtros.hasta}
+              onChange={(evento) => cambiarFiltros({ desde: evento.target.value || undefined })}
+              aria-invalid={rangoMal || undefined}
+            />
+          </label>
+
+          <label className="aud-filtro">
+            <span>Hasta</span>
+            <input
+              type="date"
+              value={filtros.hasta ?? ''}
+              min={filtros.desde}
+              onChange={(evento) => cambiarFiltros({ hasta: evento.target.value || undefined })}
+              aria-invalid={rangoMal || undefined}
+            />
+          </label>
+        </div>
+
+        {rangoMal && (
+          <p className="aud-filtros-aviso" role="alert">
+            La fecha «Desde» debe ser anterior o igual a «Hasta».
+          </p>
+        )}
+      </section>
 
       {error && (
         <div className="adm-alerta" role="alert">
@@ -181,8 +464,12 @@ function AuditoriaPage() {
         <EstadoVacio
           className="aud-vacio"
           titulo={filtrando ? 'Sin coincidencias' : 'Sin registros'}
-          texto={filtrando ? 'Ningún evento coincide con los filtros. Prueba con otro rango o acción.' : 'Cuando se realicen acciones en el sistema aparecerán aquí.'}
-          accion={filtrando ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}
+          texto={filtrando
+            ? 'Ningún evento coincide con los filtros. Prueba con otro rango o acción.'
+            : 'Cuando se realicen acciones en el sistema aparecerán aquí.'}
+          accion={filtrando
+            ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button>
+            : undefined}
         />
       ) : (
         <section className="aud-listado" aria-busy={cargando}>
@@ -199,97 +486,81 @@ function AuditoriaPage() {
                 </tr>
               </thead>
               <tbody>
-                {registros.map((registro) => (
-                  <tr key={registro.id}>
-                    <td>
-                      <span className="aud-celda-texto">
-                        <strong>{FECHA_CORTA.format(new Date(registro.fecha_hora))}</strong>
-                        <span>{HORA_CORTA.format(new Date(registro.fecha_hora))}</span>
-                      </span>
-                    </td>
-                    <td>
-                      <span className="aud-celda-texto">
-                        <strong>{registro.usuario?.nombre_completo ?? 'Sistema'}</strong>
-                        <span>{registro.usuario?.email ?? 'Sin correo'}</span>
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`aud-accion aud-accion--${claseDeAccion(registro.accion)}`}>{etiquetaAccion(registro.accion)}</span>
-                    </td>
-                    <td>
-                      <span className="aud-celda-texto aud-celda-texto--centro">
-                        <strong>{etiquetaEntidad(registro.entidad_afectada)}</strong>
-                        <span>{registro.registro_id !== null ? `Registro #${registro.registro_id}` : 'Sin registro'}</span>
-                      </span>
-                    </td>
-                    <td className="aud-ip">{registro.ip_origen?.replace(/^::ffff:/, '') ?? '—'}</td>
-                    <td>
-                      <button className="aud-boton-fila" type="button" onClick={() => setDetalle(registro)}>
-                        Ver cambios <IcChevronRight size={14} aria-hidden="true" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {registros.map((registro) => {
+                  const seleccionada = detalle?.id === registro.id
+                  const fecha = new Date(registro.fecha_hora)
+                  return (
+                    <tr
+                      key={registro.id}
+                      className={`aud-fila${seleccionada ? ' is-seleccionada' : ''}`}
+                      tabIndex={0}
+                      onClick={() => setDetalle(registro)}
+                      onKeyDown={(evento) => {
+                        if (evento.key === 'Enter' || evento.key === ' ') {
+                          evento.preventDefault()
+                          setDetalle(registro)
+                        }
+                      }}
+                    >
+                      <td>
+                        <span className="aud-celda-texto">
+                          <strong>{FECHA_CORTA.format(fecha)}</strong>
+                          <span>{HORA_CORTA.format(fecha)}</span>
+                        </span>
+                      </td>
+                      <td>
+                        <span className="aud-celda-texto">
+                          <strong>{registro.usuario?.nombre_completo ?? 'Sistema'}</strong>
+                          <span>{registro.usuario?.email ?? 'Sin correo'}</span>
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`aud-accion aud-accion--${claseDeAccion(registro.accion)}`}>
+                          <span className="aud-accion-punto" aria-hidden="true" />
+                          {etiquetaAccion(registro.accion)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="aud-celda-texto">
+                          <strong>{etiquetaEntidad(registro.entidad_afectada)}</strong>
+                          <span>{registro.registro_id !== null ? `Registro #${registro.registro_id}` : 'Sin registro'}</span>
+                        </span>
+                      </td>
+                      <td className="aud-ip">{limpiarIp(registro.ip_origen)}</td>
+                      <td className="aud-col-accion">
+                        <span className="aud-ver" aria-hidden="true">
+                          Ver <IcChevronRight size={14} />
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
 
           <footer className="aud-paginado">
-            <span>Página {pagina} de {totalPaginas} · {total.toLocaleString('es-CO')} eventos</span>
+            <span>
+              Mostrando {desdeIndice}–{hastaIndice} de {total.toLocaleString('es-CO')} eventos · Página {pagina} de {totalPaginas}
+            </span>
             <div>
-              <button type="button" onClick={() => cambiarPagina(pagina - 1)} disabled={pagina <= 1 || cargando}>Anterior</button>
-              <button type="button" onClick={() => cambiarPagina(pagina + 1)} disabled={pagina >= totalPaginas || cargando}>Siguiente</button>
+              <button type="button" onClick={() => cambiarPagina(pagina - 1)} disabled={pagina <= 1 || cargando}>
+                Anterior
+              </button>
+              <button type="button" onClick={() => cambiarPagina(pagina + 1)} disabled={pagina >= totalPaginas || cargando}>
+                Siguiente
+              </button>
             </div>
           </footer>
         </section>
       )}
 
       {detalle && (
-        <Modal
-          titulo={`${etiquetaAccion(detalle.accion)} · ${etiquetaEntidad(detalle.entidad_afectada)}`}
-          subtitulo={`Evento #${detalle.id}${detalle.registro_id !== null ? ` · registro #${detalle.registro_id}` : ''}`}
+        <PanelDetalleAuditoria
+          key={detalle.id}
+          registro={detalle}
           onCerrar={() => setDetalle(null)}
-          ancho="ancho"
-        >
-          <div className="aud-panel-contenido">
-              <dl className="aud-datos">
-                <div>
-                  <dt>Usuario</dt>
-                  <dd>
-                    {detalle.usuario
-                      ? `${detalle.usuario.nombre_completo}${detalle.usuario.email ? ` (${detalle.usuario.email})` : ''}`
-                      : 'Sistema o acción anónima'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Fecha</dt>
-                  <dd>{formatearFecha(detalle.fecha_hora)}</dd>
-                </div>
-                <div>
-                  <dt>Navegador</dt>
-                  <dd>{detalle.user_agent ?? '—'}</dd>
-                </div>
-              </dl>
-
-              {detalle.datos_antes != null && (
-                <section className="aud-json-seccion">
-                  <h3>Estado anterior</h3>
-                  <pre>{aJsonBonito(detalle.datos_antes)}</pre>
-                </section>
-              )}
-              {detalle.datos_despues != null && (
-                <section className="aud-json-seccion">
-                  <h3>Estado resultante</h3>
-                  <pre>{aJsonBonito(detalle.datos_despues)}</pre>
-                </section>
-              )}
-              {detalle.datos_antes == null && detalle.datos_despues == null && (
-                <p className="aud-sin-json">
-                  Este registro no guarda datos del cambio.
-                </p>
-              )}
-          </div>
-        </Modal>
+        />
       )}
     </div>
   )

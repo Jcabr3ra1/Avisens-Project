@@ -91,17 +91,43 @@
 }
 
 .rep-financiero-caja {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
   border-radius: 8px;
   padding: 1.25rem;
   margin-bottom: 1.5rem;
+}
+
+.rep-financiero-titulo {
+  border-color: var(--success-border);
 }
 
 .rep-financiero-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+  margin: 0;
+}
+
+.rep-financiero-grid dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.rep-financiero-grid dd {
+  margin: 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.rep-financiero-grid .rep-financiero-margen {
+  color: var(--success);
+}
+
+.rep-financiero-grid small {
+  color: var(--text-secondary);
 }
 
 .rep-tabla-wrap {

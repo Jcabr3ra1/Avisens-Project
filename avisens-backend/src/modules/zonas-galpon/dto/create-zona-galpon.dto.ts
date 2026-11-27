@@ -6,29 +6,39 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
+  Max,
+  Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import {
+  CodigoAlfanumerico,
+  DIMENSION_MAXIMA_M,
+  NombreEntidad,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateZonaGalponDto {
   @ApiProperty({ example: 1, description: 'ID del galpón al que pertenece' })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiProperty({ example: 'Zona norte', description: 'Nombre de la zona' })
-  @IsString()
+  @NombreEntidad('El nombre de la zona', 100)
   nombre: string;
 
   @ApiPropertyOptional({ example: 'ZN-01', description: 'Código de la zona' })
-  @IsString()
   @IsOptional()
+  @CodigoAlfanumerico('El código de la zona', 40, false)
   codigo?: string;
 
   @ApiPropertyOptional({
     example: 'alimentacion',
     description: 'Tipo: alimentacion | descanso | ventilacion | otro',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El tipo de zona', 40)
   tipo_zona?: string;
 
   @ApiPropertyOptional({
@@ -36,6 +46,8 @@ export class CreateZonaGalponDto {
     description: 'Coordenada X inicio (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_x_inicio?: number;
 
@@ -44,6 +56,8 @@ export class CreateZonaGalponDto {
     description: 'Coordenada Y inicio (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_y_inicio?: number;
 
@@ -52,6 +66,8 @@ export class CreateZonaGalponDto {
     description: 'Coordenada X fin (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_x_fin?: number;
 
@@ -60,6 +76,8 @@ export class CreateZonaGalponDto {
     description: 'Coordenada Y fin (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_y_fin?: number;
 
@@ -68,6 +86,9 @@ export class CreateZonaGalponDto {
     description: 'Color para visualización en mapa',
   })
   @IsString()
+  @Matches(/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/, {
+    message: 'El color debe ser un código hexadecimal válido (ej.: #FF5733)',
+  })
   @IsOptional()
   color_visualizacion?: string;
 

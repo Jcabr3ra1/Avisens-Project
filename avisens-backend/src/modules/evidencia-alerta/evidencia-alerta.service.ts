@@ -6,12 +6,14 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { paginate } from '../../common/pagination/paginate';
 import { type Solicitante } from '../../common/auth/acceso';
 import { filtroAlertas, verificarAccesoGalpon } from '../../common/auth/alcance';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 
 const EVIDENCIA_SELECT = {
   id: true,
   alerta_id: true,
   tipo_evidencia: true,
   archivo_url: true,
+  mime_type: true,
   comentario: true,
   usuario_id: true,
   tamano_bytes: true,
@@ -189,5 +191,66 @@ export class EvidenciaAlertaService {
     ]);
 
     return paginate(data, total, page, limit);
+  }
+
+  async subirFoto(
+    alertaId: number,
+    cuerpo: unknown,
+    solicitante: Solicitante,
+    comentario?: string,
+  ) {
+    await this.validarAlerta(alertaId, solicitante);
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+
+    return this.prisma.evidenciaAlerta.create({
+      data: {
+        alerta_id: alertaId,
+        usuario_id: solicitante.id,
+        tipo_evidencia: 'foto',
+        imagen: buffer,
+        mime_type: mimeType,
+        tamano_bytes: tamano,
+        comentario: comentario?.trim() || undefined,
+      },
+      select: EVIDENCIA_SELECT,
+    });
+  }
+
+  async obtenerImagen(id: number, solicitante: Solicitante) {
+    const evidencia = await this.prisma.evidenciaAlerta.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        imagen: true,
+        mime_type: true,
+        alerta: {
+          select: {
+            galpon_id: true,
+            galpon: { select: { granja: { select: { propietario_id: true } } } },
+          },
+        },
+      },
+    });
+
+    if (!evidencia) {
+      throw new NotFoundException('Evidencia no encontrada');
+    }
+
+    await verificarAccesoGalpon(
+      this.prisma,
+      evidencia.alerta.galpon_id,
+      solicitante,
+      'No tienes acceso a esta evidencia',
+      evidencia.alerta.galpon.granja.propietario_id,
+    );
+
+    if (!evidencia.imagen || !evidencia.mime_type) {
+      throw new NotFoundException('Esta evidencia no tiene imagen almacenada');
+    }
+
+    return {
+      buffer: Buffer.from(evidencia.imagen),
+      mimeType: evidencia.mime_type,
+    };
   }
 }

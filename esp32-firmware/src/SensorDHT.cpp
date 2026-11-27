@@ -10,15 +10,17 @@
 
 #include "SensorDHT.h"
 
-SensorDHT::SensorDHT()
-    : contadorFallos_(0),
+SensorDHT::SensorDHT(uint8_t pin, const char *nombre)
+    : pin_(pin),
+      nombre_(nombre),
+      contadorFallos_(0),
       ultimoIntento_(0) {
   ultimaLectura_ = {0.0f, 0.0f, false, 0};
 }
 
 void SensorDHT::begin() {
-  dht_.setup(DHTPIN, DHTesp::DHT22);
-  LOG_DEBUG("SensorDHT inicializado");
+  dht_.setup(pin_, DHTesp::DHT22);
+  LOG_DEBUG(String(nombre_) + " inicializado en GPIO " + String(pin_));
 }
 
 LecturaDHT SensorDHT::leer() {
@@ -39,13 +41,15 @@ LecturaDHT SensorDHT::leer() {
 
     // TIMEOUT = el sensor no contesta (alimentación/conexión);
     // CHECKSUM = contesta con datos corruptos (ruido, cables largos o flojos).
-    Serial.print("⚠ DHT22 fallo (NaN) #");
+    Serial.print("⚠ ");
+    Serial.print(nombre_);
+    Serial.print(" fallo (NaN) #");
     Serial.print(contadorFallos_);
     Serial.print(" — ");
     Serial.println(dht_.getStatusString());
 
     if (contadorFallos_ >= MAX_FALLOS_SENSOR) {
-      LOG_ERROR("DHT22 fallo persistente (desconectado) — Entrando en ERROR");
+      LOG_ERROR(String(nombre_) + " fallo persistente (desconectado)");
     }
     return lectura;
   }
@@ -58,12 +62,14 @@ LecturaDHT SensorDHT::leer() {
     contadorFallos_++;
     lectura.valida = false;
 
-    Serial.print("⚠ DHT22 temperatura fuera de rango: ");
+    Serial.print("⚠ ");
+    Serial.print(nombre_);
+    Serial.print(" temperatura fuera de rango: ");
     Serial.print(temperatura);
     Serial.println("°C");
 
     if (contadorFallos_ >= MAX_FALLOS_SENSOR) {
-      LOG_ERROR("DHT22 fallo persistente (rango) — Entrando en ERROR");
+      LOG_ERROR(String(nombre_) + " fallo persistente (rango)");
     }
     return lectura;
   }
@@ -72,12 +78,14 @@ LecturaDHT SensorDHT::leer() {
     contadorFallos_++;
     lectura.valida = false;
 
-    Serial.print("⚠ DHT22 humedad fuera de rango: ");
+    Serial.print("⚠ ");
+    Serial.print(nombre_);
+    Serial.print(" humedad fuera de rango: ");
     Serial.print(humedad);
     Serial.println("%");
 
     if (contadorFallos_ >= MAX_FALLOS_SENSOR) {
-      LOG_ERROR("DHT22 fallo persistente (rango) — Entrando en ERROR");
+      LOG_ERROR(String(nombre_) + " fallo persistente (rango)");
     }
     return lectura;
   }
@@ -107,6 +115,6 @@ void SensorDHT::reiniciarFallos() {
 void SensorDHT::reset() {
   contadorFallos_ = 0;
   ultimaLectura_ = {0.0f, 0.0f, false, 0};
-  dht_.setup(DHTPIN, DHTesp::DHT22);
-  LOG_DEBUG("SensorDHT reseteado");
+  dht_.setup(pin_, DHTesp::DHT22);
+  LOG_DEBUG(String(nombre_) + " reseteado");
 }

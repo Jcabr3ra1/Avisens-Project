@@ -20,9 +20,11 @@
 class SensorDHT {
  public:
   /**
-   * @brief Constructor. Inicializa el objeto DHT.
+   * @brief Constructor.
+   * @param pin GPIO del pin de datos del DHT22
+   * @param nombre Cómo aparece en el monitor serie (para distinguir sensores)
    */
-  SensorDHT();
+  SensorDHT(uint8_t pin, const char *nombre);
 
   /**
    * @brief Inicializa el sensor (llamar en setup()).
@@ -59,6 +61,8 @@ class SensorDHT {
 
  private:
   DHTesp dht_;
+  uint8_t pin_;
+  const char *nombre_;
   LecturaDHT ultimaLectura_;
   int contadorFallos_;
   unsigned long ultimoIntento_;

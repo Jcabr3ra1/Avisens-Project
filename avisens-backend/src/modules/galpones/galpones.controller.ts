@@ -7,12 +7,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -48,6 +50,38 @@ export class GalponesController {
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.galponesService.listar(req.user, paginacion);
+  }
+
+  @Get(':id/foto')
+  @ApiOperation({ summary: 'Obtener la fotografía almacenada del galpón' })
+  async foto(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } = await this.galponesService.obtenerFoto(
+      id,
+      req.user,
+    );
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
+  }
+
+  @Put(':id/foto')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary: 'Subir o actualizar la fotografía del galpón (JPG/PNG/WebP, máx. 3 MB)',
+  })
+  subirFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.galponesService.subirFoto(id, req.body, req.user);
+  }
+
+  @Delete(':id/foto')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Eliminar la fotografía almacenada del galpón' })
+  eliminarFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.galponesService.eliminarFoto(id, req.user);
   }
 
   @Get(':id')

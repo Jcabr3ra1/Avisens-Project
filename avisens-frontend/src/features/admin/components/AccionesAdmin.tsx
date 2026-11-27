@@ -5,7 +5,6 @@ import {
   IcSearch,
   IcServer,
   IcUserCircle,
-  IcUsers,
 } from '@shared/ui/icons/icons'
 
 type Accion = {
@@ -22,7 +21,6 @@ type Props = {
   onUsuarios: () => void
   onCatalogos: () => void
   onAuditoria: () => void
-  onProveedores: () => void
 }
 
 function AccionesAdmin({
@@ -31,7 +29,6 @@ function AccionesAdmin({
   onUsuarios,
   onCatalogos,
   onAuditoria,
-  onProveedores,
 }: Props) {
   const acciones: Accion[] = [
     {
@@ -68,13 +65,6 @@ function AccionesAdmin({
       etiqueta: 'Control',
       icono: <IcSearch size={20} />,
       onClick: onAuditoria,
-    },
-    {
-      titulo: 'Proveedores y Aliados',
-      descripcion: 'Gestiona el directorio de empresas abastecedoras de alimento y equipos.',
-      etiqueta: 'Abastecimiento',
-      icono: <IcUsers size={20} />,
-      onClick: onProveedores,
     },
   ]
 

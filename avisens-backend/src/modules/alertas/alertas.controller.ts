@@ -27,6 +27,7 @@ import { ROLES } from '../../common/auth/roles';
 import { AlertasService } from './alertas.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
+import { CerrarAlertaDto } from './dto/cerrar-alerta.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import {
   AlertaPaginadaDto,
@@ -102,10 +103,14 @@ export class AlertasController {
   @ApiOkResponse({ type: AlertaRespuestaDto })
   cerrar(
     @Param('id', ParseIntPipe) id: number,
-    @Body('accion_correctiva') accion_correctiva: string,
+    @Body() dto: CerrarAlertaDto,
     @Req() req: AuthRequest,
   ) {
-    return this.alertasService.cerrar(id, { accion_correctiva }, req.user);
+    return this.alertasService.cerrar(
+      id,
+      { accion_correctiva: dto.accion_correctiva ?? '' },
+      req.user,
+    );
   }
 
   @Patch(':id/escalar/:usuarioId')

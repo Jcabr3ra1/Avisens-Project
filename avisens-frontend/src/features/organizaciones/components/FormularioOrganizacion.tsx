@@ -1,7 +1,16 @@
 import { useState, type FormEvent } from 'react'
+import { IcBuilding } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarNit, validarNombreEntidad } from '@shared/utils/validacion'
 import type { CrearOrganizacionPayload, Organizacion } from '../api/organizaciones'
+
+const PLANES_PERMITIDOS = [
+  { valor: 'free', etiqueta: 'Free (gratuito)' },
+  { valor: 'basic', etiqueta: 'Basic' },
+  { valor: 'pro', etiqueta: 'Pro' },
+  { valor: 'enterprise', etiqueta: 'Enterprise' },
+] as const
 
 type Props = {
   editando: Organizacion | null
@@ -21,8 +30,14 @@ function FormularioOrganizacion({ editando, planesConocidos, onGuardar, onCerrar
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!nombre.trim()) {
-      setError('El nombre de la organización es obligatorio.')
+    const errorNombre = validarNombreEntidad(nombre, 'El nombre de la organización', { max: 150 })
+    if (errorNombre) {
+      setError(errorNombre)
+      return
+    }
+    const errorNit = validarNit(nit)
+    if (errorNit) {
+      setError(errorNit)
       return
     }
 
@@ -44,8 +59,10 @@ function FormularioOrganizacion({ editando, planesConocidos, onGuardar, onCerrar
 
   return (
     <Modal
+      variante="lateral"
+      icono={<IcBuilding size={20} />}
       titulo={editando ? 'Editar organización' : 'Nueva organización'}
-      subtitulo="Una organización es una empresa cliente. De ella cuelgan sus usuarios y sus granjas."
+      subtitulo="Actualiza los datos principales de la organización. De ella dependen sus usuarios y granjas."
       onCerrar={onCerrar}
       acciones={
         <>
@@ -61,27 +78,27 @@ function FormularioOrganizacion({ editando, planesConocidos, onGuardar, onCerrar
       <form id={ID_FORMULARIO} onSubmit={(evento) => void enviar(evento)}>
         <label className="modal-campo">
           <span>Nombre o razón social</span>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus autoComplete="organization" />
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={150} required autoFocus autoComplete="organization" />
         </label>
 
         <label className="modal-campo">
           <span>NIT <em>(Opcional)</em></span>
-          <input value={nit} onChange={(e) => setNit(e.target.value)} />
-          <small className="modal-ayuda">Debe ser único: no puede repetirse entre organizaciones.</small>
+          <input value={nit} onChange={(e) => setNit(e.target.value)} maxLength={15} placeholder="Ej.: 900123456-7" />
+          <small className="modal-ayuda">Debe ser único: 6 a 10 dígitos y dígito de verificación opcional.</small>
         </label>
 
         <label className="modal-campo">
           <span>Plan</span>
-          <input value={plan} onChange={(e) => setPlan(e.target.value)} list="planes-conocidos" />
-          {/* El backend guarda `plan` como texto libre y todavía no hay una
-              escala definida, así que se sugieren los ya usados en vez de
-              inventar niveles que después habría que desmontar. */}
-          <datalist id="planes-conocidos">
-            {planesConocidos.map((conocido) => <option key={conocido} value={conocido} />)}
-          </datalist>
-          <small className="modal-ayuda">
-            Se sugieren los planes ya en uso. Todavía no hay una escala cerrada.
-          </small>
+          <select value={plan} onChange={(e) => setPlan(e.target.value)}>
+            {PLANES_PERMITIDOS.map((opcion) => (
+              <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
+            ))}
+            {planesConocidos
+              .filter((p) => !PLANES_PERMITIDOS.some((op) => op.valor === p))
+              .map((extra) => (
+                <option key={extra} value={extra}>{extra}</option>
+              ))}
+          </select>
         </label>
 
         {error && <p className="modal-error" role="alert">{error}</p>}

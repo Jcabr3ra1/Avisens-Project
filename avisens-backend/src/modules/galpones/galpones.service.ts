@@ -27,6 +27,7 @@ import {
   TOPE_ESPERA_ESCRITURA_MS,
   transaccionConPresupuesto,
 } from '../../common/bloqueos/presupuesto-transaccion';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 
 const GALPON_SELECT = {
   id: true,
@@ -37,7 +38,7 @@ const GALPON_SELECT = {
   largo_metros: true,
   orientacion: true,
   tipo_techo: true,
-  plano_url: true,
+  foto_mime_type: true,
   activo: true,
   fecha_construccion: true,
   granja: { select: { id: true, nombre: true, propietario_id: true } },
@@ -83,7 +84,6 @@ export class GalponesService {
           largo_metros: dto.largo_metros,
           orientacion: dto.orientacion,
           tipo_techo: dto.tipo_techo,
-          plano_url: dto.plano_url,
           fecha_construccion: dto.fecha_construccion
             ? new Date(dto.fecha_construccion)
             : undefined,
@@ -149,7 +149,6 @@ export class GalponesService {
       largo_metros: dto.largo_metros,
       orientacion: dto.orientacion,
       tipo_techo: dto.tipo_techo,
-      plano_url: dto.plano_url,
       activo: dto.activo,
       fecha_construccion: dto.fecha_construccion
         ? new Date(dto.fecha_construccion)
@@ -254,5 +253,49 @@ export class GalponesService {
       throw error;
     }
     return { id, eliminado: true };
+  }
+
+  async subirFoto(id: number, cuerpo: unknown, solicitante: Solicitante) {
+    const galpon = await this.obtener(id, solicitante);
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes subir fotos en galpones de tus propias granjas',
+    );
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+    await this.prisma.galpon.update({
+      where: { id },
+      data: { foto: buffer, foto_mime_type: mimeType },
+    });
+    return { id, tiene_foto: true, mime_type: mimeType, tamano_bytes: tamano };
+  }
+
+  async eliminarFoto(id: number, solicitante: Solicitante) {
+    const galpon = await this.obtener(id, solicitante);
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes gestionar fotos en galpones de tus propias granjas',
+    );
+    await this.prisma.galpon.update({
+      where: { id },
+      data: { foto: null, foto_mime_type: null },
+    });
+    return { id, tiene_foto: false };
+  }
+
+  async obtenerFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id },
+      select: { foto: true, foto_mime_type: true },
+    });
+    if (!galpon?.foto || !galpon.foto_mime_type) {
+      throw new NotFoundException('Este galpón no tiene foto almacenada');
+    }
+    return {
+      buffer: Buffer.from(galpon.foto),
+      mimeType: galpon.foto_mime_type,
+    };
   }
 }

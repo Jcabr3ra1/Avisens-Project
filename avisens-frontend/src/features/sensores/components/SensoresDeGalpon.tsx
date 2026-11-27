@@ -7,7 +7,9 @@ import {
 } from '@features/dispositivos/api/dispositivos'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
+import { IcAlert, IcCheck, IcPlus, IcThermo } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarCodigo, validarTextoSeguro } from '@shared/utils/validacion'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
 import { useSensores } from '../hooks/useSensores'
@@ -19,6 +21,7 @@ import {
   type DatosSensor,
 } from '../model/sensor'
 import { MedicionesVivas } from './MedicionesVivas'
+import '@shared/ui/admin/AdminKit.css'
 import '../SensoresPage.css'
 import { toast } from 'sonner'
 
@@ -34,6 +37,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const puedeGestionar = getRol() === ROL_ADMIN
   const conAcciones = puedeGestionar
   const [dispositivoId, setDispositivoId] = useState('')
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
@@ -71,6 +75,16 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
     setOk('')
     if (!dispositivoId) {
       setErrorForm('Selecciona el dispositivo al que pertenece el sensor.')
+      return
+    }
+    const errCodigo = validarCodigo(form.codigo, 'El código del sensor', { max: 60 })
+    const errTipo = validarTextoSeguro(form.tipo, 'El tipo de sensor', { requerido: true, max: 40 })
+    const errUnidad = validarTextoSeguro(form.unidad_medida, 'La unidad de medida', { requerido: true, max: 20 })
+    const errModelo = validarTextoSeguro(form.modelo, 'El modelo', { max: 80 })
+    const errFab = validarTextoSeguro(form.fabricante, 'El fabricante', { max: 80 })
+    const problema = errCodigo ?? errTipo ?? errUnidad ?? errModelo ?? errFab
+    if (problema) {
+      setErrorForm(problema)
       return
     }
     setGuardando(true)
@@ -123,24 +137,56 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
 
   return (
     <div className="sensores">
-      <div className="sensores-resumen">
-        <div className="sn-stat">
-          <span className="sn-stat-valor">{sensores.length}</span>
-          <span className="sn-stat-label">Total</span>
+      <ul className="adm-kpis adm-kpis--3" aria-label="Resumen de sensores del galpón">
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Total</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcThermo size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{sensores.length.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Sensores en el galpón</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Activos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{activos.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Habilitados para lectura</span>
+          </div>
+        </li>
+        <li>
+          <div className={`adm-kpi adm-kpi--${sensores.length - activos > 0 ? 'alerta' : 'ok'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Inactivos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcAlert size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{(sensores.length - activos).toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">{sensores.length - activos > 0 ? 'Fuera de monitoreo' : 'Todos activos'}</span>
+          </div>
+        </li>
+      </ul>
+
+      {puedeGestionar && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={() => { setMostrarForm((v) => !v); setErrorForm('') }}
+          >
+            <IcPlus size={15} aria-hidden="true" />
+            {mostrarForm ? 'Ocultar formulario' : 'Registrar sensor'}
+          </button>
         </div>
-        <div className="sn-stat sn-stat--activo">
-          <span className="sn-stat-valor">{activos}</span>
-          <span className="sn-stat-label">Activos</span>
-        </div>
-        <div className="sn-stat">
-          <span className="sn-stat-valor">{sensores.length - activos}</span>
-          <span className="sn-stat-label">Inactivos</span>
-        </div>
-      </div>
+      )}
 
       {error && (
-        <div className="sn-alert sn-alert--error" role="alert">
-          {error}
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>Reintentar</button>
         </div>
       )}
       {errorAccion && (
@@ -149,16 +195,16 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
       )}
 
-      {puedeGestionar && (
+      {puedeGestionar && mostrarForm && (
       <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
           <label className="sn-campo">
-            <span>galpón</span>
+            <span>Galpón</span>
             <input value={`${galpon.codigo} · ${galpon.nombre}`} disabled />
           </label>
           <label className="sn-campo">
-            <span>dispositivo</span>
+            <span>Dispositivo</span>
             <select
               value={dispositivoId}
               onChange={(e) => setDispositivoId(e.target.value)}
@@ -173,20 +219,22 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
             </select>
           </label>
           <label className="sn-campo">
-            <span>código único</span>
+            <span>Código único</span>
             <input
               value={form.codigo}
               onChange={(e) => campo('codigo', e.target.value)}
               placeholder="TEMP-G1-01"
+              maxLength={60}
               required
             />
           </label>
           <label className="sn-campo">
-            <span>tipo</span>
+            <span>Tipo</span>
             <input
               list="tipos-sensor-galpon"
               value={form.tipo}
               onChange={(e) => campo('tipo', e.target.value)}
+              maxLength={40}
               required
             />
             <datalist id="tipos-sensor-galpon">
@@ -196,32 +244,35 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
             </datalist>
           </label>
           <label className="sn-campo">
-            <span>unidad</span>
+            <span>Unidad</span>
             <input
               value={form.unidad_medida}
               onChange={(e) => campo('unidad_medida', e.target.value)}
               placeholder="°C"
+              maxLength={20}
               required
             />
           </label>
           <label className="sn-campo">
             <span>
-              modelo <em>(opcional)</em>
+              Modelo <em>(opcional)</em>
             </span>
             <input
               value={form.modelo}
               onChange={(e) => campo('modelo', e.target.value)}
               placeholder="DHT22"
+              maxLength={80}
             />
           </label>
           <label className="sn-campo">
             <span>
-              fabricante <em>(opcional)</em>
+              Fabricante <em>(opcional)</em>
             </span>
             <input
               value={form.fabricante}
               onChange={(e) => campo('fabricante', e.target.value)}
               placeholder="Aosong"
+              maxLength={80}
             />
           </label>
         </div>

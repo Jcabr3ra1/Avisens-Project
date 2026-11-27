@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { IcThermo } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarCodigo, validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CatalogoSensor,
   CrearCatalogoSensorPayload,
@@ -46,18 +48,22 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!form.tipo_sensor.trim() || !form.nombre.trim()) {
-      setError('El tipo y el nombre son obligatorios.')
+    const errTipo = validarCodigo(form.tipo_sensor, 'El tipo de sensor', { max: 40 })
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre del sensor', { max: 120 })
+    const errDesc = validarTextoSeguro(form.descripcion, 'La descripción', { max: 500, multilinea: true })
+    const problemaTexto = errTipo ?? errNombre ?? errDesc
+    if (problemaTexto) {
+      setError(problemaTexto)
       return
     }
     const precio = Number(form.precio_unitario_cop)
-    if (form.precio_unitario_cop === '' || Number.isNaN(precio) || precio < 0) {
-      setError('El precio debe ser un número igual o mayor que cero.')
+    if (form.precio_unitario_cop === '' || Number.isNaN(precio) || precio < 0 || precio > 10_000_000_000) {
+      setError('El precio debe estar entre $0 y $10.000.000.000.')
       return
     }
     const cobertura = form.cobertura_m2 === '' ? null : Number(form.cobertura_m2)
-    if (cobertura !== null && cobertura < 0.01) {
-      setError('La cobertura debe ser al menos 0,01 m².')
+    if (cobertura !== null && (Number.isNaN(cobertura) || cobertura < 0.01 || cobertura > 5_000_000)) {
+      setError('La cobertura debe estar entre 0,01 y 5.000.000 m².')
       return
     }
 
@@ -86,6 +92,8 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
     <Modal
       titulo={editando ? 'Editar sensor del catálogo' : 'Nuevo sensor del catálogo'}
       subtitulo="Estos son los modelos que se pueden instalar en un galpón, con su precio de referencia."
+      variante="lateral"
+      icono={<IcThermo size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>
@@ -104,6 +112,7 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
           <input
             value={form.tipo_sensor}
             onChange={(e) => cambiar('tipo_sensor', e.target.value)}
+            maxLength={40}
             required
             autoFocus={editando === null}
             disabled={editando !== null}
@@ -118,7 +127,7 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
 
         <label className="modal-campo">
           <span>Nombre</span>
-          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} required />
+          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} maxLength={120} required />
         </label>
 
         <label className="modal-campo">
@@ -129,11 +138,11 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Precio unitario en pesos</span>
-            <input type="number" min="0" step="1" value={form.precio_unitario_cop} onChange={(e) => cambiar('precio_unitario_cop', e.target.value)} required />
+            <input type="number" min="0" max="10000000000" step="1" inputMode="numeric" value={form.precio_unitario_cop} onChange={(e) => cambiar('precio_unitario_cop', e.target.value)} required />
           </label>
           <label className="modal-campo">
             <span>Cobertura en m² <em>(Opcional)</em></span>
-            <input type="number" min="0.01" step="0.01" value={form.cobertura_m2} onChange={(e) => cambiar('cobertura_m2', e.target.value)} />
+            <input type="number" min="0.01" max="5000000" step="0.01" inputMode="decimal" value={form.cobertura_m2} onChange={(e) => cambiar('cobertura_m2', e.target.value)} />
           </label>
         </div>
 

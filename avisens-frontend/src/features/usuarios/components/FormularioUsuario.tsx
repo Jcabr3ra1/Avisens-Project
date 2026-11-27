@@ -3,7 +3,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import type { CrearUsuarioPayload, RolResumen } from '@shared/api'
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Galpon } from '@features/galpones/api/galpones'
-import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
+import { IcEye, IcEyeOff, IcUserCircle } from '@shared/ui/icons/icons'
 import type { CampoValidado, ErroresUsuario } from '../model/validacionUsuario'
 
 type Props = {
@@ -91,6 +91,8 @@ function FormularioUsuario({
   return (
     <Modal
       titulo={titulo}
+      variante="lateral"
+      icono={<IcUserCircle size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>
@@ -220,9 +222,12 @@ function FormularioUsuario({
             ref={nombreRef}
             value={form.nombre_completo}
             onChange={(evento) => onCambiar('nombre_completo', evento.target.value)}
+            maxLength={120}
             autoComplete="name"
+            {...marcar('nombre_completo')}
             required
           />
+          {avisoDe('nombre_completo')}
         </label>
 
         <div className="usuarios-campo-fila">
@@ -246,6 +251,7 @@ function FormularioUsuario({
               onChange={(evento) => onCambiar('telefono', evento.target.value)}
               inputMode="tel"
               autoComplete="tel"
+              maxLength={18}
               placeholder="Ej.: 3001234567"
               {...marcar('telefono')}
             />
@@ -253,7 +259,7 @@ function FormularioUsuario({
           </label>
         </div>
 
-        {solicitaOrganizacion && (
+        {solicitaOrganizacion && !pideNombreOrganizacion && (
           <label className="modal-campo">
             <span>Organización donde trabajará</span>
             <select
@@ -271,6 +277,13 @@ function FormularioUsuario({
                 <option key={organizacion.id} value={organizacion.id}>{organizacion.nombre}</option>
               ))}
             </select>
+            <button
+              type="button"
+              className="usuarios-link-btn"
+              onClick={() => { setOrganizacionNueva(true); onCambiar('organizacion_id', undefined) }}
+            >
+              + Crear una organización nueva
+            </button>
           </label>
         )}
 
@@ -280,7 +293,10 @@ function FormularioUsuario({
             <input
               value={form.organizacion_nombre ?? ''}
               onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+              maxLength={150}
+              {...marcar('organizacion_nombre')}
             />
+            {avisoDe('organizacion_nombre')}
           </label>
         )}
 
@@ -311,6 +327,7 @@ function FormularioUsuario({
             value={form.email ?? ''}
             onChange={(evento) => onCambiar('email', evento.target.value)}
             autoComplete="email"
+            maxLength={150}
             placeholder="nombre@dominio.com"
             {...marcar('email')}
           />
@@ -324,6 +341,7 @@ function FormularioUsuario({
               <input
                 type={verPassword ? 'text' : 'password'}
                 minLength={8}
+                maxLength={72}
                 value={form.password}
                 onChange={(evento) => onCambiar('password', evento.target.value)}
                 autoComplete="new-password"
@@ -347,13 +365,6 @@ function FormularioUsuario({
             <select value={form.rol_id} disabled aria-label="Rol actual">
               {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
             </select>
-            <button
-              type="button"
-              className="usuarios-link-btn"
-              onClick={() => { setOrganizacionNueva(true); onCambiar('organizacion_id', undefined) }}
-            >
-              + Crear una organización nueva
-            </button>
           </label>
         )}
 
@@ -363,9 +374,12 @@ function FormularioUsuario({
             <input
               value={form.organizacion_nombre ?? ''}
               onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+              maxLength={150}
               placeholder="Ej: Avícola La Esperanza"
+              {...marcar('organizacion_nombre')}
               required
             />
+            {avisoDe('organizacion_nombre')}
             {organizaciones.length > 0 && (
               <button
                 type="button"

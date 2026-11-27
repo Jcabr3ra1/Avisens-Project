@@ -28,13 +28,19 @@ describe('puedeAcceder', () => {
     expect(puedeAcceder('/granjas', ROL_ADMIN)).toBe(true)
     expect(puedeAcceder('/granjas', ROL_PROPIETARIO)).toBe(true)
     expect(puedeAcceder('/granjas', ROL_OPERARIO)).toBe(false)
+    expect(puedeAcceder('/granjas/galpones/31', ROL_PROPIETARIO)).toBe(true)
+    expect(puedeAcceder('/granjas/galpones/31', ROL_ADMIN)).toBe(true)
+    expect(puedeAcceder('/granjas/galpones/31', ROL_OPERARIO)).toBe(false)
   })
 
-  it('el operario entra a la bodega y a consultar proveedores', () => {
+  it('el detalle de dispositivos hereda los permisos de /dispositivos', () => {
+    expect(puedeAcceder('/dispositivos/31', ROL_ADMIN)).toBe(true)
+    expect(puedeAcceder('/dispositivos/31', ROL_PROPIETARIO)).toBe(false)
+    expect(puedeAcceder('/dispositivos/31', ROL_OPERARIO)).toBe(false)
+  })
+
+  it('el operario entra a la bodega', () => {
     expect(puedeAcceder('/inventario', ROL_OPERARIO)).toBe(true)
-    expect(puedeAcceder('/proveedores', ROL_OPERARIO)).toBe(true)
-    expect(puedeAcceder('/proveedores', ROL_ADMIN)).toBe(true)
-    expect(puedeAcceder('/proveedores', ROL_PROPIETARIO)).toBe(false)
   })
 
   it('mi jornada es solo del operario', () => {

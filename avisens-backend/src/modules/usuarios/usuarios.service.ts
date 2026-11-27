@@ -5,11 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EstadoRecuperacionPassword, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { RestablecerPasswordDto } from './dto/restablecer-password.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { normalizarUsername } from '../../common/auth/username';
@@ -735,6 +737,98 @@ export class UsuariosService {
 
     await this.prisma.usuario.update({ where: { id }, data: { activo: true } });
     return { id, activo: true };
+  }
+
+  /**
+   * Restablece la contraseña de un usuario gestionado:
+   * - Propietario: únicamente Operarios de su propia organización.
+   * - Administrador: cualquier usuario gestionado distinto a sí mismo.
+   * Revoca sesiones activas y exige cambio de contraseña en el siguiente ingreso.
+   */
+  async restablecerPassword(
+    id: number,
+    dto: RestablecerPasswordDto,
+    solicitante: Solicitante,
+  ) {
+    if (id === solicitante.id) {
+      throw new BadRequestException(
+        'Usa «Mi perfil» para cambiar tu propia contraseña.',
+      );
+    }
+
+    const usuario = await this.obtener(id, solicitante);
+    if (!usuario.activo) {
+      throw new BadRequestException(
+        'No se puede restablecer la contraseña de un usuario inactivo.',
+      );
+    }
+
+    const manual = dto.nueva_password?.trim();
+    const passwordAsignada =
+      manual && manual.length > 0
+        ? manual
+        : `Av-${randomBytes(9).toString('base64url')}!9`;
+    const passwordHash = await bcrypt.hash(passwordAsignada, 12);
+    const esOperario = usuario.rol.nombre === ROLES.OPERARIO;
+    const ahora = new Date();
+    const expiraEn = esOperario
+      ? null
+      : new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.usuario.update({
+        where: { id },
+        data: { password_hash: passwordHash },
+      });
+      await tx.seguridadCuenta.upsert({
+        where: { usuario_id: id },
+        create: {
+          usuario_id: id,
+          debe_cambiar_password: !esOperario,
+          password_temporal_expira_en: expiraEn,
+          fecha_ultimo_cambio_password: esOperario ? ahora : null,
+        },
+        update: {
+          intentos_fallidos: 0,
+          bloqueado_hasta: null,
+          debe_cambiar_password: !esOperario,
+          password_temporal_expira_en: expiraEn,
+          ...(esOperario ? { fecha_ultimo_cambio_password: ahora } : {}),
+        },
+      });
+      await tx.sesion.updateMany({
+        where: { usuario_id: id, revocada: false },
+        data: { revocada: true },
+      });
+      await tx.recuperacionPassword.updateMany({
+        where: {
+          usuario_id: id,
+          estado: EstadoRecuperacionPassword.pendiente,
+        },
+        data: {
+          estado: esOperario
+            ? EstadoRecuperacionPassword.completada
+            : EstadoRecuperacionPassword.aprobada,
+          usado: esOperario,
+          atendida_por_id: solicitante.id,
+          atendida_en: ahora,
+          observacion:
+            dto.observacion?.trim() ||
+            'Actualizada directamente desde gestión de usuarios',
+          expira_en: expiraEn,
+        },
+      });
+    });
+
+    return {
+      usuario_id: id,
+      password_temporal: passwordAsignada,
+      expira_en: expiraEn,
+      debe_cambiar_password: !esOperario,
+      aviso: esOperario
+        ? 'Esta contraseña queda activa de inmediato para el operario. Se muestra una sola vez.'
+        : 'Esta contraseña temporal se muestra una sola vez y vence en 24 horas.',
+    };
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {

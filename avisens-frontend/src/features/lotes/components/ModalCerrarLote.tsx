@@ -1,6 +1,7 @@
 import { useState, useMemo, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import {
   cerrarLote,
   type Lote,
@@ -10,18 +11,18 @@ import {
 import { gramosALibras, librasAGramos } from '../model/pesoObjetivo'
 import '@shared/ui/Modal/Modal.css'
 
+const ID_FORMULARIO = 'formulario-cerrar-lote'
+
 interface Props {
   lote: Lote
   onCerrar: () => void
   onExito: () => void
 }
 
-function hoyFechaIso(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
-  const [fechaSalida, setFechaSalida] = useState(hoyFechaIso())
+  const hoy = fechaDeHoy()
+  const fechaIngresoIso = lote.fecha_ingreso.slice(0, 10)
+  const [fechaSalida, setFechaSalida] = useState(hoy)
   const [avesVendidas, setAvesVendidas] = useState<number | ''>(lote.cantidad_inicial)
   const [modoLibras, setModoLibras] = useState(true)
   const [pesoValor, setPesoValor] = useState<string>('5.5')
@@ -60,12 +61,36 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
   }, [totalKilosVendidos, valorVentaTotal])
 
   async function ejecutarCierre(forzar = false) {
-    if (avesVendidas === '' || avesVendidas <= 0) {
-      setError('Ingresa la cantidad de aves vendidas.')
+    if (!fechaSalida) {
+      setError('Selecciona la fecha real de salida.')
       return
     }
-    if (pesoFinalGramos <= 0) {
-      setError('Ingresa un peso promedio final válido.')
+    if (fechaSalida < fechaIngresoIso) {
+      setError('La fecha real de salida no puede ser anterior al ingreso del lote.')
+      return
+    }
+    if (fechaSalida > hoy) {
+      setError('La fecha real de salida no puede ser futura.')
+      return
+    }
+    if (
+      avesVendidas === '' ||
+      !Number.isInteger(avesVendidas) ||
+      avesVendidas < 0 ||
+      avesVendidas > lote.cantidad_inicial
+    ) {
+      setError(`Las aves vendidas deben ser un entero entre 0 y ${lote.cantidad_inicial.toLocaleString('es-CO')}.`)
+      return
+    }
+    if (pesoFinalGramos <= 0 || pesoFinalGramos > 10_000) {
+      setError('Ingresa un peso promedio final válido (hasta 10.000 g o 22 lb por ave).')
+      return
+    }
+    if (
+      valorVentaTotal !== '' &&
+      (!Number.isFinite(valorVentaTotal) || valorVentaTotal < 0 || valorVentaTotal > 10_000_000_000)
+    ) {
+      setError('El ingreso total de venta debe estar entre $0 y $10.000.000.000.')
       return
     }
 
@@ -123,7 +148,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               onCerrar()
             }}
           >
-            Aceptar y actualizar
+            Aceptar
           </button>
         }
       >
@@ -164,7 +189,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               <>
                 <div>
                   <dt>Ingreso total por venta</dt>
-                  <dd><strong style={{ color: 'var(--color-exito, #16a34a)' }}>$ {Number(valorVentaTotal).toLocaleString('es-CO')} COP</strong></dd>
+                  <dd><strong style={{ color: 'var(--success)' }}>$ {Number(valorVentaTotal).toLocaleString('es-CO')} COP</strong></dd>
                 </div>
                 <div>
                   <dt>Precio por kilo</dt>
@@ -183,6 +208,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
       titulo={`Cerrar lote · ${lote.codigo}`}
       subtitulo={`Galpón: ${lote.galpon.nombre} · ${lote.galpon.granja.nombre}`}
       onCerrar={onCerrar}
+      bloqueado={guardando}
       ancho="normal"
       acciones={
         <>
@@ -195,9 +221,9 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
             Cancelar
           </button>
           <button
-            type="button"
+            type="submit"
+            form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            onClick={() => void ejecutarCierre(confirmarOmisiones)}
             disabled={guardando}
           >
             {guardando ? 'Finalizando ciclo…' : avisoFaltantes ? 'Confirmar y cerrar de todos modos' : 'Cerrar y liquidar lote'}
@@ -205,7 +231,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
         </>
       }
     >
-      <form onSubmit={manejarSubmit} className="modal-formulario">
+      <form id={ID_FORMULARIO} onSubmit={manejarSubmit} className="modal-formulario">
         {error && (
           <div className="adm-alerta" role="alert" style={{ marginBottom: '1rem' }}>
             <span>{error}</span>
@@ -213,7 +239,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
         )}
 
         {avisoFaltantes && (
-          <div className="adm-aviso" role="alert" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--color-aviso, #d97706)' }}>
+          <div className="adm-aviso" role="alert" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--warning)' }}>
             <strong>{avisoFaltantes.mensaje}</strong>
             {avisoFaltantes.diasAlimento.length > 0 && (
               <p style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
@@ -232,13 +258,14 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+        <div className="modal-fila">
           <label className="modal-campo">
             <span>Fecha real de salida *</span>
             <input
               type="date"
               value={fechaSalida}
-              max={hoyFechaIso()}
+              min={fechaIngresoIso}
+              max={hoy}
               onChange={(e) => setFechaSalida(e.target.value)}
               required
               disabled={guardando}
@@ -251,6 +278,8 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               type="number"
               min="0"
               max={lote.cantidad_inicial}
+              step="1"
+              inputMode="numeric"
               value={avesVendidas}
               onChange={(e) => setAvesVendidas(e.target.value === '' ? '' : Number(e.target.value))}
               required
@@ -286,6 +315,8 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               type="number"
               step="any"
               min="0"
+              max={modoLibras ? '22.05' : '10000'}
+              inputMode="decimal"
               value={pesoValor}
               onChange={(e) => setPesoValor(e.target.value)}
               placeholder={modoLibras ? 'Ej. 5.5' : 'Ej. 2500'}
@@ -300,13 +331,15 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
           </label>
         </div>
 
-        <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+        <div className="modal-fila" style={{ marginTop: '1rem' }}>
           <label className="modal-campo">
             <span>Ingreso total venta (COP)</span>
             <input
               type="number"
               min="0"
-              step="1000"
+              max="10000000000"
+              step="1"
+              inputMode="numeric"
               value={valorVentaTotal}
               onChange={(e) => setValorVentaTotal(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder="Ej. 58000000"

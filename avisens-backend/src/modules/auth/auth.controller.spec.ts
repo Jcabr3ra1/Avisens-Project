@@ -3,14 +3,15 @@ import { ROLES } from '../../common/auth/roles';
 import { AuthController } from './auth.controller';
 
 describe('AuthController · cambiar contraseña', () => {
-  it('no lo permite al Propietario (QA 17-nov)', () => {
+  it('solo lo permite al Administrador (Propietario y Operario no se cambian su clave solos)', () => {
     const metodo = Object.getOwnPropertyDescriptor(
       AuthController.prototype,
       'cambiarPassword',
     )?.value as object;
     const roles = Reflect.getMetadata(ROLES_KEY, metodo) as string[];
 
-    expect(roles).toEqual([ROLES.ADMINISTRADOR, ROLES.OPERARIO]);
+    expect(roles).toEqual([ROLES.ADMINISTRADOR]);
     expect(roles).not.toContain(ROLES.PROPIETARIO);
+    expect(roles).not.toContain(ROLES.OPERARIO);
   });
 });

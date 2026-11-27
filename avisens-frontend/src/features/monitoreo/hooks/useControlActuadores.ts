@@ -81,7 +81,7 @@ export function useControlActuadores(galponId: number, onOrdenFinalizada: () => 
       setErrorCarga('')
       if (termino) avisarFin.current()
     } catch (err) {
-      setErrorCarga(mensajeDeError(err, err instanceof Error ? err.message : 'No se pudo consultar el estado de los actuadores.'))
+      setErrorCarga(mensajeDeError(err, 'No se pudo consultar el estado de los actuadores.'))
     }
   }, [galponId, aplicarOrdenes])
 
@@ -128,7 +128,7 @@ export function useControlActuadores(galponId: number, onOrdenFinalizada: () => 
     } catch (err) {
       setErrores((e) => ({
         ...e,
-        [sensorId]: mensajeDeError(err, err instanceof Error ? err.message : 'No se pudo enviar la orden.'),
+        [sensorId]: mensajeDeError(err, 'No se pudo enviar la orden.'),
       }))
     } finally {
       setEnviando((e) => ({ ...e, [sensorId]: false }))

@@ -36,8 +36,7 @@ export function filtrarLotes(
     const coincideBusqueda =
       !termino ||
       lote.codigo.toLowerCase().includes(termino) ||
-      lote.galpon.nombre.toLowerCase().includes(termino) ||
-      lote.proveedor?.nombre.toLowerCase().includes(termino)
+      lote.galpon.nombre.toLowerCase().includes(termino)
     return coincideEstado && coincideBusqueda
   })
 }

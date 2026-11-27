@@ -26,7 +26,11 @@
 EstadoSistema estadoSistema = EstadoSistema::INIT;
 
 // Sensores
-SensorDHT sensorDHT;
+SensorDHT sensorDHT(DHTPIN, "DHT22");
+#ifdef DHT2_PIN
+// Segundo DHT22 en otra zona del galpón: solo informa (ver config.h).
+SensorDHT sensorDHT2(DHT2_PIN, "DHT22-2");
+#endif
 SensorMQ135 sensorMQ135;
 SensorKY032 sensorKY032;
 SensorUltrasonico sensorUltrasonico;
@@ -86,6 +90,43 @@ LecturaDHT leerSnapshotDht()
   LecturaDHT copia = snapshotDht;
   portEXIT_CRITICAL(&muxLecturaDht);
   return copia;
+}
+
+#ifdef DHT2_PIN
+static LecturaDHT snapshotDht2 = {0.0f, 0.0f, false, 0};
+
+void publicarLecturaDht2(const LecturaDHT &lectura)
+{
+  portENTER_CRITICAL(&muxLecturaDht);
+  snapshotDht2 = lectura;
+  portEXIT_CRITICAL(&muxLecturaDht);
+}
+
+LecturaDHT leerSnapshotDht2()
+{
+  portENTER_CRITICAL(&muxLecturaDht);
+  LecturaDHT copia = snapshotDht2;
+  portEXIT_CRITICAL(&muxLecturaDht);
+  return copia;
+}
+#endif
+
+// Una lectura del DHT sirve para enviar solo si es válida y reciente.
+static bool dhtListoParaEnviar(const LecturaDHT &lectura, const char *nombre)
+{
+  if (!lectura.valida)
+  {
+    LOG_WARN(String("Ingesta: ") + nombre + " sin lectura válida, se omite del envío");
+    return false;
+  }
+  unsigned long antiguedad = millis() - lectura.timestamp;
+  if (antiguedad > UMBRAL_SNAPSHOT_OBSOLETO_MS)
+  {
+    LOG_WARN(String("Ingesta: snapshot ") + nombre + " obsoleto (" + String(antiguedad) +
+             "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
+    return false;
+  }
+  return true;
 }
 
 // Actuadores "encendidos desde el último envío": la persiana se mueve solo
@@ -386,6 +427,9 @@ void tareaGalpon(void *pvParameters)
 
       LecturaDHT lecturaDHT = sensorDHT.leer();
       publicarLecturaDht(lecturaDHT);
+#ifdef DHT2_PIN
+      publicarLecturaDht2(sensorDHT2.leer());
+#endif
       LecturaMQ135 lecturaMQ135 = sensorMQ135.leer();
       publicarLecturaGas(lecturaMQ135);
       LecturaKY032 lecturaKY032 = sensorKY032.leer();
@@ -501,6 +545,14 @@ void tareaGalpon(void *pvParameters)
         Serial.printf("[Ciclo %lu] T=%.1f°C H=%.0f%% NH3=%d ESTADO=%d\n",
                       ciclosTarea, temperatura, humedad, rawNH3,
                       static_cast<int>(estadoSistema));
+#ifdef DHT2_PIN
+        LecturaDHT lectura2 = leerSnapshotDht2();
+        if (lectura2.valida)
+          Serial.printf("          T2=%.1f°C H2=%.0f%% (DHT22-2)\n",
+                        lectura2.temperatura, lectura2.humedad);
+        else
+          Serial.println("          DHT22-2 sin lectura válida");
+#endif
       }
     }
 
@@ -514,20 +566,7 @@ void tareaGalpon(void *pvParameters)
 static CicloIngesta armarCicloLecturas()
 {
   LecturaDHT lectura = leerSnapshotDht();
-  unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
-  bool incluirDht = true;
-
-  if (!lectura.valida)
-  {
-    LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
-    incluirDht = false;
-  }
-  else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
-  {
-    LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
-             "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
-    incluirDht = false;
-  }
+  bool incluirDht = dhtListoParaEnviar(lectura, "DHT");
 
   CicloIngesta ciclo;
   ciclo.resultados = nullptr;
@@ -537,6 +576,16 @@ static CicloIngesta armarCicloLecturas()
   ciclo.incluirDht = incluirDht;
   ciclo.temperatura = lectura.temperatura;
   ciclo.humedad = lectura.humedad;
+#ifdef DHT2_PIN
+  LecturaDHT lectura2 = leerSnapshotDht2();
+  ciclo.incluirDht2 = dhtListoParaEnviar(lectura2, "DHT2");
+  ciclo.temperatura2 = lectura2.temperatura;
+  ciclo.humedad2 = lectura2.humedad;
+#else
+  ciclo.incluirDht2 = false;
+  ciclo.temperatura2 = 0.0f;
+  ciclo.humedad2 = 0.0f;
+#endif
   ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
   ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
   ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
@@ -647,6 +696,9 @@ void setup()
 
   Serial.println("[SETUP] Inicializando sensores...");
   sensorDHT.begin();
+#ifdef DHT2_PIN
+  sensorDHT2.begin();
+#endif
   sensorMQ135.begin();
   sensorKY032.begin();
   sensorUltrasonico.begin();

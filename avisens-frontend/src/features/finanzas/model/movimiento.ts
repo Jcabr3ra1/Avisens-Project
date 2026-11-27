@@ -1,3 +1,4 @@
+import { validarCodigo, validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CategoriaFinanciera,
   CrearMovimientoFinancieroPayload,
@@ -5,6 +6,37 @@ import type {
 } from '../api/movimientos-financieros'
 
 export type TipoMovimiento = 'ingreso' | 'egreso'
+export type FiltroTipoMovimiento = 'todos' | TipoMovimiento
+
+function normalizarTexto(valor: string): string {
+  return valor
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+export function filtrarMovimientos(
+  movimientos: MovimientoFinanciero[],
+  filtros: { tipo: FiltroTipoMovimiento; loteId: string; busqueda: string },
+): MovimientoFinanciero[] {
+  const termino = normalizarTexto(filtros.busqueda)
+  return movimientos.filter((movimiento) => {
+    if (filtros.tipo !== 'todos' && movimiento.tipo !== filtros.tipo) return false
+    if (filtros.loteId !== 'todos' && movimiento.lote?.id !== Number(filtros.loteId)) return false
+    if (!termino) return true
+    const texto = normalizarTexto(
+      [
+        movimiento.descripcion ?? '',
+        movimiento.categoria.nombre,
+        movimiento.granja.nombre,
+        movimiento.lote?.codigo ?? '',
+        movimiento.numero_factura ?? '',
+      ].join(' '),
+    )
+    return texto.includes(termino)
+  })
+}
 
 export interface FormularioMovimiento {
   tipo: TipoMovimiento
@@ -83,6 +115,16 @@ export function errorDeFormulario(form: FormularioMovimiento): string {
     return 'Ingrese un monto razonable: el máximo por movimiento es $10.000.000.000. Revisa si sobran dígitos.'
   }
   if (!form.fecha) return 'Elige la fecha del movimiento.'
+  const errDesc = validarTextoSeguro(form.descripcion, 'La descripción', {
+    max: 300,
+    multilinea: true,
+  })
+  if (errDesc) return errDesc
+  const errFactura = validarCodigo(form.numero_factura, 'El número de factura', {
+    requerido: false,
+    max: 60,
+  })
+  if (errFactura) return errFactura
   return ''
 }
 

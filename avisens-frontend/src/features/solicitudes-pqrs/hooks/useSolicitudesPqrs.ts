@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   listarTodasLasSolicitudesPqrs,
@@ -14,21 +15,25 @@ export function useSolicitudesPqrs() {
   const [error, setError] = useState('')
   const [ocupadaId, setOcupadaId] = useState<number | null>(null)
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  const cargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       setSolicitudes(await listarTodasLasSolicitudesPqrs())
     } catch {
-      setError('No se pudieron cargar las solicitudes.')
+      if (!silencioso) setError('No se pudieron cargar las solicitudes.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useRefetchOnFocus(() => {
+    void cargar(true)
+  })
 
   const reemplazar = useCallback((actualizada: SolicitudPqrs) => {
     setSolicitudes((actuales) => actuales.map((solicitud) => (solicitud.id === actualizada.id ? actualizada : solicitud)))

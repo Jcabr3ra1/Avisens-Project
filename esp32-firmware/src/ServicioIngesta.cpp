@@ -169,6 +169,13 @@ static String armarLecturas(const CicloIngesta &ciclo, int &enviadas) {
     lecturas += lecturaJson(CODIGO_SENSOR_HUM, String(ciclo.humedad, 1));
     enviadas += 2;
   }
+#ifdef DHT2_PIN
+  if (ciclo.incluirDht2) {
+    lecturas += lecturaJson(CODIGO_SENSOR_TEMP_2, String(ciclo.temperatura2, 1));
+    lecturas += lecturaJson(CODIGO_SENSOR_HUM_2, String(ciclo.humedad2, 1));
+    enviadas += 2;
+  }
+#endif
   if (ciclo.incluirAgua) {
     lecturas += lecturaJson(CODIGO_SENSOR_AGUA, String(ciclo.distanciaAgua, 1));
     enviadas += 1;

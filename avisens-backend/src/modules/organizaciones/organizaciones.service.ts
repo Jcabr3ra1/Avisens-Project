@@ -387,9 +387,8 @@ export class OrganizacionesService {
       OR: [{ galpon }, { lote }, { sensor: { galpon } }],
     };
     const insumo = { granja };
-    const orden: Prisma.OrdenCompraWhereInput = { OR: [{ granja }, { lote }] };
     const movimientoInventario: Prisma.MovimientoInventarioWhereInput = {
-      OR: [{ insumo }, { lote }, { detalle_orden_compra: { orden } }],
+      OR: [{ insumo }, { lote }],
     };
 
     try {
@@ -444,7 +443,6 @@ export class OrganizacionesService {
             data: { usuario_id: null },
           });
 
-          await tx.alertaCanal.deleteMany({ where: { alerta } });
           await tx.evidenciaAlerta.deleteMany({ where: { alerta } });
           await tx.accionamientoEquipo.deleteMany({
             where: { OR: [{ alerta }, { equipo: { galpon } }] },
@@ -486,10 +484,6 @@ export class OrganizacionesService {
           await tx.movimientoInventario.deleteMany({
             where: movimientoInventario,
           });
-          await tx.detalleOrdenCompra.deleteMany({
-            where: { OR: [{ orden }, { insumo }] },
-          });
-          await tx.ordenCompra.deleteMany({ where: orden });
 
           await tx.medicion.deleteMany({ where: { sensor: { galpon } } });
           await tx.ingestaDispositivo.deleteMany({
@@ -510,7 +504,6 @@ export class OrganizacionesService {
           await tx.galpon.deleteMany({ where: galpon });
 
           await tx.inventarioInsumo.deleteMany({ where: insumo });
-          await tx.politicaAlerta.deleteMany({ where: { granja } });
           await tx.clima.deleteMany({ where: { granja } });
           await tx.granja.deleteMany({ where: granja });
 

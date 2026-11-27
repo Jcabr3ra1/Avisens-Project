@@ -106,15 +106,20 @@ export function proximoPaso(
   }
 }
 
+export function lotesActivosDeGalpon(galpon: GalponConLotes): Lote[] {
+  if (Array.isArray(galpon.lotesEnCurso)) return galpon.lotesEnCurso
+  return galpon.loteEnCurso ? [galpon.loteEnCurso] : []
+}
+
 export function progresoDatos(granja: GranjaConEstructura): ProgresoDatos {
   const pendientes: PendienteDatos[] = []
   let total = 1
   if (faltantesGranja(granja.granja).length > 0) pendientes.push({ tipo: 'granja' })
   for (const galpon of granja.galpones) {
     if (!galpon.activo) continue
-    if (galpon.loteEnCurso) {
+    for (const lote of lotesActivosDeGalpon(galpon)) {
       total += 1
-      if (faltantesLote(galpon.loteEnCurso).length > 0) pendientes.push({ tipo: 'lote', lote: galpon.loteEnCurso })
+      if (faltantesLote(lote).length > 0) pendientes.push({ tipo: 'lote', lote })
     }
   }
   return { completos: total - pendientes.length, total, pendientes }
@@ -123,8 +128,9 @@ export function progresoDatos(granja: GranjaConEstructura): ProgresoDatos {
 export function tarjetaGalpon(galpon: GalponConLotes): TarjetaGalpon {
   const temperatura = lecturaPorTipo(galpon.sensores, 'temp')
   const humedad = lecturaPorTipo(galpon.sensores, 'hum')
-  const lote = galpon.loteEnCurso
-  const aves = lote?.cantidad_inicial ?? 0
+  const activos = lotesActivosDeGalpon(galpon)
+  const lote = activos[0] ?? null
+  const aves = activos.reduce((total, item) => total + item.cantidad_inicial, 0)
   const estado: TarjetaGalpon['estado'] = !galpon.activo
     ? 'inactivo'
     : galpon.alertasAbiertas > 0 || galpon.estadoOperativo === 'alerta'
@@ -142,10 +148,15 @@ export function tarjetaGalpon(galpon: GalponConLotes): TarjetaGalpon {
   return {
     estado,
     etiquetaEstado: etiquetas[estado],
-    lote: lote ? `${lote.codigo} · día ${diasDeVida(lote.fecha_ingreso)}` : null,
+    lote:
+      activos.length === 0
+        ? null
+        : activos.length === 1
+          ? `${activos[0].codigo} · día ${diasDeVida(activos[0].fecha_ingreso)}`
+          : `${activos.length} lotes activos`,
     temperatura: temperatura?.valor != null ? `${decimal.format(temperatura.valor)} ${temperatura.unidad}` : null,
     humedad: humedad?.valor != null ? `${decimal.format(humedad.valor)} ${humedad.unidad}` : null,
-    ocupacion: lote ? porcentajeOcupacion(aves, galpon.capacidadAves) : null,
+    ocupacion: activos.length > 0 ? porcentajeOcupacion(aves, galpon.capacidadAves) : null,
     aves,
   }
 }
@@ -155,4 +166,87 @@ export function sensoresReportando(galpon: GalponConLotes): { reportando: number
     reportando: galpon.sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length,
     total: galpon.sensores.length,
   }
+}
+
+export type FiltroGalponPropietario = 'todos' | 'con_lote' | 'alertas' | 'disponibles'
+
+export type ResumenGalponesGranja = {
+  total: number
+  conLote: number
+  conAlertas: number
+  disponibles: number
+  sensoresActivos: number
+  sensoresTotal: number
+}
+
+function normalizarTexto(valor: string): string {
+  return valor
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function tieneAlertaOAtencion(galpon: GalponConLotes): boolean {
+  return galpon.alertasAbiertas > 0 || galpon.estadoOperativo === 'alerta' || galpon.estadoOperativo === 'atencion'
+}
+
+export function resumenGalponesGranja(galpones: GalponConLotes[]): ResumenGalponesGranja {
+  let conLote = 0
+  let conAlertas = 0
+  let disponibles = 0
+  let sensoresActivos = 0
+  let sensoresTotal = 0
+
+  for (const galpon of galpones) {
+    if (galpon.loteEnCurso !== null) conLote += 1
+    if (tieneAlertaOAtencion(galpon)) conAlertas += 1
+    if (galpon.activo && galpon.loteEnCurso === null) disponibles += 1
+    const cuenta = sensoresReportando(galpon)
+    sensoresActivos += cuenta.reportando
+    sensoresTotal += cuenta.total
+  }
+
+  return {
+    total: galpones.length,
+    conLote,
+    conAlertas,
+    disponibles,
+    sensoresActivos,
+    sensoresTotal,
+  }
+}
+
+export function filtrarGalpones(
+  galpones: GalponConLotes[],
+  filtro: FiltroGalponPropietario,
+  busqueda: string,
+): GalponConLotes[] {
+  const termino = normalizarTexto(busqueda)
+  return galpones.filter((galpon) => {
+    if (filtro === 'con_lote' && galpon.loteEnCurso === null) return false
+    if (filtro === 'alertas' && !tieneAlertaOAtencion(galpon)) return false
+    if (filtro === 'disponibles' && (!galpon.activo || galpon.loteEnCurso !== null)) return false
+    if (!termino) return true
+    const codigosLotes = lotesActivosDeGalpon(galpon).map((item) => item.codigo).join(' ')
+    const texto = normalizarTexto([galpon.nombre, galpon.codigo, codigosLotes].join(' '))
+    return texto.includes(termino)
+  })
+}
+
+export function siguienteGalponPropietario(
+  galpones: GalponConLotes[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (galpones.length === 0) return null
+  if (tecla === 'Home') return galpones[0].id
+  if (tecla === 'End') return galpones[galpones.length - 1].id
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = galpones.findIndex((g) => g.id === actualId)
+  if (indice === -1) return galpones[0].id
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(galpones.length - 1, indice + 1)
+    : Math.max(0, indice - 1)
+  return galpones[siguiente].id
 }

@@ -6,13 +6,18 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
+  Max,
   Min,
 } from 'class-validator';
 import {
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
+  VALOR_MAXIMO_MOVIMIENTO_COP,
 } from '../../../common/avicultura/vocabulario';
+import {
+  AVES_MAXIMO_LOTE,
+  NombreEntidad,
+} from '../../../common/validation/texto';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -22,16 +27,6 @@ export class CreateLoteDto {
   @IsInt()
   @Min(1)
   galpon_id: number;
-
-  @ApiPropertyOptional({
-    example: 1,
-    description: 'ID del proveedor que vendio los pollitos',
-    nullable: true,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  proveedor_id?: number | null;
 
   @ApiProperty({
     example: '2026-08-06',
@@ -46,10 +41,11 @@ export class CreateLoteDto {
   })
   @IsInt()
   @IsPositive()
+  @Max(AVES_MAXIMO_LOTE)
   cantidad_inicial: number;
 
   @ApiPropertyOptional({ example: 'Ross 308', description: 'Raza de las aves' })
-  @IsString()
+  @NombreEntidad('La raza', 80, false)
   @IsOptional()
   raza?: string;
 
@@ -90,6 +86,7 @@ export class CreateLoteDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   @IsOptional()
   costo_pollito_unitario?: number;
 
@@ -99,6 +96,7 @@ export class CreateLoteDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   @IsOptional()
   presupuesto_total_cop?: number;
 

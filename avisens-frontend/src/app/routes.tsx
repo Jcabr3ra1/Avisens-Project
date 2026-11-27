@@ -36,16 +36,16 @@ const SensoresPage = lazy(() => import('@features/sensores/SensoresPage'))
 const OperarioPage = lazy(() => import('@features/operario/OperarioPage'))
 const CaptacionPage = lazy(() => import('@features/captacion/CaptacionPage'))
 const SolicitudesPqrsPage = lazy(() => import('@features/solicitudes-pqrs/SolicitudesPqrsPage'))
-const ProveedoresPage = lazy(() => import('@features/proveedores/ProveedoresPage'))
-const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCompraPage'))
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
 const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
 const PerfilPage = lazy(() => import('@features/perfil/PerfilPage'))
 const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
 const CatalogosPage = lazy(() => import('@features/catalogos/CatalogosPage'))
 const DispositivosPage = lazy(() => import('@features/dispositivos/DispositivosPage'))
+const DispositivoDetallePage = lazy(() => import('@features/dispositivos/DispositivoDetallePage'))
 const OrganizacionesPage = lazy(() => import('@features/organizaciones/OrganizacionesPage'))
 const OrganizacionDetallePage = lazy(() => import('@features/organizaciones/OrganizacionDetallePage'))
+const GalponDetallePropietarioPage = lazy(() => import('@features/granjas/propietario/GalponDetallePropietarioPage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
@@ -111,15 +111,15 @@ function AppRoutes() {
         <Route path="/finanzas"        element={cargarPagina(<FinanzasPage />)} />
         <Route path="/inventario"      element={cargarPagina(<InventarioPage />)} />
         <Route path="/usuarios"        element={cargarPagina(<UsuariosPage />)} />
-        <Route path="/proveedores"     element={cargarPagina(<ProveedoresPage />)} />
-        <Route path="/ordenes-compra"  element={cargarPagina(<OrdenesCompraPage />)} />
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />
         <Route path="/dispositivos"     element={cargarPagina(<DispositivosPage />)} />
+        <Route path="/dispositivos/:id" element={cargarPagina(<DispositivoDetallePage />)} />
         <Route path="/organizaciones"   element={cargarPagina(<OrganizacionesPage />)} />
         <Route path="/organizaciones/:id" element={cargarPagina(<OrganizacionDetallePage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
+        <Route path="/granjas/galpones/:id" element={cargarPagina(<GalponDetallePropietarioPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />

@@ -43,6 +43,7 @@ function FormularioProspecto() {
               id="captacion-nombre"
               value={formulario.nombre}
               onChange={(evento) => actualizar('nombre', evento.target.value)}
+              maxLength={120}
               autoComplete="name"
               aria-invalid={Boolean(errores.nombre)}
               aria-describedby={errores.nombre ? 'captacion-nombre-error' : undefined}
@@ -56,6 +57,7 @@ function FormularioProspecto() {
               id="captacion-telefono"
               type="tel"
               inputMode="tel"
+              maxLength={18}
               value={formulario.telefono}
               onChange={(evento) => actualizar('telefono', evento.target.value)}
               autoComplete="tel"
@@ -71,6 +73,7 @@ function FormularioProspecto() {
               id="captacion-municipio"
               value={formulario.municipio}
               onChange={(evento) => actualizar('municipio', evento.target.value)}
+              maxLength={100}
               autoComplete="address-level2"
               aria-invalid={Boolean(errores.municipio)}
               aria-describedby={errores.municipio ? 'captacion-municipio-error' : undefined}
@@ -84,6 +87,7 @@ function FormularioProspecto() {
               id="captacion-produccion"
               value={formulario.tipo_produccion}
               onChange={(evento) => actualizar('tipo_produccion', evento.target.value)}
+              maxLength={120}
               aria-invalid={Boolean(errores.tipo_produccion)}
               aria-describedby={errores.tipo_produccion ? 'captacion-produccion-error' : undefined}
             />
@@ -95,6 +99,7 @@ function FormularioProspecto() {
             <input
               id="captacion-email"
               type="email"
+              maxLength={150}
               value={formulario.email}
               onChange={(evento) => actualizar('email', evento.target.value)}
               autoComplete="email"

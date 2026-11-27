@@ -21,7 +21,7 @@ function BarraLotes({ busqueda, estado, visibles, total, onBuscar, onCambiarEsta
   return (
     <BarraHerramientas
       busqueda={busqueda}
-      placeholder="Buscar por código, galpón o proveedor"
+      placeholder="Buscar por código o galpón"
       etiquetaBusqueda="Buscar lotes"
       onBuscar={onBuscar}
       filtro={estado}

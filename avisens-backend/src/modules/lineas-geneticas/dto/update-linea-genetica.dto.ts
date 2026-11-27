@@ -1,15 +1,6 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { OmitType, PartialType } from '@nestjs/swagger';
+import { CreateLineaGeneticaDto } from './create-linea-genetica.dto';
 
-export class UpdateLineaGeneticaDto {
-  @ApiPropertyOptional({ example: 'Ross 308' })
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  nombre?: string;
-
-  @ApiPropertyOptional({ example: 'Línea de engorde de Aviagen' })
-  @IsString()
-  @IsOptional()
-  descripcion?: string;
-}
+export class UpdateLineaGeneticaDto extends PartialType(
+  OmitType(CreateLineaGeneticaDto, ['codigo'] as const),
+) {}

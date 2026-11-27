@@ -4,14 +4,22 @@ import type { SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbienta
 import type { DashboardIndicador } from '@features/dashboard/model/dashboard'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import type { GalponConLotes, GranjaConEstructura } from '../hooks/useEstructuraGranjas'
-import { pesajesDelLote, progresoDatos, proximoPaso, sensoresReportando, tarjetaGalpon } from './explorador'
+import {
+  filtrarGalpones,
+  pesajesDelLote,
+  progresoDatos,
+  proximoPaso,
+  resumenGalponesGranja,
+  sensoresReportando,
+  siguienteGalponPropietario,
+  tarjetaGalpon,
+} from './explorador'
 
 const loteCompleto = {
   id: 9, codigo: 'LOT-9', fecha_ingreso: '2026-10-16', cantidad_inicial: 500, raza: null, sexo: 'macho',
   marca_alimento: 'italcol', linea_genetica: { id: 2, codigo: 'cobb_500', nombre: 'Cobb 500' },
   costo_pollito_unitario: null, presupuesto_total_cop: null, fecha_salida_estimada: null, fecha_salida_real: null,
   estado: 'activo', galpon: { id: 31, nombre: 'G', granja: { id: 1, nombre: 'el jaller', propietario_id: 56 } },
-  proveedor: { id: 1, nombre: 'Italcol S.A.' },
 } as Lote
 
 function sensor(tipo: string, valor: number | null, estado: SensorVista['estado'] = 'optimo'): SensorVista {
@@ -24,7 +32,7 @@ function galpon(cambios: Partial<GalponConLotes> = {}): GalponConLotes {
     anchoMetros: 12, largoMetros: 100, loteActivo: null, diaVida: 3,
     origen: {
       id: 31, codigo: 'GAL-31', nombre: 'jallergalpon', capacidad_aves: 500, ancho_metros: 12, largo_metros: 100,
-      orientacion: 'norte-sur', tipo_techo: 'zinc', plano_url: null, fecha_construccion: '2020-01-01', activo: true,
+      orientacion: 'norte-sur', tipo_techo: 'zinc', fecha_construccion: '2020-01-01', activo: true,
       granja: { id: 1, nombre: 'el jaller', propietario_id: 56 },
     },
     sensores: [sensor('Temperatura', 27.4), sensor('Humedad', 63.5)],
@@ -110,7 +118,60 @@ describe('tarjetaGalpon', () => {
     expect(tarjetaGalpon(galpon({ loteEnCurso: null }))).toMatchObject({ estado: 'vacio', etiquetaEstado: 'Sin lote', lote: null })
   })
 
+  it('resume correctamente un galpón con múltiples lotes activos simultáneos', () => {
+    const segundo = { ...loteCompleto, id: 10, codigo: 'LOT-10', cantidad_inicial: 300 } as Lote
+    const multi = galpon({
+      capacidadAves: 1000,
+      loteEnCurso: loteCompleto,
+      lotesEnCurso: [loteCompleto, segundo],
+      lotes: [loteCompleto, segundo],
+    })
+    expect(tarjetaGalpon(multi)).toMatchObject({
+      estado: 'ok',
+      lote: '2 lotes activos',
+      aves: 800,
+      ocupacion: 80,
+    })
+    expect(filtrarGalpones([multi], 'todos', 'lot-10').map((g) => g.id)).toEqual([31])
+  })
+
   it('cuenta los sensores que reportan', () => {
     expect(sensoresReportando(galpon({ sensores: [sensor('Temperatura', 27), sensor('Humedad', null, 'offline')] }))).toEqual({ reportando: 1, total: 2 })
+  })
+})
+
+describe('filtrarGalpones y navegación', () => {
+  const lista = [
+    galpon({ id: 1, nombre: 'Galpón Norte', codigo: 'GAL-01', alertasAbiertas: 2 }),
+    galpon({ id: 2, nombre: 'Galpón Sur', codigo: 'GAL-02', alertasAbiertas: 0, loteEnCurso: null }),
+    galpon({ id: 3, nombre: 'Galpón Este', codigo: 'GAL-03', alertasAbiertas: 0, activo: false, loteEnCurso: null }),
+  ]
+
+  it('resume galpones por estado y sensores', () => {
+    expect(resumenGalponesGranja(lista)).toEqual({
+      total: 3,
+      conLote: 1,
+      conAlertas: 1,
+      disponibles: 1,
+      sensoresActivos: 6,
+      sensoresTotal: 6,
+    })
+  })
+
+  it('filtra por estado y búsqueda sin sensibilidad a tildes', () => {
+    expect(filtrarGalpones(lista, 'todos', '').map((g) => g.id)).toEqual([1, 2, 3])
+    expect(filtrarGalpones(lista, 'con_lote', '').map((g) => g.id)).toEqual([1])
+    expect(filtrarGalpones(lista, 'alertas', '').map((g) => g.id)).toEqual([1])
+    expect(filtrarGalpones(lista, 'disponibles', '').map((g) => g.id)).toEqual([2])
+    expect(filtrarGalpones(lista, 'todos', 'galpon sur').map((g) => g.id)).toEqual([2])
+    expect(filtrarGalpones(lista, 'todos', 'lot-9').map((g) => g.id)).toEqual([1])
+  })
+
+  it('navega la lista con flechas, Home y End', () => {
+    expect(siguienteGalponPropietario(lista, 1, 'ArrowDown')).toBe(2)
+    expect(siguienteGalponPropietario(lista, 1, 'ArrowUp')).toBe(1)
+    expect(siguienteGalponPropietario(lista, 1, 'End')).toBe(3)
+    expect(siguienteGalponPropietario(lista, 3, 'Home')).toBe(1)
+    expect(siguienteGalponPropietario(lista, 1, 'Enter')).toBeNull()
   })
 })

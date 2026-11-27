@@ -1,15 +1,15 @@
-import { useState, type CSSProperties } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ROL_PROPIETARIO } from '@shared/auth/permisos'
 import {
+  IcAlert,
+  IcArrowRight,
   IcBarn,
-  IcChevronDown,
   IcChip,
   IcEdit,
   IcEgg,
   IcEye,
-  IcGrid,
   IcPin,
   IcPlus,
   IcSettings,
@@ -31,11 +31,9 @@ import './EstructuraOrganizacion.css'
 
 type Props = {
   detalle: OrganizacionDetalle
+  granjaActivaId: number | null
+  onSeleccionarGranja: (granjaId: number) => void
   recargarDetalle: () => Promise<void>
-  resaltadaId: number | null
-  reveladaId: number | null
-  reveladaVez: number
-  onResaltar: (granjaId: number | null) => void
 }
 
 const fecha = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -61,9 +59,8 @@ function aGranja(granja: GranjaOrganizacionDetalle): Granja {
   }
 }
 
-function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, reveladaId, reveladaVez, onResaltar }: Props) {
+function EstructuraOrganizacion({ detalle, granjaActivaId, onSeleccionarGranja, recargarDetalle }: Props) {
   const estructura = useEstructuraOrganizacion(detalle.granjas.map((granja) => granja.id))
-  const [abiertoId, setAbiertoId] = useState<number | null>(null)
   const [monitoreo, setMonitoreo] = useState<{ id: number; nombre: string } | null>(null)
   const propietarios = detalle.usuarios
     .filter((usuario) => usuario.rol.nombre === ROL_PROPIETARIO)
@@ -74,19 +71,19 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
   }
 
   const formGranja = useFormularioGranja(async (datos, editandoId) => {
-    if (editandoId === null) await crearGranja(datos)
-    else await actualizarGranja(editandoId, datos)
+    if (editandoId === null) {
+      const nueva = await crearGranja(datos)
+      onSeleccionarGranja(nueva.id)
+    } else {
+      await actualizarGranja(editandoId, datos)
+    }
     toast.success(editandoId === null ? 'Granja creada' : 'Granja actualizada')
     await recargarTodo()
   })
 
   const formGalpon = useFormularioGalpon(async (datos, editandoId) => {
-    if (editandoId === null) {
-      const nuevo = await crearGalpon(datos)
-      setAbiertoId(nuevo.id)
-    } else {
-      await actualizarGalpon(editandoId, datos)
-    }
+    if (editandoId === null) await crearGalpon(datos)
+    else await actualizarGalpon(editandoId, datos)
     toast.success(editandoId === null ? 'Galpón registrado' : 'Galpón actualizado')
     await recargarTodo()
   })
@@ -98,17 +95,35 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
     await recargarTodo()
   })
 
-  const loteEnCurso = (galponId: number) =>
-    estructura.lotes.find((lote) => lote.galpon.id === galponId && lote.estado === 'activo') ?? null
+  const granjaActiva = detalle.granjas.find((item) => item.id === granjaActivaId) ?? detalle.granjas[0] ?? null
+  const galponesDeGranja = granjaActiva
+    ? estructura.galpones.filter((galpon) => galpon.granja.id === granjaActiva.id)
+    : []
+  const lotesEnCurso = (galponId: number) =>
+    estructura.lotes
+      .filter((lote) => lote.galpon.id === galponId && lote.estado === 'activo')
+      .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
+
+  const ubicacion = granjaActiva
+    ? [granjaActiva.municipio, granjaActiva.departamento].filter(Boolean).join(', ')
+      || granjaActiva.direccion
+      || 'Ubicación sin registrar'
+    : ''
+  const tieneSensores = granjaActiva
+    ? granjaActiva.galpones.some((galpon) => galpon._count.sensores > 0)
+    : false
 
   return (
     <div className="est">
-      <div className="est-barra">
-        <p>Organiza cada granja con sus galpones, el lote que está criando y los sensores que lo vigilan.</p>
-        <button type="button" className="est-boton est-boton--principal" onClick={() => formGranja.abrirCrear(propietarios[0]?.id)} disabled={propietarios.length === 0}>
-          <IcPlus size={16} aria-hidden="true" /> Nueva granja
-        </button>
-      </div>
+      {propietarios.length === 0 && (
+        <div className="est-aviso-propietario" role="status">
+          <IcAlert size={16} aria-hidden="true" />
+          <span>Para crear una granja, primero registra al menos una persona con rol <strong>Propietario</strong> en este cliente.</span>
+          <Link to="/usuarios" className="est-boton est-boton--suave">
+            Ir a usuarios <IcArrowRight size={14} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
 
       {estructura.error && (
         <div className="adm-alerta" role="alert">
@@ -119,100 +134,152 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
 
       {detalle.granjas.length === 0 ? (
         <div className="est-vacio">
-          <IcPin size={26} aria-hidden="true" />
-          <h3>Esta organización aún no tiene granjas</h3>
-          <p>Registra la primera granja para empezar a montar su estructura.</p>
-        </div>
-      ) : detalle.granjas.map((granja, indice) => {
-        const galpones = estructura.galpones.filter((galpon) => galpon.granja.id === granja.id)
-        const ubicacion = [granja.municipio, granja.departamento].filter(Boolean).join(', ') || granja.direccion || 'Ubicación sin registrar'
-        const revelada = reveladaId === granja.id
-        const tieneSensores = granja.galpones.some((galpon) => galpon._count.sensores > 0)
-        return (
-          <article
-            key={revelada ? `${granja.id}-${reveladaVez}` : granja.id}
-            id={`org-granja-${granja.id}`}
-            className={`est-granja org-aparece${revelada ? ' is-revelada' : ''}${resaltadaId === granja.id ? ' is-resaltada' : ''}${granja.activa ? '' : ' is-inactiva'}`}
-            style={{ '--orden': Math.min(indice, 6) } as CSSProperties}
-            onMouseEnter={() => onResaltar(granja.id)}
-            onMouseLeave={() => onResaltar(null)}
+          <IcBarn size={28} aria-hidden="true" />
+          <h3>Este cliente aún no tiene granjas</h3>
+          <p>Registra la primera granja para crear sus galpones, iniciar lotes y conectar sensores.</p>
+          <button
+            type="button"
+            className="est-boton est-boton--principal"
+            onClick={() => formGranja.abrirCrear(propietarios[0]?.id)}
+            disabled={propietarios.length === 0}
           >
-            <header className="est-granja-cabecera">
-              <span className="est-granja-icono" aria-hidden="true"><IcBarn size={22} /></span>
-              <div className="est-granja-ident">
-                <div className="est-granja-titulo-fila">
-                  <h3>{granja.nombre}</h3>
-                  <span className={`est-estado${granja.activa ? ' is-activo' : ''}`}>
-                    <span className="est-estado-punto" aria-hidden="true" />
-                    {granja.activa ? 'Activa' : 'Inactiva'}
-                  </span>
-                </div>
-                <p className="est-granja-meta">
-                  <span className="est-meta-ubicacion">
-                    <IcPin size={13} aria-hidden="true" />
-                    {ubicacion}
-                  </span>
-                  <span className="est-meta-sep" aria-hidden="true">·</span>
-                  <span className="est-meta-propietario">
-                    Propietario: <strong>{granja.propietario.nombre_completo}</strong>
-                  </span>
-                </p>
+            <IcPlus size={16} aria-hidden="true" /> Registrar primera granja
+          </button>
+        </div>
+      ) : granjaActiva ? (
+        <>
+          {detalle.granjas.length > 1 && (
+            <div className="est-selector-barra">
+              <div className="est-selector-pills" role="tablist" aria-label="Granjas del cliente">
+                {detalle.granjas.map((granja) => {
+                  const activa = granja.id === granjaActiva.id
+                  return (
+                    <button
+                      key={granja.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activa}
+                      className={`est-selector-pill${activa ? ' is-activa' : ''}`}
+                      onClick={() => onSeleccionarGranja(granja.id)}
+                    >
+                      <IcBarn size={14} aria-hidden="true" />
+                      <span>{granja.nombre}</span>
+                      <small>{granja.galpones.length}</small>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="est-granja-acciones">
-                {tieneSensores && (
-                  <button type="button" className="est-boton est-boton--monitoreo" onClick={() => setMonitoreo({ id: granja.id, nombre: granja.nombre })}>
-                    <IcEye size={15} aria-hidden="true" /> Monitoreo
-                  </button>
-                )}
-                <button type="button" className="est-boton est-boton--secundario" onClick={() => formGranja.abrirEditar(aGranja(granja))}>
-                  <IcSettings size={15} aria-hidden="true" /> Editar granja
-                </button>
-              </div>
-            </header>
-
-            <div className="est-granja-cuerpo">
-              <div className="est-galpones-cabecera">
-                <div className="est-galpones-titulo">
-                  <h4>Galpones</h4>
-                  <span className="est-galpones-conteo">{galpones.length}</span>
-                </div>
-                <button type="button" className="est-boton est-boton--suave" onClick={() => formGalpon.abrirCrear(granja.id)} disabled={!granja.activa}>
-                  <IcPlus size={15} aria-hidden="true" /> Nuevo galpón
-                </button>
-              </div>
-
-              {estructura.cargando && galpones.length === 0 ? (
-                <div className="est-esqueleto org-brilla" aria-hidden="true" />
-              ) : galpones.length === 0 ? (
-                <div className="est-vacio est-vacio--compacto">
-                  <p>Esta granja aún no tiene galpones. Registra el primero para iniciar un lote y conectar sus sensores.</p>
-                  <button type="button" className="est-boton est-boton--principal" onClick={() => formGalpon.abrirCrear(granja.id)} disabled={!granja.activa}>
-                    <IcPlus size={15} aria-hidden="true" /> Registrar el primer galpón
-                  </button>
-                </div>
-              ) : (
-                <ul className="est-galpones">
-                  {galpones.map((galpon) => (
-                    <FilaGalpon
-                      key={galpon.id}
-                      galpon={galpon}
-                      lote={loteEnCurso(galpon.id)}
-                      sensores={granja.galpones.find((item) => item.id === galpon.id)?._count.sensores ?? 0}
-                      controladores={granja.galpones.find((item) => item.id === galpon.id)?._count.dispositivo ?? 0}
-                      abierto={abiertoId === galpon.id}
-                      habilitado={detalle.activa && granja.activa && galpon.activo}
-                      onAlternar={() => setAbiertoId((actual) => (actual === galpon.id ? null : galpon.id))}
-                      onEditarGalpon={() => formGalpon.abrirEditar(galpon)}
-                      onIniciarLote={() => formLote.abrirCrear(galpon.id)}
-                      onEditarLote={(lote) => formLote.abrirEditar(lote)}
-                    />
-                  ))}
-                </ul>
-              )}
+              <button
+                type="button"
+                className="est-boton est-boton--suave"
+                onClick={() => formGranja.abrirCrear(propietarios[0]?.id)}
+                disabled={propietarios.length === 0}
+              >
+                <IcPlus size={15} aria-hidden="true" /> Nueva granja
+              </button>
             </div>
-          </article>
-        )
-      })}
+          )}
+
+          <header className="est-granja-resumen">
+            <div className="est-granja-resumen-info">
+              <div className="est-granja-titulo-fila">
+                <h2>{granjaActiva.nombre}</h2>
+                <span className={`est-estado${granjaActiva.activa ? ' is-activo' : ''}`}>
+                  <span className="est-estado-punto" aria-hidden="true" />
+                  {granjaActiva.activa ? 'Activa' : 'Inactiva'}
+                </span>
+              </div>
+              <p className="est-granja-meta">
+                <span className="est-meta-ubicacion">
+                  <IcPin size={13} aria-hidden="true" /> {ubicacion}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>Propietario: <strong>{granjaActiva.propietario.nombre_completo}</strong></span>
+              </p>
+            </div>
+
+            <div className="est-granja-acciones">
+              {tieneSensores && (
+                <button
+                  type="button"
+                  className="est-boton est-boton--monitoreo"
+                  onClick={() => setMonitoreo({ id: granjaActiva.id, nombre: granjaActiva.nombre })}
+                >
+                  <IcEye size={15} aria-hidden="true" /> Monitoreo
+                </button>
+              )}
+              {detalle.granjas.length === 1 && (
+                <button
+                  type="button"
+                  className="est-boton est-boton--suave"
+                  onClick={() => formGranja.abrirCrear(propietarios[0]?.id)}
+                  disabled={propietarios.length === 0}
+                >
+                  <IcPlus size={15} aria-hidden="true" /> Nueva granja
+                </button>
+              )}
+              <button
+                type="button"
+                className="est-boton est-boton--secundario"
+                onClick={() => formGranja.abrirEditar(aGranja(granjaActiva))}
+              >
+                <IcSettings size={15} aria-hidden="true" /> Editar granja
+              </button>
+              <button
+                type="button"
+                className="est-boton est-boton--principal"
+                onClick={() => formGalpon.abrirCrear(granjaActiva.id)}
+                disabled={!granjaActiva.activa}
+              >
+                <IcPlus size={15} aria-hidden="true" /> Nuevo galpón
+              </button>
+            </div>
+          </header>
+
+          {estructura.cargando && galponesDeGranja.length === 0 ? (
+            <div className="est-galpones-grid" aria-hidden="true">
+              <div className="est-esqueleto org-brilla" />
+              <div className="est-esqueleto org-brilla" />
+            </div>
+          ) : galponesDeGranja.length === 0 ? (
+            <div className="est-vacio est-vacio--compacto">
+              <h3>Sin galpones en {granjaActiva.nombre}</h3>
+              <p>Registra el primer galpón para iniciar un lote y conectar sensores.</p>
+              <button
+                type="button"
+                className="est-boton est-boton--principal"
+                onClick={() => formGalpon.abrirCrear(granjaActiva.id)}
+                disabled={!granjaActiva.activa}
+              >
+                <IcPlus size={15} aria-hidden="true" /> Registrar primer galpón
+              </button>
+            </div>
+          ) : (
+            <ul className="est-galpones-grid" aria-label={`Galpones de ${granjaActiva.nombre}`}>
+              {galponesDeGranja.map((galpon) => {
+                const resumenGalpon = granjaActiva.galpones.find((item) => item.id === galpon.id)
+                const sensores = resumenGalpon?._count.sensores ?? 0
+                const controladores = resumenGalpon?._count.dispositivo ?? 0
+                const lotesActivos = lotesEnCurso(galpon.id)
+                const habilitado = detalle.activa && granjaActiva.activa && galpon.activo
+                return (
+                  <TarjetaGalpon
+                    key={galpon.id}
+                    galpon={galpon}
+                    lotesActivos={lotesActivos}
+                    sensores={sensores}
+                    controladores={controladores}
+                    habilitado={habilitado}
+                    onEditarGalpon={() => formGalpon.abrirEditar(galpon)}
+                    onIniciarLote={() => formLote.abrirCrear(galpon.id)}
+                    onEditarLote={(item) => formLote.abrirEditar(item)}
+                  />
+                )
+              })}
+            </ul>
+          )}
+        </>
+      ) : null}
 
       {monitoreo && (
         <MonitoreoGranja granjaId={monitoreo.id} granjaNombre={monitoreo.nombre} onCerrar={() => setMonitoreo(null)} />
@@ -252,7 +319,6 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
           form={formLote.form}
           modoEdicion={formLote.modoEdicion}
           galpones={estructura.galpones}
-          proveedores={estructura.proveedores}
           lineasGeneticas={estructura.lineasGeneticas}
           errorLineasGeneticas={estructura.errorLineas}
           guardando={formLote.guardando}
@@ -266,159 +332,115 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
   )
 }
 
-function FilaGalpon({
-  galpon, lote, sensores, controladores, abierto, habilitado, onAlternar, onEditarGalpon, onIniciarLote, onEditarLote,
+function TarjetaGalpon({
+  galpon,
+  lotesActivos,
+  sensores,
+  controladores,
+  habilitado,
+  onEditarGalpon,
+  onIniciarLote,
+  onEditarLote,
 }: {
   galpon: Galpon
-  lote: Lote | null
+  lotesActivos: Lote[]
   sensores: number
   controladores: number
-  abierto: boolean
   habilitado: boolean
-  onAlternar: () => void
   onEditarGalpon: () => void
   onIniciarLote: () => void
   onEditarLote: (lote: Lote) => void
 }) {
-  const idCuerpo = `est-galpon-${galpon.id}`
-  const dia = lote ? diaDeLote(lote) : null
-
   return (
-    <li className={`est-galpon${abierto ? ' is-abierto' : ''}${galpon.activo ? '' : ' is-inactivo'}`}>
-      <button type="button" className="est-galpon-fila" aria-expanded={abierto} aria-controls={idCuerpo} onClick={onAlternar}>
-        <span className="est-galpon-icono" aria-hidden="true"><IcGrid size={18} /></span>
-        <span className="est-galpon-ident">
-          <strong>{galpon.nombre}</strong>
-          <small className="est-galpon-sub">
+    <li className={`est-card${galpon.activo ? '' : ' is-inactiva'}`}>
+      <header className="est-card-top">
+        <div className="est-card-ident">
+          <div className="est-card-titulo-fila">
+            <h3>{galpon.nombre}</h3>
+            {!galpon.activo && <span className="est-etiqueta est-etiqueta--inactivo">Inactivo</span>}
+          </div>
+          <p className="est-card-sub">
             <code className="est-codigo">{galpon.codigo}</code>
-            {galpon.capacidad_aves ? <span> · capacidad {galpon.capacidad_aves.toLocaleString('es-CO')} aves</span> : null}
-          </small>
-        </span>
-        <span className="est-galpon-resumen">
-          {!galpon.activo && <span className="est-etiqueta est-etiqueta--inactivo">Inactivo</span>}
-          <span className={`est-etiqueta${lote ? ' est-etiqueta--lote' : ''}`}>
-            <IcEgg size={13} aria-hidden="true" />
-            {lote ? (
-              <span>
-                Lote <strong>{lote.codigo}</strong> · día {dia}
-              </span>
-            ) : (
-              'Sin lote'
-            )}
-          </span>
-          <span className={`est-indicador-iot${sensores > 0 ? ' is-activo' : ''}`}>
-            <IcThermo size={14} aria-hidden="true" />
-            {sensores === 1 ? '1 sensor' : `${sensores} sensores`}
-          </span>
-        </span>
-        <span className="est-galpon-flecha-caja" aria-hidden="true">
-          <IcChevronDown size={18} className="est-galpon-flecha" />
-        </span>
-      </button>
+            {galpon.capacidad_aves ? <span> · {galpon.capacidad_aves.toLocaleString('es-CO')} aves máx.</span> : null}
+          </p>
+        </div>
+        <button type="button" className="est-card-editar" onClick={onEditarGalpon}>
+          <IcEdit size={13} aria-hidden="true" /> Editar
+        </button>
+      </header>
 
-      <AnimatePresence initial={false}>
-        {abierto && (
-          <motion.div
-            id={idCuerpo}
-            className="est-galpon-cuerpo"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.26, ease: [0.2, 0, 0, 1] }}
-          >
-            <div className="est-galpon-contenido">
-              <div className="est-galpon-paneles">
-                <section className="est-bloque est-bloque--lote">
-                  <header className="est-bloque-cabecera">
-                    <div className="est-bloque-titulo">
-                      <span className="est-bloque-icono est-bloque-icono--lote" aria-hidden="true">
-                        <IcEgg size={14} />
+      <div className="est-card-lote">
+        {lotesActivos.length > 0 ? (
+          <>
+            <div className="est-card-lotes-lista">
+              {lotesActivos.map((lote) => {
+                const dia = diaDeLote(lote)
+                return (
+                  <div key={lote.id} className="est-card-lote-item">
+                    <div className="est-card-lote-cabecera">
+                      <span className="est-card-lote-badge">
+                        <IcEgg size={13} aria-hidden="true" /> Lote activo · Día {dia}
                       </span>
-                      <h5>Lote en curso</h5>
-                    </div>
-                    {lote ? (
-                      <button type="button" className="est-enlace est-enlace--accion" onClick={() => onEditarLote(lote)}>
-                        <IcEdit size={13} aria-hidden="true" /> Editar lote
+                      <button type="button" className="est-enlace" onClick={() => onEditarLote(lote)}>
+                        Editar lote
                       </button>
-                    ) : null}
-                  </header>
-
-                  {lote ? (
-                    <dl className="est-lote">
-                      <div className="est-lote-dato est-lote-dato--destacado">
-                        <dt>Ingreso</dt>
-                        <dd className="est-lote-ciclo">
-                          <strong className="est-lote-cifra">Día {dia}</strong>
-                          <span className="est-lote-subdato">{fecha.format(new Date(lote.fecha_ingreso))}</span>
-                        </dd>
-                      </div>
-                      <div className="est-lote-dato est-lote-dato--destacado">
+                    </div>
+                    <dl className="est-card-lote-datos">
+                      <div>
                         <dt>Aves</dt>
-                        <dd className="est-lote-aves">
-                          <strong className="est-lote-cifra">{lote.cantidad_inicial.toLocaleString('es-CO')}</strong>
-                        </dd>
+                        <dd>{lote.cantidad_inicial.toLocaleString('es-CO')}</dd>
                       </div>
-                      <div className="est-lote-dato est-lote-dato--codigo">
-                        <dt>Código</dt>
-                        <dd><code className="est-codigo-lote">{lote.codigo}</code></dd>
+                      <div>
+                        <dt>Ingreso</dt>
+                        <dd>{fecha.format(new Date(lote.fecha_ingreso))}</dd>
                       </div>
-                      <div className="est-lote-dato est-lote-dato--ficha">
-                        <dt>Línea genética</dt>
+                      <div>
+                        <dt>Línea</dt>
                         <dd>{lote.linea_genetica?.nombre ?? lote.raza ?? 'Sin registrar'}</dd>
                       </div>
-                      {lote.proveedor && (
-                        <div className="est-lote-dato est-lote-dato--ficha">
-                          <dt>Proveedor</dt>
-                          <dd>{lote.proveedor.nombre}</dd>
-                        </div>
-                      )}
+                      <div>
+                        <dt>Código</dt>
+                        <dd><code className="est-codigo">{lote.codigo}</code></dd>
+                      </div>
                     </dl>
-                  ) : (
-                    <div className="est-sin-lote">
-                      <p>Este galpón no está criando ningún lote.</p>
-                      <button type="button" className="est-boton est-boton--principal" onClick={onIniciarLote} disabled={!habilitado}>
-                        <IcPlus size={15} aria-hidden="true" /> Iniciar lote
-                      </button>
-                    </div>
-                  )}
-                </section>
-
-                <section className="est-bloque est-iot" aria-label="Controladores y sensores">
-                  <header className="est-bloque-cabecera">
-                    <div className="est-bloque-titulo">
-                      <span className="est-bloque-icono est-bloque-icono--iot" aria-hidden="true">
-                        <IcChip size={14} />
-                      </span>
-                      <h5>Controladores y sensores</h5>
-                    </div>
-                  </header>
-                  <div className="est-iot-cifras">
-                    <div className="est-iot-metrica">
-                      <strong>{controladores}</strong>
-                      <span>{controladores === 1 ? 'controlador' : 'controladores'}</span>
-                    </div>
-                    <div className="est-iot-metrica">
-                      <strong>{sensores}</strong>
-                      <span>{sensores === 1 ? 'sensor' : 'sensores'}</span>
-                    </div>
                   </div>
-                  <p className="est-nota">
-                    {habilitado
-                      ? 'Se instalan y configuran en Dispositivos, desde el riel verde.'
-                      : 'La organización, la granja y el galpón deben estar activos para conectar sensores.'}
-                  </p>
-                </section>
-              </div>
-
-              <footer className="est-galpon-pie">
-                <button type="button" className="est-enlace est-enlace--galpon" onClick={onEditarGalpon}>
-                  <IcSettings size={14} aria-hidden="true" /> Editar datos del galpón
-                </button>
-              </footer>
+                )
+              })}
             </div>
-          </motion.div>
+            <div className="est-card-lote-pie">
+              <button
+                type="button"
+                className="est-boton est-boton--suave"
+                onClick={onIniciarLote}
+                disabled={!habilitado}
+              >
+                <IcPlus size={14} aria-hidden="true" /> Nuevo lote
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="est-card-sin-lote">
+            <span>Sin lote en curso</span>
+            <button type="button" className="est-boton est-boton--principal" onClick={onIniciarLote} disabled={!habilitado}>
+              <IcPlus size={14} aria-hidden="true" /> Iniciar lote
+            </button>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
+
+      <footer className="est-card-pie">
+        <div className="est-card-iot">
+          <span className={controladores > 0 ? 'is-activo' : ''}>
+            <IcChip size={14} aria-hidden="true" /> {controladores} {controladores === 1 ? 'controlador' : 'controladores'}
+          </span>
+          <span className={sensores > 0 ? 'is-activo' : ''}>
+            <IcThermo size={14} aria-hidden="true" /> {sensores} {sensores === 1 ? 'sensor' : 'sensores'}
+          </span>
+        </div>
+        <Link to={`/dispositivos?galpon=${galpon.id}`} className="est-card-link">
+          Dispositivos <IcArrowRight size={13} aria-hidden="true" />
+        </Link>
+      </footer>
     </li>
   )
 }

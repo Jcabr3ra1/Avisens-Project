@@ -413,7 +413,6 @@ galpones [icon: package, color: green] {
   largo_metros number
   orientacion string
   tipo_techo string
-  plano_url string
   activo bool
   fecha_construccion date
 }

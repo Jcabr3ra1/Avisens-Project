@@ -5,7 +5,6 @@ import {
   type ConsumoDiario,
 } from '@features/consumos-diarios/api/consumosDiarios'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
-import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import {
   listarLineasGeneticas,
   type LineaGenetica,
@@ -21,6 +20,7 @@ export type GalponConLotes = GalponMonitoreoVista & {
   estadoOperativo: EstadoOperativo
   alertasAbiertas: number
   loteEnCurso: Lote | null
+  lotesEnCurso: Lote[]
   lotes: Lote[]
 }
 
@@ -36,16 +36,14 @@ export type GranjaConEstructura = {
 //
 // El ambiente sale de useMonitoreoAmbiental, que es un store compartido: si
 // el dashboard ya pidió sensores y mediciones, entrar aquí no vuelve a
-// pedirlos. Lo demás (granjas, lotes, alertas, consumos, proveedores) se
-// trae una vez y se reparte en memoria, en vez de que cada galpón dispare
-// su propia petición.
+// pedirlos. Lo demás (granjas, lotes, alertas, consumos) se trae una vez y se
+// reparte en memoria, en vez de que cada galpón dispare su propia petición.
 export function useEstructuraGranjas() {
   const monitoreo = useMonitoreoAmbiental()
   const [granjas, setGranjas] = useState<Granja[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
   const [alertas, setAlertas] = useState<Alerta[]>([])
   const [consumos, setConsumos] = useState<ConsumoDiario[]>([])
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [lineasGeneticas, setLineasGeneticas] = useState<LineaGenetica[]>([])
   const [lineasGeneticasError, setLineasGeneticasError] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -70,12 +68,9 @@ export function useEstructuraGranjas() {
       setCargando(false)
     }
 
-    // Consumos, proveedores y líneas genéticas son de apoyo: si fallan, la
-    // página sigue funcionando sin ese dato en lugar de caerse entera.
+    // Consumos y líneas genéticas son de apoyo: si fallan, la página sigue
+    // funcionando sin ese dato en lugar de caerse entera.
     void listarConsumosDiarios().then(setConsumos).catch(() => setConsumos([]))
-    void listarProveedores()
-      .then((lista) => setProveedores(lista.filter((proveedor) => proveedor.activo)))
-      .catch(() => setProveedores([]))
     void listarLineasGeneticas()
       .then((lista) => {
         setLineasGeneticas(lista)
@@ -118,11 +113,13 @@ export function useEstructuraGranjas() {
             (a, b) =>
               new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime(),
           )
+          const activos = suyos.filter((lote) => lote.estado === 'activo')
           return {
             ...galpon,
             estadoOperativo: estadoOperativoDeGalpon(galpon.activo, galpon.sensores),
             alertasAbiertas: abiertasPorGalpon.get(galpon.id) ?? 0,
-            loteEnCurso: suyos.find((lote) => lote.estado === 'activo') ?? null,
+            loteEnCurso: activos[0] ?? null,
+            lotesEnCurso: activos,
             lotes: suyos,
           }
         })
@@ -130,9 +127,10 @@ export function useEstructuraGranjas() {
       return {
         granja,
         galpones,
-        lotesActivos: galpones.filter((galpon) => galpon.loteEnCurso !== null).length,
+        lotesActivos: galpones.reduce((total, galpon) => total + galpon.lotesEnCurso.length, 0),
         avesAlojadas: galpones.reduce(
-          (total, galpon) => total + (galpon.loteEnCurso?.cantidad_inicial ?? 0),
+          (total, galpon) =>
+            total + galpon.lotesEnCurso.reduce((suma, lote) => suma + lote.cantidad_inicial, 0),
           0,
         ),
         alertasAbiertas: galpones.reduce((total, galpon) => total + galpon.alertasAbiertas, 0),
@@ -156,7 +154,6 @@ export function useEstructuraGranjas() {
 
   return {
     estructura,
-    proveedores,
     lineasGeneticas,
     lineasGeneticasError,
     consumoPorLote,

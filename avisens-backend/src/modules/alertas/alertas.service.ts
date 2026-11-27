@@ -130,13 +130,20 @@ export class AlertasService {
     const semanaVida = loteActivo
       ? semanaDeVida(diaDeVida(loteActivo.fecha_ingreso, fecha))
       : 0;
+    // El umbral de la semana del lote o, si esa semana no tiene, el de la
+    // última semana configurada antes de ella. La configuración cubre el
+    // ciclo de la semana 0 a la 6; un lote que sigue en el galpón después
+    // (semana 7 en adelante) no encontraba umbral y ninguna lectura se
+    // comparaba: el galpón podía pasar de 24 °C sin una sola alerta. Se usa
+    // el rango que el propietario ya configuró, sin inventar valores.
     const umbral = await this.prisma.umbralAmbiental.findFirst({
       where: {
         galpon_id: sensor.galpon_id,
         variable,
-        semana_vida: semanaVida,
+        semana_vida: { lte: semanaVida },
         vigente: true,
       },
+      orderBy: { semana_vida: 'desc' },
       select: {
         valor_minimo: true,
         valor_maximo: true,

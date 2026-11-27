@@ -15,15 +15,15 @@ export function useCurvasObjetivo() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
+  const recargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       setCurvas(await listarCurvasObjetivo())
     } catch {
-      setError('No se pudieron cargar las curvas objetivo.')
+      if (!silencioso) setError('No se pudieron cargar las curvas objetivo.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
@@ -35,13 +35,14 @@ export function useCurvasObjetivo() {
   ) => {
     if (editandoId === null) await crearCurvaObjetivo(payload)
     else await actualizarCurvaObjetivo(editandoId, payload)
-    await recargar()
+    await recargar(true)
+    toast.success(editandoId === null ? 'Punto de curva creado' : 'Punto de curva actualizado')
   }, [recargar])
 
   const eliminar = useCallback(async (curva: CurvaObjetivo) => {
     try {
       await eliminarCurvaObjetivo(curva.id)
-      await recargar()
+      await recargar(true)
       toast.success('Punto de curva eliminado')
     } catch (problema) {
       // El backend devuelve 403 con un mensaje propio si se intenta borrar una

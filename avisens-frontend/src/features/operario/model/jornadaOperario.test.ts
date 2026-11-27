@@ -27,6 +27,15 @@ describe('crearJornadasOperario', () => {
     )
     expect(jornadas.map((jornada) => jornada.galpon.id)).toEqual([1, 2])
     expect(jornadas[0].lote?.id).toBe(11)
+    expect(jornadas[0].lotesActivos.map((item) => item.id)).toEqual([11])
     expect(jornadas[1].lote).toBeNull()
+  })
+
+  it('conserva todos los lotes activos de un galpón ordenados por ingreso más reciente', () => {
+    const antiguo: LoteOperario = { ...lote(1, 1), fecha_ingreso: '2026-10-10' }
+    const reciente: LoteOperario = { ...lote(2, 1), fecha_ingreso: '2026-11-15' }
+    const jornadas = crearJornadasOperario([galpon(1)], [antiguo, reciente])
+    expect(jornadas[0].lote?.id).toBe(2)
+    expect(jornadas[0].lotesActivos.map((item) => item.id)).toEqual([2, 1])
   })
 })

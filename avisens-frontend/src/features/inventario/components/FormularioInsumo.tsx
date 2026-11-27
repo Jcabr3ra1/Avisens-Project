@@ -1,14 +1,13 @@
+import type { FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Granja } from '@features/granjas/api/granjas'
-import type { Proveedor } from '@features/proveedores/api/proveedores'
 import type { FormularioInsumoDatos } from '../model/formularioInsumo'
+
+const ID_FORMULARIO = 'formulario-insumo'
 
 interface Props {
   form: FormularioInsumoDatos
   granjas: Granja[]
-  proveedores: Proveedor[]
-  // Solo quien puede dar de alta proveedores ve el acceso (HU-58, escenario 3).
-  onNuevoProveedor?: () => void
   modoEdicion: boolean
   guardando: boolean
   error: string
@@ -23,8 +22,6 @@ interface Props {
 function FormularioInsumo({
   form,
   granjas,
-  proveedores,
-  onNuevoProveedor,
   modoEdicion,
   guardando,
   error,
@@ -35,19 +32,26 @@ function FormularioInsumo({
   const puedeGuardar =
     form.nombre.trim() !== '' && form.unidad_medida.trim() !== '' && form.granja_id > 0
 
+  function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    if (!guardando && puedeGuardar) onGuardar()
+  }
+
   return (
     <Modal
+      variante="lateral"
       titulo={modoEdicion ? 'Editar insumo' : 'Nuevo insumo'}
       onCerrar={onCerrar}
+      bloqueado={guardando}
       acciones={
         <>
           <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
           <button
-            type="button"
+            type="submit"
+            form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            onClick={onGuardar}
             disabled={guardando || !puedeGuardar}
           >
             {guardando ? 'Guardando…' : modoEdicion ? 'Guardar' : 'Agregar insumo'}
@@ -55,6 +59,7 @@ function FormularioInsumo({
         </>
       }
     >
+      <form id={ID_FORMULARIO} onSubmit={manejarSubmit}>
       {!modoEdicion && (
         <label className="modal-campo">
           <span>Granja</span>
@@ -82,6 +87,7 @@ function FormularioInsumo({
             value={form.nombre}
             onChange={(evento) => onCambiar('nombre', evento.target.value)}
             placeholder="Alimento iniciación"
+            maxLength={120}
             required
           />
         </label>
@@ -91,6 +97,7 @@ function FormularioInsumo({
             value={form.unidad_medida}
             onChange={(evento) => onCambiar('unidad_medida', evento.target.value)}
             placeholder="kg"
+            maxLength={30}
             required
           />
         </label>
@@ -105,6 +112,7 @@ function FormularioInsumo({
             value={form.tipo}
             onChange={(evento) => onCambiar('tipo', evento.target.value)}
             placeholder="alimento, sanitario, cama…"
+            maxLength={60}
           />
         </label>
         <label className="modal-campo">
@@ -112,40 +120,13 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000"
             step="0.001"
+            inputMode="decimal"
             value={form.stock_minimo}
             onChange={(evento) => onCambiar('stock_minimo', evento.target.value)}
           />
         </label>
-      </div>
-
-      <div className="modal-campo">
-        <label className="modal-campo-etiqueta" htmlFor="insumo-proveedor">
-          Proveedor <em>(opcional)</em>
-        </label>
-        <select
-          id="insumo-proveedor"
-          value={form.proveedor_habitual_id || ''}
-          onChange={(evento) => onCambiar('proveedor_habitual_id', Number(evento.target.value) || 0)}
-        >
-          <option value="">
-            {proveedores.length === 0 ? 'No hay proveedores registrados' : 'Sin proveedor'}
-          </option>
-          {proveedores.map((proveedor) => (
-            <option key={proveedor.id} value={proveedor.id}>
-              {proveedor.nombre} · NIT {proveedor.nit}
-            </option>
-          ))}
-        </select>
-        {onNuevoProveedor ? (
-          <button type="button" className="inv-enlace" onClick={onNuevoProveedor}>
-            + ¿No está en la lista? Registrar proveedor
-          </button>
-        ) : (
-          proveedores.length === 0 && (
-            <small className="modal-ayuda">Los proveedores los registra el propietario de la granja.</small>
-          )
-        )}
       </div>
 
       {!modoEdicion && (
@@ -156,7 +137,9 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000"
             step="0.001"
+            inputMode="decimal"
             value={form.stock_actual}
             onChange={(evento) => onCambiar('stock_actual', evento.target.value)}
           />
@@ -171,6 +154,9 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000000"
+            step="1"
+            inputMode="numeric"
             value={form.precio_unitario_cop}
             onChange={(evento) => onCambiar('precio_unitario_cop', evento.target.value)}
           />
@@ -183,6 +169,7 @@ function FormularioInsumo({
             value={form.ubicacion_almacen}
             onChange={(evento) => onCambiar('ubicacion_almacen', evento.target.value)}
             placeholder="Bodega 1, estante A"
+            maxLength={120}
           />
         </label>
       </div>
@@ -203,6 +190,7 @@ function FormularioInsumo({
           {error}
         </p>
       )}
+      </form>
     </Modal>
   )
 }

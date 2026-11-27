@@ -21,10 +21,16 @@ import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { AsignarGalponDto } from './dto/asignar-galpon.dto';
+import { RestablecerPasswordDto } from './dto/restablecer-password.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email?: string | null; rol: string };
+  user: {
+    id: number;
+    email?: string | null;
+    rol: string;
+    organizacion_id?: number | null;
+  };
 }
 
 @ApiTags('usuarios')
@@ -116,6 +122,19 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Activar un usuario' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.usuariosService.activar(id, req.user);
+  }
+
+  @Post(':id/restablecer-password')
+  @ApiOperation({
+    summary:
+      'Restablecer contraseña con clave temporal (Admin: usuarios · Propietario: sus operarios)',
+  })
+  restablecerPassword(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RestablecerPasswordDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.usuariosService.restablecerPassword(id, dto, req.user);
   }
 
   @Delete(':id')

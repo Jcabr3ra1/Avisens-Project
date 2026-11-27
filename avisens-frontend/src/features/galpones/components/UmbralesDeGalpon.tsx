@@ -3,13 +3,13 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
+import { IcDrop, IcEdit, IcPlus, IcSun, IcThermo, IcTrash } from '@shared/ui/icons/icons'
 import { VARIABLES_UMBRAL, type Umbral } from '../api/umbrales'
 import { useUmbrales } from '../hooks/useUmbrales'
 import {
   agruparPorVariable,
   etiquetaSemana,
   rangoLegible,
-  SEMANAS_CICLO,
   totalDeHuecos,
 } from '../model/umbralVista'
 import FormularioUmbral from './FormularioUmbral'
@@ -19,6 +19,18 @@ const UNIDAD_POR_VARIABLE: Record<string, string> = {
   temperatura: '°C',
   humedad: '%',
   luminosidad: 'lux',
+}
+
+const ETIQUETA_VARIABLE: Record<string, string> = {
+  temperatura: 'Temperatura',
+  humedad: 'Humedad',
+  luminosidad: 'Luminosidad',
+}
+
+const ICONO_VARIABLE: Record<string, typeof IcThermo> = {
+  temperatura: IcThermo,
+  humedad: IcDrop,
+  luminosidad: IcSun,
 }
 
 const VALORES_SUGERIDOS: Record<
@@ -59,6 +71,7 @@ type Props = { galpon: { id: number } }
 function UmbralesDeGalpon({ galpon }: Props) {
   const permisos = permisosOperativosDeGalpon(getRol())
   const { umbrales, cargando, error, recargar, crear, revisar, jubilar } = useUmbrales(galpon.id)
+  const [variableActiva, setVariableActiva] = useState<string>(VARIABLES_UMBRAL[0])
   const [editando, setEditando] = useState<
     { variable: string; semana: number; existente: Umbral | null } | null
   >(null)
@@ -69,6 +82,7 @@ function UmbralesDeGalpon({ galpon }: Props) {
     [umbrales],
   )
   const huecos = totalDeHuecos(filas)
+  const filaActiva = filas.find((f) => f.variable === variableActiva) ?? filas[0] ?? null
 
   async function cargarValoresSugeridos() {
     if (cargandoSugeridos || !permisos.configurar) return
@@ -114,10 +128,10 @@ function UmbralesDeGalpon({ galpon }: Props) {
 
   async function jubilarConAviso(umbral: Umbral) {
     if (!(await confirmarAccion({
-      titulo: '¿Jubilar este umbral?',
-      entidad: `${umbral.variable} · ${etiquetaSemana(umbral.semana_vida)}`,
+      titulo: '¿Quitar este umbral?',
+      entidad: `${ETIQUETA_VARIABLE[umbral.variable] ?? umbral.variable} · ${etiquetaSemana(umbral.semana_vida)}`,
       descripcion: 'Esa semana dejará de compararse y el sensor no generará alertas.',
-      textoConfirmar: 'Jubilar umbral',
+      textoConfirmar: 'Quitar umbral',
       tono: 'aviso',
     }))) return
     void jubilar(umbral)
@@ -125,37 +139,18 @@ function UmbralesDeGalpon({ galpon }: Props) {
 
   return (
     <div className="umb-bloque">
-      {/* Los huecos van arriba y con número: una semana sin umbral no es un
-          hueco cosmético, es que esa lectura no se compara con nada y el
-          galpón sale verde aunque esté fuera de rango. */}
       {!cargando && huecos > 0 && (
-        <div
-          className="umb-aviso"
-          role="status"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 'var(--space-3)',
-          }}
-        >
-          <div>
+        <div className="umb-aviso" role="status">
+          <div className="umb-aviso-texto">
             <strong>{huecos} {huecos === 1 ? 'umbral sin definir' : 'umbrales sin definir'}.</strong>{' '}
-            Mientras falten, esas lecturas no se comparan con nada: el galpón se ve
-            en verde aunque la temperatura esté fuera de rango.
+            Mientras falten, esas lecturas no se comparan con nada y el galpón puede verse en verde aunque esté fuera de rango.
           </div>
           {permisos.configurar && (
             <button
               type="button"
-              className="adm-btn adm-btn--secundario"
+              className="adm-btn adm-btn--primario umb-aviso-btn"
               onClick={() => void cargarValoresSugeridos()}
               disabled={cargandoSugeridos}
-              style={{
-                fontSize: '0.85rem',
-                padding: 'var(--space-1) var(--space-3)',
-                whiteSpace: 'nowrap',
-              }}
             >
               {cargandoSugeridos ? 'Cargando sugeridos…' : 'Cargar valores sugeridos'}
             </button>
@@ -172,82 +167,104 @@ function UmbralesDeGalpon({ galpon }: Props) {
 
       {cargando ? (
         <p className="umb-vacio" role="status">Cargando umbrales…</p>
-      ) : (
-        <div className="umb-scroll">
-          <table className="umb-tabla">
-            <thead>
-              <tr>
-                <th scope="col">Variable</th>
-                {SEMANAS_CICLO.map((semana) => (
-                  <th key={semana} scope="col">
-                    <span className="umb-semana">Semana {semana}</span>
-                    <span className="umb-dias">{etiquetaSemana(semana)}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((fila) => (
-                <tr key={fila.variable}>
-                  <th scope="row" className="umb-variable">
-                    {fila.variable}
-                    {fila.faltan > 0 && (
-                      <span className="umb-faltan">faltan {fila.faltan}</span>
+      ) : filaActiva ? (
+        <>
+          <div className="umb-variables" role="tablist" aria-label="Variables ambientales">
+            {filas.map((fila) => {
+              const Icono = ICONO_VARIABLE[fila.variable] ?? IcThermo
+              const total = fila.celdas.length
+              const definidos = total - fila.faltan
+              const activa = fila.variable === filaActiva.variable
+              return (
+                <button
+                  key={fila.variable}
+                  type="button"
+                  role="tab"
+                  aria-selected={activa}
+                  className={`umb-var-tab${activa ? ' is-activa' : ''}`}
+                  onClick={() => setVariableActiva(fila.variable)}
+                >
+                  <Icono size={15} aria-hidden="true" />
+                  <span>{ETIQUETA_VARIABLE[fila.variable] ?? fila.variable}</span>
+                  <span className={`umb-var-cuenta${fila.faltan > 0 ? ' is-pendiente' : ''}`}>
+                    {definidos}/{total}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <ul className="umb-grid" aria-label={`Umbrales de ${ETIQUETA_VARIABLE[filaActiva.variable] ?? filaActiva.variable}`}>
+            {filaActiva.celdas.map((celda) => {
+              const umbral = celda.umbral
+              return (
+                <li
+                  key={celda.semana}
+                  className={`umb-card${umbral ? ` umb-card--${umbral.criticidad}` : ' umb-card--vacia'}`}
+                >
+                  <div className="umb-card-top">
+                    <div>
+                      <strong className="umb-card-semana">Semana {celda.semana}</strong>
+                      <span className="umb-card-dias">{etiquetaSemana(celda.semana)}</span>
+                    </div>
+                    {umbral ? (
+                      <span className={`umb-crit umb-crit--${umbral.criticidad}`}>
+                        {umbral.criticidad}
+                      </span>
+                    ) : (
+                      <span className="umb-crit umb-crit--vacia">Sin definir</span>
                     )}
-                  </th>
-                  {fila.celdas.map((celda) => (
-                    <td key={celda.semana} className={celda.umbral ? '' : 'umb-celda--vacia'}>
-                      {celda.umbral ? (
-                        <>
-                          <span className="umb-rango">{rangoLegible(celda.umbral)}</span>
-                          <span className={`umb-crit umb-crit--${celda.umbral.criticidad}`}>
-                            {celda.umbral.criticidad}
-                          </span>
-                          {permisos.configurar && (
-                            <span className="umb-acciones">
-                              <button
-                                type="button"
-                                onClick={() => setEditando({
-                                  variable: fila.variable,
-                                  semana: celda.semana,
-                                  existente: celda.umbral,
-                                })}
-                              >
-                                Revisar
-                              </button>
-                              <button
-                                type="button"
-                                className="umb-btn--peligro"
-                                onClick={() => jubilarConAviso(celda.umbral as Umbral)}
-                              >
-                                Jubilar
-                              </button>
-                            </span>
-                          )}
-                        </>
-                      ) : permisos.configurar ? (
-                        <button
-                          type="button"
-                          className="umb-definir"
-                          onClick={() => setEditando({
-                            variable: fila.variable,
-                            semana: celda.semana,
-                            existente: null,
-                          })}
-                        >
-                          Definir
-                        </button>
-                      ) : (
-                        <span className="umb-sin">Sin definir</span>
+                  </div>
+
+                  {umbral ? (
+                    <>
+                      <div className="umb-card-rango">{rangoLegible(umbral)}</div>
+                      {permisos.configurar && (
+                        <div className="umb-card-acciones">
+                          <button
+                            type="button"
+                            className="umb-card-btn"
+                            onClick={() => setEditando({
+                              variable: filaActiva.variable,
+                              semana: celda.semana,
+                              existente: umbral,
+                            })}
+                          >
+                            <IcEdit size={13} aria-hidden="true" /> Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="umb-card-btn umb-card-btn--peligro"
+                            aria-label={`Quitar umbral de semana ${celda.semana}`}
+                            onClick={() => void jubilarConAviso(umbral)}
+                          >
+                            <IcTrash size={13} aria-hidden="true" />
+                          </button>
+                        </div>
                       )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    </>
+                  ) : permisos.configurar ? (
+                    <button
+                      type="button"
+                      className="umb-card-definir"
+                      onClick={() => setEditando({
+                        variable: filaActiva.variable,
+                        semana: celda.semana,
+                        existente: null,
+                      })}
+                    >
+                      <IcPlus size={14} aria-hidden="true" />
+                      Definir rango
+                    </button>
+                  ) : (
+                    <span className="umb-sin">Sin rango configurado</span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </>
+      ) : null}
 
       {editando && (
         <FormularioUmbral

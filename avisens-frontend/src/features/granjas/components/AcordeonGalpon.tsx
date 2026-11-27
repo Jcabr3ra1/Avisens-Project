@@ -65,7 +65,7 @@ function AcordeonGalpon({
 }: Props) {
   const temperatura = lecturaPorTipo(galpon.sensores, 'temp')
   const humedad = lecturaPorTipo(galpon.sensores, 'hum')
-  const aves = galpon.loteEnCurso?.cantidad_inicial ?? 0
+  const aves = galpon.lotesEnCurso.reduce((suma, item) => suma + item.cantidad_inicial, 0)
   const ocupacion = porcentajeOcupacion(aves, galpon.capacidadAves)
   const panelId = `gr-panel-galpon-${galpon.id}`
 

@@ -1,7 +1,8 @@
 // dto/update-alertas.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { EstadoAlerta } from '@prisma/client';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class UpdateAlertasDto {
   @ApiPropertyOptional({
@@ -17,8 +18,8 @@ export class UpdateAlertasDto {
     example: 'Se ajustó la ventilación',
     description: 'Acción correctiva tomada',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('La acción correctiva', 500, { multilinea: true })
   accion_correctiva?: string;
 
   @ApiPropertyOptional({
@@ -28,6 +29,7 @@ export class UpdateAlertasDto {
       'ID del usuario responsable. null lo desasigna (@IsOptional deja pasar null)',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   responsable_id?: number | null;
 
@@ -38,6 +40,7 @@ export class UpdateAlertasDto {
       'ID del usuario a quien se escaló. null lo desasigna (@IsOptional deja pasar null)',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   escalado_a_id?: number | null;
 
@@ -45,7 +48,7 @@ export class UpdateAlertasDto {
     example: '2024-01-15T10:30:00Z',
     description: 'Fecha de aceptación de la alerta',
   })
-  @IsString()
+  @IsDateString()
   @IsOptional()
   fecha_aceptacion?: string;
 
@@ -53,7 +56,7 @@ export class UpdateAlertasDto {
     example: '2024-01-15T14:00:00Z',
     description: 'Fecha de cierre de la alerta',
   })
-  @IsString()
+  @IsDateString()
   @IsOptional()
   fecha_cierre?: string;
 }

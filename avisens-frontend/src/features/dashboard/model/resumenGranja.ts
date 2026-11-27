@@ -2,7 +2,7 @@ import { esCriticidadAlta, etiquetaCriticidad } from '@features/alertas/model/al
 import { tieneLecturaUtil, type GalponMonitoreoVista, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { diasDeVida, hace } from '@shared/utils/fechas'
 import type { DashboardAlerta, DashboardGalpon, DashboardLote } from './dashboard'
-import type { LoteResumenCrecimiento } from '@features/indicadores/api/indicadores'
+import type { AlertaCrecimiento, LoteResumenCrecimiento } from '@features/indicadores/api/indicadores'
 
 export type KpiGranja = {
   id: 'galpones' | 'aves' | 'alertas' | 'sensores'
@@ -25,7 +25,18 @@ export type ItemAtencionGranja = {
   cuando: string | null
   orden: number
   galponId: number
+  galponNombre?: string
   loteId?: number
+  regla?: AlertaCrecimiento['regla']
+  lectura?: LecturaPendiente
+}
+
+export type LecturaPendiente = {
+  clase: 'temperatura' | 'humedad' | 'otra'
+  tipo: string
+  valorTexto: string
+  direccion: 'alto' | 'bajo' | null
+  sinSenal: boolean
 }
 
 export type FilaGalpon = {
@@ -114,6 +125,13 @@ function valorSensor(sensor: SensorVista): string {
   return sensor.valor === null ? '—' : `${unDecimal.format(sensor.valor)} ${sensor.unidad}`.trim()
 }
 
+function direccionFueraDeRango(sensor: SensorVista): 'alto' | 'bajo' | null {
+  if (sensor.valor === null) return null
+  if (sensor.maxUmbral !== null && sensor.valor > sensor.maxUmbral) return 'alto'
+  if (sensor.minUmbral !== null && sensor.valor < sensor.minUmbral) return 'bajo'
+  return null
+}
+
 export function itemsAtencionGranja({ alertas, galpones, monitoreo, riesgosCrecimiento = [], ahora = Date.now() }: {
   alertas: DashboardAlerta[]
   galpones: DashboardGalpon[]
@@ -137,6 +155,7 @@ export function itemsAtencionGranja({ alertas, galpones, monitoreo, riesgosCreci
       cuando: Number.isNaN(fecha) ? null : hace(alerta.fechaCreacion),
       orden: Number.isNaN(fecha) ? 0 : fecha,
       galponId: alerta.galponId,
+      galponNombre: nombres.get(alerta.galponId),
     })
   }
 
@@ -158,6 +177,14 @@ export function itemsAtencionGranja({ alertas, galpones, monitoreo, riesgosCreci
         cuando: ultima === null ? null : hace(new Date(ultima).toISOString()),
         orden: ultima ?? ahora - 365 * 86_400_000,
         galponId: galpon.id,
+        galponNombre: galpon.nombre,
+        lectura: {
+          clase: sensor.variableUmbral === 'temperatura' || sensor.variableUmbral === 'humedad' ? sensor.variableUmbral : 'otra',
+          tipo: sensor.tipo,
+          valorTexto: valorSensor(sensor),
+          direccion: direccionFueraDeRango(sensor),
+          sinSenal: !fueraDeRango,
+        },
       })
     }
   }
@@ -175,7 +202,9 @@ export function itemsAtencionGranja({ alertas, galpones, monitoreo, riesgosCreci
         cuando: null,
         orden: -(lote.posicion_riesgo ?? 999) - indice / 100,
         galponId: lote.galpon_id,
+        galponNombre: nombres.get(lote.galpon_id),
         loteId: lote.lote_id,
+        regla: alerta.regla,
       })
     })
   }

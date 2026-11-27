@@ -6,9 +6,14 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
-  IsUrl,
+  Max,
+  Min,
 } from 'class-validator';
+import {
+  STOCK_MAXIMO,
+  TextoSeguro,
+  UrlHttpSegura,
+} from '../../../common/validation/texto';
 
 export class RegistrarMovimientoDto {
   @ApiProperty({
@@ -27,20 +32,22 @@ export class RegistrarMovimientoDto {
   })
   @IsNumber({ maxDecimalPlaces: 3 })
   @IsPositive()
+  @Max(STOCK_MAXIMO)
   cantidad: number;
 
-  @ApiPropertyOptional({ example: 'Compra a proveedor', description: 'Por que se movio' })
-  @IsString()
+  @ApiPropertyOptional({ example: 'Compra de insumo', description: 'Por que se movio' })
+  @TextoSeguro('El motivo', 250)
   @IsOptional()
   motivo?: string;
 
   @ApiPropertyOptional({ example: 1, description: 'Lote que consume el insumo' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   lote_id?: number;
 
   @ApiPropertyOptional({ example: 'https://ejemplo.com/factura.pdf' })
-  @IsUrl()
+  @UrlHttpSegura('El comprobante', 500)
   @IsOptional()
   comprobante_url?: string;
 }

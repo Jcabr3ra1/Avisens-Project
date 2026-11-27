@@ -1,482 +1,950 @@
-/* Mi jornada usa el mismo resumen del propietario (hero, pendientes y
-   galpón 3D, con los estilos de features/dashboard) y el Modal compartido.
-   Aquí solo queda lo propio del operario: la sección «Registro de hoy» con
-   la tarjeta de cada galpón asignado. */
-.operario-page {
+/* Mi jornada — consola operativa ejecutiva para el Operario en campo.
+   Unificada con el lenguaje visual de Avisens: cabecera abierta, 4 KPIs
+   alineados a la izquierda, tarjetas blancas sobre lienzo crema y acciones
+   directas en panel lateral. */
+
+.op-page {
+  display: grid;
+  gap: var(--space-4);
   width: 100%;
 }
 
-.operario-registro {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.operario-page .operario-sin-lote {
-  margin: 1rem 0;
-}
-
-.operario-success {
-  margin: 0;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--green-d);
-  background: color-mix(in srgb, var(--green) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
-}
-
-.operario-btn,
-.operario-link-alertas,
-.operario-link-crecimiento {
-  font: inherit;
-  cursor: pointer;
-}
-
-.operario-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.operario-galpones {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-  gap: 1.1rem;
-}
-
-.operario-galpon-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 1.15rem;
-  /* Mismos tokens que .adm-panel: la tarjeta se ve como el resto del panel. */
-  background: var(--card);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--adm-shadow);
-}
-
-.operario-galpon-head,
-.operario-lote-activo {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.operario-lote-activo {
-  flex-wrap: wrap;
-}
-
-.operario-galpon-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 46px;
-  width: 46px;
-  height: 46px;
-  color: var(--green-d);
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--green) 20%, transparent);
-  border-radius: 13px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 6%, transparent);
-}
-
-.operario-galpon-icon svg {
-  width: 26px;
-  height: 26px;
-}
-
-.operario-galpon-head p,
-.operario-galpon-head h2,
-.operario-galpon-head span,
-.operario-lote-activo span,
-.operario-lote-activo strong {
+.op-rotulo {
   display: block;
+  margin-bottom: 0.14rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.operario-link-crecimiento {
-  display: inline-flex;
-  align-items: center;
+.op-conteo {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-conteo.is-alerta {
+  background: var(--danger-soft);
+  color: var(--danger3);
+}
+
+/* ─── Cabecera abierta ─── */
+
+.op-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.op-cabecera-info {
+  display: grid;
   gap: 0.2rem;
-  margin-left: auto;
-  min-height: 44px;
-  padding: 0 0.6rem;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--primary);
+  min-width: 0;
+}
+
+.op-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.op-subtitulo {
+  margin: 0.15rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.op-cabecera-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.op-granja-selector select {
+  min-height: 40px;
+  padding: 0.4rem 2rem 0.4rem 0.8rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  white-space: nowrap;
+  font-size: 0.84rem;
+  font-weight: 650;
   cursor: pointer;
 }
 
-.operario-link-crecimiento:hover {
-  background: var(--surface-hover);
-}
+/* ─── 4 KPIs elevados con borde superior de color ─── */
 
-.operario-link-crecimiento:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.operario-galpon-head p,
-.operario-galpon-head span,
-.operario-lote-activo span {
-  margin: 0;
-  color: var(--text3);
-  font-size: 0.78rem;
-}
-
-.operario-galpon-head h2 {
-  margin: 0.08rem 0;
-  color: var(--dash-ink);
-  font-size: 1.05rem;
-}
-
-.operario-lote-activo {
-  margin: 1rem 0;
-  padding: 0.7rem 0.8rem;
-  color: var(--text2);
-  background: color-mix(in srgb, var(--green) 7%, transparent);
-  border: 1px solid color-mix(in srgb, var(--green) 16%, transparent);
-  border-radius: 14px;
-}
-
-.operario-lote-icono {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
-  color: var(--green-d);
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--green) 22%, transparent);
-  border-radius: 10px;
-}
-
-.operario-lote-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.operario-dia-badge {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  padding: 0.3rem 0.6rem;
-  color: var(--green-d);
-  background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--green) 28%, transparent);
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.operario-dia-badge b {
-  font-size: 0.98rem;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.operario-lote-activo strong {
-  margin-top: 0.15rem;
-  color: var(--text);
-  font-size: 0.84rem;
-}
-
-.operario-sin-lote {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  color: var(--text3);
-  background: color-mix(in srgb, var(--avisens-ink) 3.5%, transparent);
-  border-radius: 12px;
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.operario-acciones {
+.op-kpis {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-  margin-top: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
 }
 
-.operario-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  min-height: 46px;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.operario-btn--mortalidad {
-  color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  border-color: color-mix(in srgb, var(--red) 22%, transparent);
-}
-
-.operario-btn--consumo {
-  color: var(--green-d);
-  background: color-mix(in srgb, var(--green) 10%, transparent);
-  border-color: color-mix(in srgb, var(--green) 22%, transparent);
-}
-
-.operario-btn:hover:not(:disabled) {
-  filter: brightness(0.96);
-}
-
-.operario-link-alertas {
-  display: inline-flex;
-  grid-column: 1 / -1;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  min-height: 44px;
-  padding: 0.45rem;
-  color: var(--text2);
-  background: transparent;
-  border: none;
-  border-radius: 9px;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.operario-link-alertas:hover {
-  color: var(--green-d);
-  background: var(--card-h);
-}
-
-.operario-btn:focus-visible,
-.operario-link-alertas:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* «Tu lote hoy»: cifras del lote (las mismas de la app) y salud. */
-.operario-lote-resumen {
+.op-kpi {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 6px 18px -14px color-mix(in srgb, var(--avisens-ink) 32%, transparent), var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease;
 }
 
-.operario-lote-error {
-  margin: 0;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-  border-radius: 12px;
-  color: var(--amber);
-  background: color-mix(in srgb, var(--amber) 9%, transparent);
-  font-size: 0.84rem;
-  font-weight: 600;
+.op-kpi--primario { border-top-color: var(--primary); }
+.op-kpi--ok { border-top-color: var(--success); }
+.op-kpi--info { border-top-color: var(--info); }
+.op-kpi--peligro { border-top-color: var(--danger); }
+
+.op-kpi--estatico {
+  cursor: default;
 }
 
-.operario-cifras {
+.op-kpi:not(.op-kpi--estatico):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -16px color-mix(in srgb, var(--avisens-ink) 36%, transparent);
+}
+
+.op-kpi:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.op-kpi-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.op-kpi-etiqueta {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.op-kpi-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.op-kpi--ok .op-kpi-icono { background: var(--success-soft); color: var(--success); }
+.op-kpi--info .op-kpi-icono { background: var(--info-soft); color: var(--info); }
+.op-kpi--peligro .op-kpi-icono { background: var(--danger-soft); color: var(--danger); }
+
+.op-kpi strong {
+  color: var(--text-primary);
+  font-size: 1.55rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+}
+
+.op-kpi small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.op-kpi .op-kpi--ok { color: var(--success); }
+.op-kpi .op-kpi--peligro { color: var(--danger); }
+
+/* ─── Confirmación inline ─── */
+
+.op-toast-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-lg);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+/* ─── Bloque de atención prioritaria ─── */
+
+.op-atencion {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--danger-border);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.op-atencion-cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.op-atencion-cabecera > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.op-atencion-cabecera h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.op-atencion-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger3);
+}
+
+.op-atencion-lista {
+  display: grid;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.operario-cifra {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas:
-    "icono etiqueta"
-    "valor valor"
-    "nota nota"
-    "aviso aviso";
-  align-items: center;
-  gap: 0.2rem 0.55rem;
-  min-width: 0;
-  padding: 0.95rem 1rem;
-  background: var(--card);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--adm-shadow);
-}
-
-.operario-cifra-icono {
-  grid-area: icono;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--green-d);
-  background: color-mix(in srgb, var(--green) 10%, transparent);
-  border-radius: 10px;
-}
-
-.operario-cifra-etiqueta {
-  grid-area: etiqueta;
-  min-width: 0;
-  color: var(--text3);
-  font-size: 0.76rem;
-  font-weight: 700;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.operario-cifra-valor {
-  grid-area: valor;
-  margin-top: 0.35rem;
-  color: var(--dash-ink);
-  font-size: 1.45rem;
-  font-weight: 800;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.operario-cifra-nota {
-  grid-area: nota;
-  color: var(--text3);
-  font-size: 0.76rem;
-  line-height: 1.35;
-}
-
-.operario-cifra-aviso {
-  grid-area: aviso;
-  justify-self: start;
-  margin-top: 0.3rem;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  color: var(--amber);
-  background: color-mix(in srgb, var(--amber) 12%, transparent);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.operario-cifra--peligro .operario-cifra-icono {
-  color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-}
-
-.operario-cifra--peligro .operario-cifra-valor {
-  color: var(--red);
-}
-
-.operario-cifra--aviso .operario-cifra-icono {
-  color: var(--amber);
-  background: color-mix(in srgb, var(--amber) 12%, transparent);
-}
-
-.operario-cifra--aviso .operario-cifra-valor {
-  font-size: 1.05rem;
-}
-
-.operario-salud {
-  --salud-color: var(--green-d);
-  padding: 1rem 1.1rem;
-  background: var(--card);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--adm-shadow);
-}
-
-.operario-salud--critico { --salud-color: var(--red); }
-.operario-salud--atencion,
-.operario-salud--seguimiento { --salud-color: var(--amber); }
-.operario-salud--sin_datos { --salud-color: var(--text3); }
-
-.operario-salud-cabecera {
+.op-atencion-item {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.op-atencion-item--critico {
+  border-left-color: var(--danger);
+}
+
+.op-atencion-texto {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.op-atencion-texto strong {
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.op-atencion-texto span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* ─── Selector único de galpón (píldoras verdes flotantes) ─── */
+
+.op-galpon-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-self: stretch;
+  width: 100%;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.op-galpon-tab {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.op-galpon-tab:hover {
+  background: var(--surface-tinted);
+  color: var(--text-primary);
+}
+
+.op-galpon-tab.is-activa {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Workspace de 2 columnas alineadas por fila ─── */
+
+.op-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(20rem, 1fr);
+  align-items: stretch;
+  gap: var(--space-4);
+}
+
+/* ─── Tarjetas ejecutivas ─── */
+
+.op-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  height: 100%;
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.op-card-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.op-card-titulo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.operario-salud-titulo {
-  color: var(--text3);
-  font-size: 0.74rem;
+.op-card h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.06rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.op-card-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.op-dia-pill {
+  padding: 0.16rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.07em;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-aviso-inline {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.op-vacio-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+/* ─── Cifras del lote: grilla exacta 3×2 (6 celdas alineadas) ─── */
+
+.op-cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--border-subtle);
+  list-style: none;
+}
+
+.op-cifra {
+  display: grid;
+  align-content: start;
+  gap: 0.28rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  background: var(--surface-tinted);
+}
+
+.op-cifra--salud {
+  gap: 0.5rem;
+}
+
+.op-cifra-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.op-cifra-etiqueta {
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.operario-salud-estado {
-  padding: 0.2rem 0.7rem;
-  border-radius: 999px;
-  color: var(--salud-color);
-  background: color-mix(in srgb, var(--salud-color) 12%, transparent);
-  font-size: 0.8rem;
+.op-cifra-icono {
+  color: var(--primary);
+}
+
+.op-cifra--peligro .op-cifra-icono,
+.op-cifra--peligro .op-cifra-valor {
+  color: var(--danger);
+}
+
+.op-cifra--aviso .op-cifra-icono,
+.op-cifra--aviso .op-cifra-valor {
+  color: var(--warning);
+}
+
+.op-cifra-valor {
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-cifra-nota {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.op-cifra-aviso {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.15rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+/* ─── Medidor de salud del lote ─── */
+
+.op-salud {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.op-salud-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.op-salud-titulo {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.op-salud-estado {
+  padding: 0.14rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.op-salud--atencion .op-salud-estado { background: var(--warning-soft); color: var(--warning); }
+.op-salud--riesgo .op-salud-estado { background: var(--danger-soft); color: var(--danger3); }
+.op-salud--sin_datos .op-salud-estado { background: var(--surface-subtle); color: var(--text-muted); }
+
+.op-salud-barra {
+  height: 7px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+}
+
+.op-salud-barra span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  transition: width 260ms ease;
+}
+
+.op-salud--atencion .op-salud-barra span { background: var(--warning); }
+.op-salud--riesgo .op-salud-barra span { background: var(--danger); }
+
+.op-salud-detalle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+/* ─── Sensores en vivo dentro de Mi jornada ─── */
+
+.op-sensores-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-sensor {
+  position: relative;
+  display: grid;
+  gap: 0.45rem;
+  overflow: hidden;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.op-sensor::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--success);
+}
+
+.op-sensor--advertencia::before { background: var(--warning); }
+.op-sensor--critico::before { background: var(--danger); }
+.op-sensor--offline::before,
+.op-sensor--sin_umbral::before,
+.op-sensor--lectura_no_disponible::before { background: var(--border-strong); }
+
+.op-sensor-top {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.op-sensor-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-base);
+  color: var(--primary);
+}
+
+.op-sensor-tipo {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op-sensor-badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.op-sensor-badge--optimo { background: var(--success-soft); color: var(--success); }
+.op-sensor-badge--advertencia { background: var(--warning-soft); color: var(--warning); }
+.op-sensor-badge--critico { background: var(--danger-soft); color: var(--danger3); }
+
+.op-sensor-valor {
+  color: var(--text-primary);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.op-sensor-valor small {
+  margin-left: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.48em;
+  font-weight: 700;
+}
+
+.op-sensor-rango {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.op-riesgo-wrap {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ─── Tarjetas de registro de hoy (columna derecha) ─── */
+
+.op-jornadas-lista {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.op-jornada-card {
+  position: relative;
+  display: grid;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.op-jornada-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--border-strong);
+}
+
+.op-jornada-card.is-con-lote::before {
+  background: var(--primary);
+}
+
+.op-jornada-card.is-destacada {
+  border-color: color-mix(in srgb, var(--primary) 32%, var(--border-subtle));
+  background: var(--surface-base);
+}
+
+.op-jornada-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.op-jornada-ident {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.op-jornada-granja {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.op-jornada-ident h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.96rem;
   font-weight: 800;
 }
 
-.operario-salud-barra {
-  height: 10px;
-  margin: 0.8rem 0 0.6rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+.op-jornada-codigo {
+  padding: 0.14rem 0.45rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
-.operario-salud-barra span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--salud-color);
-  transition: width 0.4s ease;
+.op-jornada-lote {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
 }
 
-.operario-salud-detalle {
-  margin: 0;
-  color: var(--text2);
+.op-jornada-lote-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.op-jornada-lote-texto {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.op-jornada-lote-texto strong {
+  color: var(--text-primary);
   font-size: 0.82rem;
-  line-height: 1.45;
+  font-weight: 750;
 }
 
-@media (max-width: 640px) {
-  .operario-cifras {
+.op-jornada-lote-texto span {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.op-jornada-guia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.op-jornada-guia:hover {
+  background: var(--primary-soft);
+}
+
+.op-jornada-vacio {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.op-jornada-acciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.op-jornada-btn {
+  justify-content: center;
+  min-height: 40px;
+}
+
+/* ─── Accesos rápidos ─── */
+
+.op-accesos-card {
+  gap: var(--space-2);
+}
+
+.op-accesos-lista {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.op-acceso {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.op-acceso:hover {
+  border-color: var(--border-default);
+  background: var(--surface-base);
+}
+
+.op-acceso > svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.op-acceso-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface-base);
+  color: var(--primary);
+}
+
+.op-acceso-texto {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 0.08rem;
+}
+
+.op-acceso-texto strong {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.op-acceso-texto small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+/* ─── Esqueleto ─── */
+
+.op-hueso {
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--surface-subtle) 25%, var(--surface-tinted) 50%, var(--surface-subtle) 75%);
+  background-size: 200% 100%;
+  animation: op-brillo 1.4s ease-in-out infinite;
+}
+
+.op-hueso--cabecera { height: 84px; }
+.op-hueso--kpis { height: 92px; }
+.op-hueso--panel { height: 280px; }
+
+@keyframes op-brillo {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 64rem) {
+  .op-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .operario-cifra {
-    padding: 0.8rem;
-  }
-
-  .operario-cifra-valor {
-    font-size: 1.2rem;
-  }
-
-  .operario-galpones {
+  .op-workspace {
     grid-template-columns: 1fr;
   }
 
-  .operario-acciones {
+  .op-sensores-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .op-cifras {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .op-sensores-grid {
     grid-template-columns: 1fr;
   }
+}
 
-  /* En el teléfono el código del lote ocupa su propia línea; el día y la
-     guía de peso bajan debajo en vez de apretarlo en columnas angostas. */
-  .operario-lote-info {
-    flex-basis: calc(100% - 3.2rem);
+@media (max-width: 560px) {
+  .op-cabecera-acciones {
+    width: 100%;
   }
 
-  .operario-link-alertas {
-    grid-column: auto;
+  .op-cabecera-acciones .adm-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .op-jornada-acciones {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .operario-salud-barra span,
-  .operario-btn,
-  .operario-link-alertas {
+  .op-hueso,
+  .op-salud-barra span {
+    animation: none;
     transition: none;
   }
 }

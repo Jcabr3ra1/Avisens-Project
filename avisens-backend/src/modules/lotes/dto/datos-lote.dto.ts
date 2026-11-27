@@ -22,9 +22,4 @@ export class DatosLoteDto {
   @ApiProperty({ example: 'italcol', enum: MARCAS_ALIMENTO })
   @IsIn(MARCAS_ALIMENTO)
   marca_alimento: string;
-
-  @ApiProperty({ example: 3, description: 'Proveedor de los pollitos' })
-  @IsInt()
-  @Min(1)
-  proveedor_id: number;
 }

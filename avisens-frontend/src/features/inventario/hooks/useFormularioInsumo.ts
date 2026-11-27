@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { ActualizarInsumoPayload, CrearInsumoPayload, Insumo } from '../api/insumos'
 import {
   actualizarPayloadInsumo,
@@ -46,7 +47,44 @@ export function useFormularioInsumo(alGuardar: GuardarInsumo, granjaPorDefecto =
     setForm((previo) => ({ ...previo, [campo]: valor }))
   }
 
+  function validarFormulario(): string | null {
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre del insumo', { max: 120 })
+    if (errNombre) return errNombre
+    const errUnidad = validarTextoSeguro(form.unidad_medida, 'La unidad de medida', {
+      requerido: true,
+      max: 30,
+      exigirLetras: true,
+    })
+    if (errUnidad) return errUnidad
+    const errTipo = validarTextoSeguro(form.tipo, 'El tipo de insumo', { max: 50 })
+    if (errTipo) return errTipo
+    const errUbicacion = validarTextoSeguro(form.ubicacion_almacen, 'La ubicación', { max: 120 })
+    if (errUbicacion) return errUbicacion
+
+    const validarNumero = (valor: string, etiqueta: string, maximo: number): string | null => {
+      if (!valor.trim()) return null
+      const num = Number(valor)
+      if (!Number.isFinite(num) || num < 0) return `${etiqueta} no puede ser negativo.`
+      if (num > maximo) return `${etiqueta} no puede superar ${maximo.toLocaleString('es-CO')}.`
+      return null
+    }
+    const errMin = validarNumero(form.stock_minimo, 'El stock mínimo', 10_000_000)
+    if (errMin) return errMin
+    if (editandoId === null) {
+      const errAct = validarNumero(form.stock_actual, 'El stock inicial', 10_000_000)
+      if (errAct) return errAct
+    }
+    const errPrecio = validarNumero(form.precio_unitario_cop, 'El precio unitario', 10_000_000_000)
+    if (errPrecio) return errPrecio
+    return null
+  }
+
   async function guardar() {
+    const problema = validarFormulario()
+    if (problema) {
+      setError(problema)
+      return
+    }
     setGuardando(true)
     setError('')
     try {

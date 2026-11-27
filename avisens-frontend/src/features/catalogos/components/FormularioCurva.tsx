@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { IcChart } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CrearCurvaObjetivoPayload,
   CurvaObjetivo,
@@ -57,8 +59,13 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const dia = Number(form.dia)
-    if (form.dia === '' || Number.isNaN(dia) || dia < 1) {
-      setError('El día de vida debe ser un número mayor que cero.')
+    if (form.dia === '' || !Number.isInteger(dia) || dia < 1 || dia > 365) {
+      setError('El día de vida debe ser un entero entre 1 y 365.')
+      return
+    }
+    const errFuente = validarTextoSeguro(form.fuente, 'La fuente', { max: 60 })
+    if (errFuente) {
+      setError(errFuente)
       return
     }
 
@@ -74,6 +81,22 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
     const diario = numero(form.consumo_diario_g)
     const acumulado = numero(form.consumo_acumulado_g)
     const fcr = numero(form.fcr_objetivo)
+    if (peso !== null && (Number.isNaN(peso) || peso < 0 || peso > 10_000)) {
+      setError('El peso esperado debe estar entre 0 y 10.000 g.')
+      return
+    }
+    if (diario !== null && (Number.isNaN(diario) || diario < 0 || diario > 50_000)) {
+      setError('El consumo diario debe estar entre 0 y 50.000 g.')
+      return
+    }
+    if (acumulado !== null && (Number.isNaN(acumulado) || acumulado < 0 || acumulado > 50_000)) {
+      setError('El consumo acumulado debe estar entre 0 y 50.000 g.')
+      return
+    }
+    if (fcr !== null && (Number.isNaN(fcr) || fcr < 0 || fcr > 20)) {
+      setError('El FCR objetivo debe estar entre 0 y 20.')
+      return
+    }
     if (peso !== null) payload.peso_esperado_g = peso
     if (diario !== null) payload.consumo_diario_g = diario
     if (acumulado !== null) payload.consumo_acumulado_g = acumulado
@@ -99,6 +122,8 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
     <Modal
       titulo={editando ? 'Editar punto de curva' : 'Nuevo punto de curva'}
       subtitulo="Un punto es una combinación de marca, sexo y día de vida. El peso del lote se compara contra el último punto que no supere su día."
+      variante="lateral"
+      icono={<IcChart size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>
@@ -131,29 +156,29 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
           </label>
           <label className="modal-campo">
             <span>Día de vida</span>
-            <input type="number" min="1" max="70" value={form.dia} onChange={(e) => cambiar('dia', e.target.value)} required />
+            <input type="number" min="1" max="365" step="1" inputMode="numeric" value={form.dia} onChange={(e) => cambiar('dia', e.target.value)} required />
           </label>
         </div>
 
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Peso esperado en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.peso_esperado_g} onChange={(e) => cambiar('peso_esperado_g', e.target.value)} />
+            <input type="number" min="0" max="10000" step="any" inputMode="decimal" value={form.peso_esperado_g} onChange={(e) => cambiar('peso_esperado_g', e.target.value)} />
           </label>
           <label className="modal-campo">
             <span>FCR objetivo <em>(Opcional)</em></span>
-            <input type="number" min="0" step="0.01" value={form.fcr_objetivo} onChange={(e) => cambiar('fcr_objetivo', e.target.value)} />
+            <input type="number" min="0" max="20" step="0.01" inputMode="decimal" value={form.fcr_objetivo} onChange={(e) => cambiar('fcr_objetivo', e.target.value)} />
           </label>
         </div>
 
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Consumo diario en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.consumo_diario_g} onChange={(e) => cambiar('consumo_diario_g', e.target.value)} />
+            <input type="number" min="0" max="50000" step="any" inputMode="decimal" value={form.consumo_diario_g} onChange={(e) => cambiar('consumo_diario_g', e.target.value)} />
           </label>
           <label className="modal-campo">
             <span>Consumo acumulado en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.consumo_acumulado_g} onChange={(e) => cambiar('consumo_acumulado_g', e.target.value)} />
+            <input type="number" min="0" max="50000" step="any" inputMode="decimal" value={form.consumo_acumulado_g} onChange={(e) => cambiar('consumo_acumulado_g', e.target.value)} />
           </label>
         </div>
 
@@ -169,7 +194,7 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
 
         <label className="modal-campo">
           <span>Fuente <em>(Opcional)</em></span>
-          <input value={form.fuente} onChange={(e) => cambiar('fuente', e.target.value)} maxLength={120} />
+          <input value={form.fuente} onChange={(e) => cambiar('fuente', e.target.value)} maxLength={60} />
           <small className="modal-ayuda">
             De dónde sale el dato. Escribirlo permite defenderlo cuando alguien
             pregunte por qué el objetivo es ese y no otro.

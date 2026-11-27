@@ -15,8 +15,6 @@ import {
   IcNote,
   IcRefresh,
   IcSearch,
-  IcSeed,
-  IcSend,
   IcServer,
   IcThermo,
   IcUserCircle,
@@ -98,9 +96,6 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   // de la interfaz, que era la que estaba abierta.
   '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
-  // El operario solo consulta (proveedores:leer); gestionar es del admin.
-  '/proveedores':             [ROL_ADMIN, ROL_OPERARIO],
-  '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
   '/catalogos':               [ROL_ADMIN],
@@ -176,12 +171,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: <IcRefresh size={16} />,
       },
       {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcSeed size={16} />,
-        rolesVisibles: [ROL_ADMIN],
-      },
-      {
         path: '/catalogos',
         label: 'Catálogos',
         icon: <IcNote size={16} />,
@@ -240,9 +229,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // Se llamaba 'Operación', pero dentro no hay nada operativo: es el papeleo
-  // de la granja. Los tres primeros son una cadena —lo que hay, lo que se
-  // pide, a quién— y están en ese orden a propósito.
+  // Gestión de recursos, finanzas y operarios de la granja.
   {
     label: 'Gestión',
     items: [
@@ -250,12 +237,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/inventario',
         label: 'Bodega',
         icon: <IcBox size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO],
-      },
-      {
-        path: '/ordenes-compra',
-        label: 'Compras',
-        icon: <IcSend size={16} />,
         rolesVisibles: [ROL_PROPIETARIO],
       },
       {
@@ -271,23 +252,15 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // La bodega del operario: lo que hay en ella y a quién se le pide. Va en su
-  // propio espacio y no en 'Administración' porque para el operario no es
-  // papeleo: es donde apunta lo que entra y sale. El propietario conserva su
-  // ítem «Bodega» en Administración; el admin, Proveedores en Plataforma.
+  // La bodega del operario: consulta lo que hay en ella (stock y mínimo).
+  // El propietario conserva su ítem «Bodega» en Gestión.
   {
     label: 'Bodega',
     items: [
       {
         path: '/inventario',
-        label: 'Inventario',
+        label: 'Bodega',
         icon: <IcBox size={16} />,
-        rolesVisibles: [ROL_OPERARIO],
-      },
-      {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcSeed size={16} />,
         rolesVisibles: [ROL_OPERARIO],
       },
     ],
@@ -316,11 +289,15 @@ export function esGrupo(item: NavItem): item is NavGroupItem {
   return 'children' in item
 }
 
+const RUTAS_DETALLE: Array<{ patron: RegExp; padre: string }> = [
+  { patron: /^\/organizaciones\/\d+$/, padre: '/organizaciones' },
+  { patron: /^\/granjas\/galpones\/\d+$/, padre: '/granjas' },
+  { patron: /^\/dispositivos\/\d+$/, padre: '/dispositivos' },
+]
+
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  const permisoDetalleOrganizacion = /^\/organizaciones\/\d+$/.test(path)
-    ? PERMISOS_RUTA['/organizaciones']
-    : undefined
-  const permitidos = PERMISOS_RUTA[path] ?? permisoDetalleOrganizacion
+  const rutaPadre = RUTAS_DETALLE.find(({ patron }) => patron.test(path))?.padre
+  const permitidos = PERMISOS_RUTA[path] ?? (rutaPadre ? PERMISOS_RUTA[rutaPadre] : undefined)
   if (!permitidos) return false
   return rol !== null && permitidos.includes(rol)
 }

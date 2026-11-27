@@ -9,10 +9,11 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -67,6 +68,37 @@ export class EvidenciaAlertaController {
       req.user,
       paginacion,
     );
+  }
+
+  @Post('alerta/:alertaId/foto')
+  @ApiOperation({
+    summary: 'Subir una fotografía binaria (JPG/PNG/WebP, máx. 3 MB) como evidencia de una alerta',
+  })
+  subirFoto(
+    @Param('alertaId', ParseIntPipe) alertaId: number,
+    @Query('comentario') comentario: string | undefined,
+    @Req() req: AuthRequest,
+  ) {
+    return this.evidenciaAlertaService.subirFoto(
+      alertaId,
+      req.body,
+      req.user,
+      comentario,
+    );
+  }
+
+  @Get(':id/imagen')
+  @ApiOperation({ summary: 'Descargar la imagen almacenada de una evidencia' })
+  async imagen(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } =
+      await this.evidenciaAlertaService.obtenerImagen(id, req.user);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
   }
 
   @Get(':id')

@@ -1,3 +1,4 @@
+import { validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { DatosGranjaPayload, Granja } from '../api/granjas'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { DatosLotePayload, Lote } from '@features/lotes/api/lotes'
@@ -9,7 +10,6 @@ export type FormDatosLote = {
   sexo: string
   linea_genetica_id: string
   marca_alimento: string
-  proveedor_id: string
 }
 
 const texto = (valor: string | number | null | undefined) => (valor === null || valor === undefined ? '' : String(valor))
@@ -54,7 +54,6 @@ export function faltantesLote(lote: Lote): string[] {
   if (!lote.linea_genetica) faltan.push('la línea genética')
   if (!lote.sexo) faltan.push('el sexo')
   if (!lote.marca_alimento) faltan.push('la marca de alimento')
-  if (!lote.proveedor) faltan.push('el proveedor')
   return faltan
 }
 
@@ -74,6 +73,11 @@ const FALTA = 'Completa todos los campos: ninguno es opcional.'
 
 export function payloadDatosGranja(form: FormDatosGranja): Resultado<DatosGranjaPayload> {
   if (Object.values(form).some((valor) => valor.trim() === '')) return { payload: null, error: FALTA }
+  const errDir = validarTextoSeguro(form.direccion, 'La dirección', { requerido: true, max: 200, exigirLetras: true })
+  const errMun = validarNombreEntidad(form.municipio, 'El municipio', { max: 100 })
+  const errDep = validarNombreEntidad(form.departamento, 'El departamento', { max: 100 })
+  const problema = errDir ?? errMun ?? errDep
+  if (problema) return { payload: null, error: problema }
   return {
     error: null,
     payload: {
@@ -89,7 +93,6 @@ export function formDatosLote(lote: Lote): FormDatosLote {
     sexo: texto(lote.sexo),
     linea_genetica_id: texto(lote.linea_genetica?.id),
     marca_alimento: texto(lote.marca_alimento),
-    proveedor_id: texto(lote.proveedor?.id),
   }
 }
 
@@ -101,7 +104,6 @@ export function payloadDatosLote(form: FormDatosLote): Resultado<DatosLotePayloa
       linea_genetica_id: Number(form.linea_genetica_id),
       sexo: form.sexo,
       marca_alimento: form.marca_alimento,
-      proveedor_id: Number(form.proveedor_id),
     },
   }
 }

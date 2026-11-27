@@ -150,11 +150,15 @@ function AhoraGalpon({ riesgo, problema, cargando, sensores, onCompletarUbicacio
       transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
     >
       <div className="amb-ahora-principal">
-        <span className="amb-rotulo">Ahora en el galpón</span>
+        <div className="amb-ahora-top">
+          <span className="amb-rotulo amb-rotulo--suave">Ahora en el galpón</span>
+          <span className={`amb-nivel amb-nivel--${riesgo.nivel_maximo}`}>
+            {ETIQUETA_NIVEL[riesgo.nivel_maximo]}
+          </span>
+        </div>
         <h3 id="amb-ahora-titulo" className="amb-ahora-titular">{titularRiesgo(riesgo)}</h3>
         <div className="amb-ahora-medidas">
           <Medida rotulo="Adentro" temperatura={temperatura?.valor ?? null} humedad={humedad?.valor ?? null} nota={notaAdentro} />
-          <span className="amb-ahora-separador" aria-hidden="true" />
           <Medida
             rotulo="Afuera"
             temperatura={afuera.temperatura}

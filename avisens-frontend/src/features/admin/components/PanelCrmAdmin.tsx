@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react'
-import * as Tooltip from '@radix-ui/react-tooltip'
 import IconoFigma from '@shared/ui/icons/IconoFigma'
 import { ESTILO_ETAPA } from '@features/crm/model/etapas'
 import { iniciales } from '@features/crm/model/formato'
@@ -33,42 +32,31 @@ function PanelCrmAdmin({ etapas, recientes, total, cargando, conversion, onGesti
         <span className="cdc-resumen-dato">Conversión <strong>{cargando ? '–' : `${conversion} %`}</strong></span>
       </div>
 
-      <div className="cdc-medidor cdc-medidor--alto" aria-label="Distribución de prospectos por etapa">
-        {total === 0 ? (
-          <span className="cdc-medidor-vacio" />
-        ) : (
-          etapas.filter((etapa) => etapa.cantidad > 0).map((etapa, posicion) => {
-            const porcentaje = Math.round((etapa.cantidad / total) * 100)
-            return (
-              <Tooltip.Root key={etapa.nombre}>
-                <Tooltip.Trigger asChild>
+      <ul className="cdc-embudo" aria-label="Prospectos por etapa">
+        {etapas.map((etapa) => {
+          const porcentaje = total === 0 ? 0 : Math.round((etapa.cantidad / total) * 100)
+          return (
+            <li key={etapa.nombre}>
+              <button
+                type="button"
+                className={etapa.cantidad === 0 ? 'is-cero' : undefined}
+                onClick={onGestionar}
+                title={`${etapa.descripcion} · ${porcentaje} %`}
+                aria-label={`${etapa.nombre}: ${etapa.cantidad} de ${total} (${porcentaje} %). Abrir CRM`}
+              >
+                <span className="cdc-embudo-nombre">{etapa.nombre}</span>
+                <span className="cdc-embudo-pista" aria-hidden="true">
                   <span
-                    className="cdc-medidor-tramo"
-                    style={{ flexGrow: etapa.cantidad, background: etapa.color, '--j': posicion } as CSSProperties}
-                    aria-label={`${etapa.nombre}: ${etapa.cantidad} (${porcentaje} %)`}
+                    className="cdc-embudo-barra"
+                    style={{ width: `${cargando ? 0 : porcentaje}%`, background: etapa.color }}
                   />
-                </Tooltip.Trigger>
-                <Tooltip.Portal>
-                  <Tooltip.Content className="cdc-tooltip" side="top" sideOffset={6}>
-                    {etapa.nombre}: {etapa.cantidad} de {total} ({porcentaje} %) · {etapa.descripcion}
-                    <Tooltip.Arrow className="cdc-tooltip-flecha" />
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              </Tooltip.Root>
-            )
-          })
-        )}
-      </div>
-
-      <div className="cdc-etapas">
-        {etapas.map((etapa) => (
-          <button key={etapa.nombre} type="button" className={etapa.cantidad === 0 ? 'is-cero' : undefined} onClick={onGestionar} title={etapa.descripcion}>
-            <i style={{ background: etapa.color }} aria-hidden="true" />
-            <span>{etapa.nombre}</span>
-            <strong>{cargando ? '–' : etapa.cantidad}</strong>
-          </button>
-        ))}
-      </div>
+                </span>
+                <strong>{cargando ? '–' : etapa.cantidad}</strong>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
 
       <h3 className="cdc-subtitulo">Últimos posibles clientes</h3>
       {recientes.length === 0 ? (

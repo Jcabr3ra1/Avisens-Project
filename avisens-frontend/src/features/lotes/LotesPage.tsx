@@ -175,7 +175,6 @@ function LotesPage() {
           form={formulario.form}
           modoEdicion={formulario.modoEdicion}
           galpones={galponesDisponibles}
-          proveedores={gestion.proveedores}
           lineasGeneticas={gestion.lineasGeneticas}
           errorLineasGeneticas={gestion.lineasGeneticasError}
           guardando={formulario.guardando}
