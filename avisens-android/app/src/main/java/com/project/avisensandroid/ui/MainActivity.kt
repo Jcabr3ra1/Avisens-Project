@@ -485,13 +485,14 @@ class MainActivity : AperturaReanudableActivity() {
             ) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 712)
             }
+            NotificacionesLocales.programar(applicationContext)
             monitoreoNotificaciones?.cancel()
             monitoreoNotificaciones = lifecycleScope.launch {
                 while (isActive) {
                     try { NotificacionesLocales.revisar(applicationContext) }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */ }
-                    delay(60_000L)
+                    delay(15_000L)
                 }
             }
         }
@@ -512,6 +513,42 @@ class MainActivity : AperturaReanudableActivity() {
     override fun onResume() {
         super.onResume()
         if (observandoConexion) revisarConexion()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        abrirAvisoPendiente()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (!supportFragmentManager.isStateSaved) abrirAvisoPendiente()
+    }
+
+    private fun abrirAvisoPendiente() {
+        val aviso = intent ?: return
+        val id = aviso.getIntExtra(NotificacionesLocales.EXTRA_NOTIFICACION, -1)
+        if (id <= 0 || supportFragmentManager.isStateSaved) return
+        val usuario = aviso.getIntExtra(NotificacionesLocales.EXTRA_USUARIO, -1)
+        val alerta = aviso.getBooleanExtra(NotificacionesLocales.EXTRA_ALERTA, false)
+        aviso.removeExtra(NotificacionesLocales.EXTRA_NOTIFICACION)
+        if (!UserSession.isLoggedIn(this) || UserSession.userId(this) != usuario) return
+        if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) return
+        if (findViewById<SlidingBottomNavigationView>(R.id.bottomNav) == null) volverAlInicio()
+        if (alerta) {
+            mostrarFragment(AlertasFragment())
+        } else {
+            volverAlInicio()
+        }
+        lifecycleScope.launch {
+            try {
+                if (UserSession.userId(this@MainActivity) == usuario) {
+                    RetrofitClient.api.marcarNotificacionLeida(id)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
     }
 
     override fun onStop() {
@@ -583,6 +620,7 @@ class MainActivity : AperturaReanudableActivity() {
         preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
             .remove(claveSeleccion("galpon")).apply()
         UserSession.clear(this)
+        NotificacionesLocales.cancelar(applicationContext)
         if (!refreshToken.isNullOrBlank()) {
             RetrofitClient.cerrarSesionRemota(refreshToken)
         }
@@ -819,6 +857,7 @@ class MainActivity : AperturaReanudableActivity() {
     private fun irALogin(sesionExpirada: Boolean = false) {
 
         if (isFinishing) return
+        NotificacionesLocales.cancelar(applicationContext)
 
         // Limpia la tarea para que Atrás no regrese a pantallas sin sesión.
         startActivity(
@@ -1211,6 +1250,10 @@ class MainActivity : AperturaReanudableActivity() {
     // =========================================================
     // NOTIFICACIONES
     // =========================================================
+
+    fun abrirCentroNotificaciones() {
+        CentroNotificaciones(this).mostrar()
+    }
 
     private fun mostrarNotificaciones() {
 

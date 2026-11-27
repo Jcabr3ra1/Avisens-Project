@@ -160,26 +160,26 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                 for (soloCache in listOf(true, false)) {
                     val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
                     try {
-                val (consumos, idsLotes) = coroutineScope {
-                    val lotesJob = async { activity.obtenerIdsLotesDeGalponSeleccionado(soloCache) }
-                    val consumosJob = async {
-                        val datos = mutableListOf<ConsumoDiarioResponse>()
-                        var pagina = 1
-                        do {
-                            val response = api.listarConsumosDiarios(pagina, 100)
-                            check(response.isSuccessful) { "Error de consumos: ${response.code()}" }
-                            val body = checkNotNull(response.body()) { "Sin datos de consumo" }
-                            datos.addAll(body.data)
-                            val total = body.meta.totalPages.coerceAtLeast(pagina)
-                            pagina++
-                        } while (pagina <= total)
-                        datos
-                    }
-                    consumosJob.await() to lotesJob.await()
-                }
-                if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
-                    mostrarRegistros(consumos.filter { it.lote_id in idsLotes }, idsLotes.toSet())
-                }
+                        val (consumos, idsLotes) = coroutineScope {
+                            val lotesJob = async { activity.obtenerIdsLotesDeGalponSeleccionado(soloCache) }
+                            val consumosJob = async {
+                                val datos = mutableListOf<ConsumoDiarioResponse>()
+                                var pagina = 1
+                                do {
+                                    val response = api.listarConsumosDiarios(pagina, 100)
+                                    check(response.isSuccessful) { "Error de consumos: ${response.code()}" }
+                                    val body = checkNotNull(response.body()) { "Sin datos de consumo" }
+                                    datos.addAll(body.data)
+                                    val total = body.meta.totalPages.coerceAtLeast(pagina)
+                                    pagina++
+                                } while (pagina <= total)
+                                datos
+                            }
+                            consumosJob.await() to lotesJob.await()
+                        }
+                        if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
+                            mostrarRegistros(consumos.filter { it.lote_id in idsLotes }, idsLotes.toSet())
+                        }
 
                         copiaMostrada = true
                     } catch (e: CancellationException) { throw e }
@@ -232,7 +232,13 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
             entradaTarjetas.mostrar(contenedor.getChildAt(contenedor.childCount - 1), "fecha:$dia", true)
             pendientes.filter { it.second.optString("fecha").take(10) == dia }.forEach { (item, datos) ->
                 val tarjeta = TextView(c).apply {
-                    text = "Lote ${datos.optInt("lote_id")}\n" + if (item.optString("estado").startsWith("REVISAR")) "Envío por confirmar; no repetir el registro" else "Pendiente de sincronización automática"
+                    text = "Lote ${datos.optInt("lote_id")}\n" + when (item.optString("estado")) {
+                        "ERROR" -> "Registro rechazado: ${item.optString("error")}"
+                        "ERROR_STOCK" -> "Consumo guardado; descuento rechazado: ${item.optString("error")}"
+                        "REVISAR_STOCK" -> "Consumo guardado; descuento por confirmar"
+                        "REVISAR" -> "Envío por confirmar; no repetir el registro. ${item.optString("error")}"
+                        else -> "Pendiente de sincronización automática"
+                    }
                     setTextColor(resources.getColor(R.color.text_primary, c.theme))
                     setPadding(dp(14), dp(12), dp(14), dp(12))
                     setBackgroundResource(R.drawable.bg_bitacora_card)

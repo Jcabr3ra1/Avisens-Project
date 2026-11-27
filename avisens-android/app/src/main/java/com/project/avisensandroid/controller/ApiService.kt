@@ -1,50 +1,55 @@
 package com.project.avisensandroid.controller
 
+import com.google.gson.JsonObject
+import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
+import com.project.avisensandroid.model.AlertaResponse
+import com.project.avisensandroid.model.AsignarGalponRequest
+import com.project.avisensandroid.model.CerrarAlertaRequest
+import com.project.avisensandroid.model.ComparacionIndicadorResponse
+import com.project.avisensandroid.model.ConsumoDiarioResponse
+import com.project.avisensandroid.model.ContadorNotificacionesResponse
+import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
+import com.project.avisensandroid.model.CrearPlanLoteRequest
+import com.project.avisensandroid.model.CreateConsumoDiarioRequest
+import com.project.avisensandroid.model.CreateUsuarioRequest
+import com.project.avisensandroid.model.CurvaGeneticaApiResponse
+import com.project.avisensandroid.model.EstimacionAlimentoApiResponse
 import com.project.avisensandroid.model.EventoSanitarioRequest
 import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
+import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
-import com.project.avisensandroid.model.RegistrarMovimientoRequest
-import com.project.avisensandroid.model.TipoAlimentoResponse
+import com.project.avisensandroid.model.InterpretarComandoVozRequest
 import com.project.avisensandroid.model.LoginRequest
 import com.project.avisensandroid.model.LoginResponse
-import com.project.avisensandroid.model.LoteSelectorResponse
-import com.project.avisensandroid.model.PaginatedResponse
-import com.project.avisensandroid.model.ProveedorResponse
-import com.project.avisensandroid.model.RegistroMortalidadRequest
-import com.project.avisensandroid.model.RegistroMortalidadResponse
-import com.project.avisensandroid.model.CreateUsuarioRequest
-import com.project.avisensandroid.model.UsuarioGestionResponse
-import com.project.avisensandroid.model.RolCatalogoResponse
-import com.project.avisensandroid.model.AsignarGalponRequest
-import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
-import com.project.avisensandroid.model.UsuarioGalponResponse
-import com.project.avisensandroid.model.UserResponse
-import com.project.avisensandroid.model.PesajeResponse
-import com.project.avisensandroid.model.CreateConsumoDiarioRequest
-import com.project.avisensandroid.model.ConsumoDiarioResponse
-import com.project.avisensandroid.model.SensorResponse
-import com.project.avisensandroid.model.MedicionResponse
-import com.project.avisensandroid.model.UltimasLecturasResponse
-import com.project.avisensandroid.model.AlertaResponse
-import com.project.avisensandroid.model.CerrarAlertaRequest
-import com.project.avisensandroid.model.IndicadorLoteResponse
-import com.project.avisensandroid.model.ComparacionIndicadorResponse
-import com.project.avisensandroid.model.EstimacionAlimentoApiResponse
-import com.project.avisensandroid.model.CurvaGeneticaApiResponse
-import com.project.avisensandroid.model.PlanLoteApiResponse
-import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
-import com.project.avisensandroid.model.RecalcularPlanLoteRequest
-import com.project.avisensandroid.model.CrearPlanLoteRequest
-import com.project.avisensandroid.model.UmbralAmbientalResponse
 import com.project.avisensandroid.model.LoteResponse
+import com.project.avisensandroid.model.LoteSelectorResponse
+import com.project.avisensandroid.model.MedicionResponse
+import com.project.avisensandroid.model.MovimientoAutonomiaResponse
+import com.project.avisensandroid.model.NotificacionResponse
+import com.project.avisensandroid.model.PaginatedResponse
+import com.project.avisensandroid.model.PesajeResponse
+import com.project.avisensandroid.model.PlanLoteApiResponse
+import com.project.avisensandroid.model.ProveedorResponse
+import com.project.avisensandroid.model.RecalcularPlanLoteRequest
 import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
-import com.project.avisensandroid.model.InterpretarComandoVozRequest
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
+import com.project.avisensandroid.model.RegistroMortalidadRequest
+import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.model.RespuestaComandoVoz
-
+import com.project.avisensandroid.model.RolCatalogoResponse
+import com.project.avisensandroid.model.SensorResponse
+import com.project.avisensandroid.model.TipoAlimentoResponse
+import com.project.avisensandroid.model.UltimasLecturasResponse
+import com.project.avisensandroid.model.UmbralAmbientalResponse
+import com.project.avisensandroid.model.UserResponse
+import com.project.avisensandroid.model.UsuarioGalponResponse
+import com.project.avisensandroid.model.UsuarioGestionResponse
+import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -52,29 +57,29 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
 
+    // =========================================================
+    // PERFIL
+    // =========================================================
+
     @GET("v1/auth/perfil")
-    suspend fun consultarPerfil(): Response<com.google.gson.JsonObject>
+    suspend fun consultarPerfil(): Response<JsonObject>
 
     @GET("v1/auth/perfil/foto")
-    suspend fun consultarFotoPerfil(): Response<okhttp3.ResponseBody>
+    suspend fun consultarFotoPerfil(): Response<ResponseBody>
 
-    @retrofit2.http.PUT("v1/auth/perfil/foto")
-    suspend fun subirFotoPerfil(@Body foto: okhttp3.RequestBody): Response<com.google.gson.JsonObject>
+    @PUT("v1/auth/perfil/foto")
+    suspend fun subirFotoPerfil(
+        @Body foto: RequestBody
+    ): Response<JsonObject>
 
     @DELETE("v1/auth/perfil/foto")
-    suspend fun eliminarFotoPerfil(): Response<com.google.gson.JsonObject>
-
-    @PATCH("v1/usuarios/{id}")
-    suspend fun editarDatosOperario(@Path("id") id: Int, @Body datos: com.google.gson.JsonObject): Response<UsuarioGestionResponse>
-
-    @POST("v1/usuarios/{id}/restablecer-password")
-    suspend fun restablecerPasswordOperario(@Path("id") id: Int, @Body datos: com.google.gson.JsonObject): Response<com.google.gson.JsonObject>
-
+    suspend fun eliminarFotoPerfil(): Response<JsonObject>
 
     // =========================================================
     // NOTIFICACIONES
@@ -84,25 +89,23 @@ interface ApiService {
     suspend fun listarMisNotificaciones(
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
-    ): Response<PaginatedResponse<com.project.avisensandroid.model.NotificacionResponse>>
+    ): Response<PaginatedResponse<NotificacionResponse>>
 
     @GET("v1/notificaciones/no-leidas")
-    suspend fun contarNotificacionesNoLeidas():
-            Response<com.project.avisensandroid.model.ContadorNotificacionesResponse>
+    suspend fun contarNotificacionesNoLeidas(): Response<ContadorNotificacionesResponse>
 
     @PATCH("v1/notificaciones/{id}/leer")
     suspend fun marcarNotificacionLeida(
         @Path("id") id: Int
-    ): Response<com.project.avisensandroid.model.NotificacionResponse>
+    ): Response<NotificacionResponse>
 
     @PATCH("v1/notificaciones/leer-todas")
-    suspend fun marcarTodasNotificacionesLeidas():
-            Response<okhttp3.ResponseBody>
+    suspend fun marcarTodasNotificacionesLeidas(): Response<ResponseBody>
 
     @DELETE("v1/notificaciones/{id}")
     suspend fun eliminarMiNotificacion(
         @Path("id") id: Int
-    ): Response<okhttp3.ResponseBody>
+    ): Response<ResponseBody>
 
     // =========================================================
     // AUTENTICACIÓN
@@ -138,6 +141,18 @@ interface ApiService {
     // USUARIOS / GESTIÓN DE OPERARIOS
     // =========================================================
 
+    @PATCH("v1/usuarios/{id}")
+    suspend fun editarDatosOperario(
+        @Path("id") id: Int,
+        @Body datos: JsonObject
+    ): Response<UsuarioGestionResponse>
+
+    @POST("v1/usuarios/{id}/restablecer-password")
+    suspend fun restablecerPasswordOperario(
+        @Path("id") id: Int,
+        @Body datos: JsonObject
+    ): Response<JsonObject>
+
     @POST("v1/usuarios")
     suspend fun crearUsuario(
         @Body request: CreateUsuarioRequest
@@ -150,8 +165,7 @@ interface ApiService {
     ): Response<PaginatedResponse<UsuarioGestionResponse>>
 
     @GET("v1/usuarios/catalogos/roles")
-    suspend fun listarRolesUsuarios():
-            Response<List<RolCatalogoResponse>>
+    suspend fun listarRolesUsuarios(): Response<List<RolCatalogoResponse>>
 
     @PATCH("v1/usuarios/{id}")
     suspend fun actualizarEstadoUsuario(
@@ -203,7 +217,7 @@ interface ApiService {
         @Path("id") insumoId: Int,
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
-    ): Response<PaginatedResponse<com.project.avisensandroid.model.MovimientoAutonomiaResponse>>
+    ): Response<PaginatedResponse<MovimientoAutonomiaResponse>>
 
     // Registrar entrada de insumos.
     // BodegaFragment convierte primero la cantidad
@@ -316,10 +330,15 @@ interface ApiService {
     ): Response<PaginatedResponse<UmbralAmbientalResponse>>
 
     @POST("v1/umbrales")
-    suspend fun crearUmbralAmbiental(@Body datos: Map<String, @JvmSuppressWildcards Any>): Response<UmbralAmbientalResponse>
+    suspend fun crearUmbralAmbiental(
+        @Body datos: Map<String, @JvmSuppressWildcards Any>
+    ): Response<UmbralAmbientalResponse>
 
     @PATCH("v1/umbrales/{id}/revisar")
-    suspend fun revisarUmbralAmbiental(@Path("id") id: Int, @Body datos: Map<String, @JvmSuppressWildcards Any>): Response<UmbralAmbientalResponse>
+    suspend fun revisarUmbralAmbiental(
+        @Path("id") id: Int,
+        @Body datos: Map<String, @JvmSuppressWildcards Any>
+    ): Response<UmbralAmbientalResponse>
 
     @GET("v1/mediciones/ultimas")
     suspend fun listarUltimasLecturas(
@@ -329,6 +348,11 @@ interface ApiService {
     // =========================================================
     // ALERTAS
     // =========================================================
+
+    @GET("v1/alertas/{id}")
+    suspend fun consultarAlertaNotificacion(
+        @Path("id") id: Int
+    ): Response<AlertaResponse>
 
     @GET("v1/alertas/galpon/{galponId}")
     suspend fun listarAlertasDeGalpon(
@@ -422,11 +446,16 @@ interface ApiService {
         @Body request: RegistroMortalidadRequest
     ): Response<RegistroMortalidadResponse>
 
-    @retrofit2.http.PUT("v1/registros-mortalidad/{id}/foto")
-    suspend fun subirFotoMortalidad(@Path("id") id: Int, @Body foto: okhttp3.RequestBody): Response<okhttp3.ResponseBody>
+    @PUT("v1/registros-mortalidad/{id}/foto")
+    suspend fun subirFotoMortalidad(
+        @Path("id") id: Int,
+        @Body foto: RequestBody
+    ): Response<ResponseBody>
 
     @GET("v1/registros-mortalidad/{id}/foto")
-    suspend fun obtenerFotoMortalidad(@Path("id") id: Int): Response<okhttp3.ResponseBody>
+    suspend fun obtenerFotoMortalidad(
+        @Path("id") id: Int
+    ): Response<ResponseBody>
 
     @GET("v1/registros-mortalidad")
     suspend fun listarRegistrosMortalidad(

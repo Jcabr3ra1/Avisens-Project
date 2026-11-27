@@ -73,12 +73,13 @@ object Hu56OfflineQueue {
         false
     }
 
-    internal fun cambiarEstado(c: Context, id: String, estado: String): Boolean = synchronized(lock) {
+    internal fun cambiarEstado(c: Context, id: String, estado: String, error: String? = null): Boolean = synchronized(lock) {
         val lista = JSONArray(prefs(c).getString(KEY, "[]"))
         for (i in 0 until lista.length()) {
             val item = lista.getJSONObject(i)
             if (item.optString("id") == id) {
                 item.put("estado", estado)
+                if (error != null) item.put("error", error) else item.remove("error")
                 return@synchronized prefs(c).edit().putString(KEY, lista.toString()).commit()
             }
         }
@@ -87,9 +88,36 @@ object Hu56OfflineQueue {
 }
 
 class Hu56SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    private fun registrarFallo(id: String, response: retrofit2.Response<*>, stock: Boolean) {
+        val codigo = response.code()
+        val raw = runCatching { response.errorBody()?.string() }.getOrNull()
+        val mensaje = runCatching { JSONObject(raw.orEmpty()).optString("message") }.getOrNull()
+        val detalle = "HTTP $codigo: ${mensaje?.takeIf { it.isNotBlank() } ?: response.message()}"
+        val rechazo = codigo in listOf(400, 401, 403, 404, 409, 422)
+        Hu56OfflineQueue.cambiarEstado(applicationContext, id,
+            if (rechazo) (if (stock) "ERROR_STOCK" else "ERROR") else (if (stock) "REVISAR_STOCK" else "REVISAR"), detalle)
+    }
+
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         RetrofitClient.inicializar(applicationContext)
         if (!UserSession.isLoggedIn(applicationContext)) return@withContext Result.success()
+        // Un movimiento con el identificador local exacto confirma el descuento.
+        for (item in Hu56OfflineQueue.registros(applicationContext).filter { it.optString("estado") == "REVISAR_STOCK" }) {
+            try {
+                var pagina = 1
+                do {
+                    val r = RetrofitClient.api.listarMovimientosInsumo(item.getInt("insumo_id"), pagina, 100)
+                    val cuerpo = r.body() ?: break
+                    if (!r.isSuccessful) break
+                    if (cuerpo.data.any { it.motivo == "Consumo móvil ${item.getString("id")}" }) {
+                        Hu56OfflineQueue.cambiarEstado(applicationContext, item.getString("id"), "SINCRONIZADO")
+                        break
+                    }
+                    pagina++
+                } while (pagina <= cuerpo.meta.totalPages)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { /* Conservar para revisión. */ }
+        }
         while (true) {
             val item = Hu56OfflineQueue.siguiente(applicationContext) ?: break
             val id = item.getString("id")
@@ -100,7 +128,8 @@ class Hu56SyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     val consumo = Gson().fromJson(item.getString("payload"), CreateConsumoDiarioRequest::class.java)
                     val r = RetrofitClient.api.registrarMovimientoInsumo(item.getInt("insumo_id"), RegistrarMovimientoRequest("salida", requireNotNull(consumo.alimento_kg), "Consumo móvil ${id}", consumo.lote_id))
                     if (r.isSuccessful) Hu56OfflineQueue.cambiarEstado(applicationContext, id, "SINCRONIZADO")
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                    else registrarFallo(id, r, true)
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Hu56OfflineQueue.cambiarEstado(applicationContext, id, "REVISAR_STOCK", e.message ?: "Respuesta incierta") }
                 continue
             }
             if (item.optString("estado") == "FOTO") {
@@ -131,11 +160,11 @@ class Hu56SyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
                         if (!Hu56OfflineQueue.guardarIdFoto(applicationContext, id, registro.id)) break
                     } else if (!item.has("foto")) Hu56OfflineQueue.cambiarEstado(applicationContext, id, if (item.has("insumo_id")) "STOCK" else "SINCRONIZADO")
                 } else {
-                    // Error 4xx/5xx o resultado desconocido: no reintentar a ciegas.
-                    break
+                    if (response != null) registrarFallo(id, response, false)
+                    else Hu56OfflineQueue.cambiarEstado(applicationContext, id, "ERROR", "Tipo de registro no reconocido")
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
-                break
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                Hu56OfflineQueue.cambiarEstado(applicationContext, id, "REVISAR", e.message ?: "Respuesta incierta")
             }
         }
         Result.success()

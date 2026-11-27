@@ -95,6 +95,28 @@ class InicioFragment : BaseBottomNavFragment() {
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_inicio)
         configurarEncabezado(activity)
+        binding.btnCampana.setOnClickListener { activity.abrirCentroNotificaciones() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                suspend fun contador(soloCache: Boolean) {
+                    try {
+                        val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
+                        val r = api.contarNotificacionesNoLeidas()
+                        val n = r.body()?.no_leidas ?: return
+                        _binding?.txtNoLeidas?.apply {
+                            text = if (n > 99) "99+" else n.toString()
+                            visibility = if (n > 0) View.VISIBLE else View.GONE
+                        }
+                    } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                }
+                contador(true)
+                while (isActive) {
+                    contador(false)
+                    delay(15000)
+                }
+            }
+        }
+
         if (esPropietario()) {
             conectarDetalleInicio(binding.arcTemperaturaInicio, binding.txtTemperaturaInicio, binding.txtEstadoTemperaturaInicio, "Temperatura", "temperatura", "°C")
             conectarDetalleInicio(binding.arcHumedadInicio, binding.txtHumedadInicio, binding.txtEstadoHumedadInicio, "Humedad", "humedad", "%")
@@ -377,33 +399,33 @@ class InicioFragment : BaseBottomNavFragment() {
                 val activity = requireActivity() as MainActivity
                 for (soloCache in listOf(true, false)) {
                     try {
-                // Primero consultar la estructura y los sensores, sin competir con historiales.
-                supervisorScope {
-                    val granjasDef = async { activity.obtenerGranjas(soloCache) }
-                    val galponesDef = async { activity.obtenerGalpones(soloCache) }
-                    val sensoresDef = async { if (esPropietario()) cargarTodosSensores(soloCache) else emptyList() }
-                    val rg = granjasDef.await()
-                    val rp = galponesDef.await()
-                    if (!rg.isSuccessful || !rp.isSuccessful) error("No se pudo consultar la estructura")
-                    granjas = rg.body()?.data.orEmpty().filter { it.activa }
-                    galpones = rp.body()?.data.orEmpty().filter { it.activo }
-                    errorCargaSensores = false
-                    sensores = try { sensoresDef.await() } catch (e: CancellationException) { throw e }
-                    catch (_: Exception) { errorCargaSensores = true; emptyList() }
-                }
-                configurarSpinnerGranjas()
-                if (granjas.isEmpty()) {
-                    if (soloCache) continue
-                    granjaSeleccionada = null
-                    activity.limpiarGranjaSeleccionada()
-                    activity.limpiarGalponSeleccionado()
-                    binding.txtCantidadGalpones.text = "0 galpones"
-                    binding.containerGalpones.removeAllViews()
-                    limpiarDashboard("Sin datos")
-                    return@launch
-                }
-                val inicial = granjas.firstOrNull { it.id == activity.obtenerGranjaSeleccionadaId() } ?: granjas.first()
-                seleccionarGranjaEnInicio(inicial)
+                        // Primero consultar la estructura y los sensores, sin competir con historiales.
+                        supervisorScope {
+                            val granjasDef = async { activity.obtenerGranjas(soloCache) }
+                            val galponesDef = async { activity.obtenerGalpones(soloCache) }
+                            val sensoresDef = async { if (esPropietario()) cargarTodosSensores(soloCache) else emptyList() }
+                            val rg = granjasDef.await()
+                            val rp = galponesDef.await()
+                            if (!rg.isSuccessful || !rp.isSuccessful) error("No se pudo consultar la estructura")
+                            granjas = rg.body()?.data.orEmpty().filter { it.activa }
+                            galpones = rp.body()?.data.orEmpty().filter { it.activo }
+                            errorCargaSensores = false
+                            sensores = try { sensoresDef.await() } catch (e: CancellationException) { throw e }
+                            catch (_: Exception) { errorCargaSensores = true; emptyList() }
+                        }
+                        configurarSpinnerGranjas()
+                        if (granjas.isEmpty()) {
+                            if (soloCache) continue
+                            granjaSeleccionada = null
+                            activity.limpiarGranjaSeleccionada()
+                            activity.limpiarGalponSeleccionado()
+                            binding.txtCantidadGalpones.text = "0 galpones"
+                            binding.containerGalpones.removeAllViews()
+                            limpiarDashboard("Sin datos")
+                            return@launch
+                        }
+                        val inicial = granjas.firstOrNull { it.id == activity.obtenerGranjaSeleccionadaId() } ?: granjas.first()
+                        seleccionarGranjaEnInicio(inicial)
                     } catch (e: CancellationException) { throw e }
                     catch (e: Exception) { if (!soloCache && granjas.isEmpty()) throw e }
                 }
@@ -1022,7 +1044,6 @@ class InicioFragment : BaseBottomNavFragment() {
         val semana = campo(R.id.edtSemanaUmbral)
         val minimo = campo(R.id.edtMinimoUmbral)
         val maximo = campo(R.id.edtMaximoUmbral)
-        val unidad = campo(R.id.edtUnidadUmbral)
         val guardar = formulario.findViewById<View>(R.id.btnGuardarUmbral)
         val cancelar = formulario.findViewById<View>(R.id.btnCancelarUmbral)
         val variables = listOf(clave)
@@ -1031,16 +1052,15 @@ class InicioFragment : BaseBottomNavFragment() {
         val semanaActual = semanaUmbralInicio() + 1
         var totalSemanas = maxOf(8, semanaActual.coerceAtMost(201), porSemana.keys.maxOrNull() ?: 0)
         val progreso = formulario.findViewById<TextView>(R.id.txtProgresoUmbrales)
-        val agregar = formulario.findViewById<View>(R.id.btnAgregarSemanaUmbral)
         fun actualizarSemanas(seleccion: Int) {
             progreso.text = "${porSemana.size} de $totalSemanas semanas configuradas"
-            adaptar(selector, (1..totalSemanas).map { numero ->
+            val opciones = (1..totalSemanas).map { numero ->
                 val estado = if (porSemana.containsKey(numero)) "Configurada" else "Sin configurar"
                 val marca = if (numero == semanaActual) " · Actual" else ""
                 "Semana $numero · $estado$marca"
-            })
+            }
+            adaptar(selector, opciones + if (totalSemanas < 201) listOf("+ Agregar semana") else emptyList())
             selector.setSelection((seleccion - 1).coerceIn(0, totalSemanas - 1))
-            agregar.isEnabled = totalSemanas < 201
         }
         adaptar(variable, listOf(clave.replaceFirstChar { it.uppercase() }))
         adaptar(criticidad, criticidades.map { it.replaceFirstChar { c -> c.uppercase() } })
@@ -1048,6 +1068,12 @@ class InicioFragment : BaseBottomNavFragment() {
         selector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (position == totalSemanas && totalSemanas < 201) {
+                    totalSemanas++
+                    actualizarSemanas(totalSemanas)
+                    return
+                }
+                if (position !in 0 until totalSemanas) return
                 actual = porSemana[position + 1]
                 val item = actual
                 variable.setSelection(variables.indexOf(item?.variable).coerceAtLeast(0))
@@ -1056,34 +1082,30 @@ class InicioFragment : BaseBottomNavFragment() {
                 semana.setText((position + 1).toString())
                 minimo.setText(item?.valor_minimo?.toString().orEmpty())
                 maximo.setText(item?.valor_maximo?.toString().orEmpty())
-                unidad.setText(item?.unidad ?: unidadSensor)
                 criticidad.setSelection(criticidades.indexOf(item?.criticidad).coerceAtLeast(0))
             }
         }
         actualizarSemanas(semanaActual)
-        agregar.setOnClickListener {
-            if (totalSemanas < 201) {
-                totalSemanas++
-                actualizarSemanas(totalSemanas)
-            }
-        }
         cancelar.setOnClickListener { dialogo.dismiss() }
         guardar.setOnClickListener {
             if (!esPropietario() || galponSeleccionadoId != galponId) { dialogo.dismiss(); return@setOnClickListener }
             val min = minimo.text.toString().replace(',', '.').toDoubleOrNull()
             val max = maximo.text.toString().replace(',', '.').toDoubleOrNull()
             val sem = semana.text.toString().toIntOrNull()
-            val uni = unidad.text.toString().trim()
+            val uni = when (clave) {
+                "temperatura" -> "°C"
+                "humedad" -> "%"
+                "luminosidad" -> "lux"
+                else -> unidadSensor
+            }
             if (sem == null || sem !in 1..201) { semana.error = "Semana entre 1 y 201"; return@setOnClickListener }
             if (min == null || !min.isFinite() || min !in -50.0..100000.0) { minimo.error = "Valor mínimo inválido"; return@setOnClickListener }
             if (max == null || !max.isFinite() || max !in -50.0..100000.0 || max <= min) { maximo.error = "Debe ser mayor que el mínimo"; return@setOnClickListener }
-            if (uni.isBlank() || uni.length > 20) { unidad.error = "Ingresa una unidad válida"; return@setOnClickListener }
             val item = porSemana[sem]
             val datos = mutableMapOf<String, Any>("valor_minimo" to min, "valor_maximo" to max, "unidad" to uni, "criticidad" to criticidades[criticidad.selectedItemPosition])
             if (item == null) { datos["galpon_id"] = galponId; datos["variable"] = variables[variable.selectedItemPosition]; datos["semana_vida"] = sem - 1 }
             guardar.isEnabled = false
             selector.isEnabled = false
-            agregar.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     val respuesta = if (item == null) RetrofitClient.api.crearUmbralAmbiental(datos) else RetrofitClient.api.revisarUmbralAmbiental(item.id, datos)
@@ -1101,7 +1123,7 @@ class InicioFragment : BaseBottomNavFragment() {
                     else minimo.error = if (respuesta.code() == 409) "Ya existe un umbral para esta semana y variable" else "No se pudo guardar (HTTP ${respuesta.code()})"
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { minimo.error = "No se pudo conectar con el servidor" }
-                finally { guardar.isEnabled = true; selector.isEnabled = true; agregar.isEnabled = totalSemanas < 201 }
+                finally { guardar.isEnabled = true; selector.isEnabled = true }
             }
         }
         dialogoUmbral?.dismiss()

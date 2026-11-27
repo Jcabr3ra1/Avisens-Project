@@ -1,72 +1,223 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true"
-    android:background="@android:color/transparent">
+    android:background="@android:color/transparent"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_white"
         android:orientation="vertical"
-        android:padding="18dp"
-        android:background="@drawable/bg_dialog_white">
+        android:padding="18dp">
 
         <!-- TÍTULO -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
             android:text="Configurar umbrales"
-            android:textSize="20sp"
-            android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="10dp" />
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <TextView android:id="@+id/txtProgresoUmbrales" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/text_primary" android:textStyle="bold" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Seleccionar semana" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerUmbralExistente" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:id="@+id/btnAgregarSemanaUmbral" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center" android:text="+ Agregar semana" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_primary" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Variable ambiental" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerVariableUmbral" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Semana de vida (1 = primera)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtSemanaUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="number"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor mínimo" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtMinimoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor máximo" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtMaximoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Unidad de medida" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtUnidadUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="text"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Criticidad" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerCriticidadUmbral" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
+        <!-- PROGRESO DE UMBRALES -->
+        <TextView
+            android:id="@+id/txtProgresoUmbrales"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- SELECCIONAR SEMANA -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Seleccionar semana"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
+
+            <Spinner
+                android:id="@+id/spinnerUmbralExistente"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
+
+        </FrameLayout>
+
+        <!-- VARIABLE AMBIENTAL -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Variable ambiental"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
+
+            <Spinner
+                android:id="@+id/spinnerVariableUmbral"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
+
+        </FrameLayout>
+
+        <!-- SEMANA DE VIDA -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Semana de vida (1 = primera)"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtSemanaUmbral"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="number"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
+
+        <!-- VALOR MÍNIMO -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Valor mínimo"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtMinimoUmbral"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="numberDecimal|numberSigned"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
+
+        <!-- VALOR MÁXIMO -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Valor máximo"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtMaximoUmbral"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="numberDecimal|numberSigned"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
+
+        <!-- CRITICIDAD -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Criticidad"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
+
+            <Spinner
+                android:id="@+id/spinnerCriticidadUmbral"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
+
+        </FrameLayout>
+
         <!-- BOTONES DEL FORMULARIO -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
             android:gravity="center"
-            android:layout_marginTop="10dp">
+            android:orientation="horizontal">
 
             <!-- CANCELAR -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelarUmbral"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginEnd="3dp"
                 android:layout_weight="1"
-                android:text="Cancelar"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/cancel_text"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginEnd="3dp"
-                app:cornerRadius="9dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Cancelar"
+                android:textAllCaps="false"
+                android:textColor="@color/cancel_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
                 app:backgroundTint="@color/cancel_background"
+                app:cornerRadius="9dp"
                 app:strokeWidth="0dp" />
 
             <!-- GUARDAR -->
@@ -74,19 +225,19 @@
                 android:id="@+id/btnGuardarUmbral"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginStart="3dp"
                 android:layout_weight="1"
-                android:text="Guardar umbral"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
                 android:backgroundTint="#2E8B57"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginStart="3dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Guardar umbral"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
                 app:cornerRadius="9dp" />
 
         </LinearLayout>
