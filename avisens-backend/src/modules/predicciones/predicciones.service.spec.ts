@@ -110,13 +110,16 @@ describe('PrediccionesService', () => {
 
   // Cada ruta del servicio ML devuelve una forma distinta; un solo mock para
   // las tres haria que mortalidad y consumo recibieran el cuerpo del peso.
-  const mlResponde = () => {
+  const mlResponde = (sobrescritura?: Partial<typeof respuestaMl>) => {
+    const cuerpoPeso = sobrescritura
+      ? { ...respuestaMl, ...sobrescritura }
+      : respuestaMl;
     global.fetch = jest.fn().mockImplementation((url: string) => {
       const cuerpo = url.includes('/predecir-mortalidad')
         ? { mortalidad_proyectada_pct: 4.2, dia_faena: 42 }
         : url.includes('/predecir-consumo')
           ? { consumo_proyectado_kg: 3800, dia_faena: 42 }
-          : respuestaMl;
+          : cuerpoPeso;
       return Promise.resolve({
         ok: true,
         json: jest.fn().mockResolvedValue(cuerpo),
@@ -453,7 +456,7 @@ describe('PrediccionesService', () => {
       peso_proyectado_faena_g: 2600,
       dia_faena: 42,
       dias_al_objetivo: 38,
-      peso_objetivo_g: 2500,
+      peso_objetivo_g: 2400,
       modelo: {
         nombre: 'crecimiento_aves',
         version: '1.2.0',

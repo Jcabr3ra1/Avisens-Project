@@ -1,5 +1,6 @@
 import type { ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
 import type { Lote } from '@features/lotes/api/lotes'
+import { gramosALibras } from '@features/lotes/model/pesoObjetivo'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import { diasDeVida } from '@shared/utils/fechas'
 import type { HojaXlsx, ImagenXlsx, RangoCombinado, ValorCelda } from '@shared/utils/xlsx'
@@ -275,6 +276,156 @@ export function hojasCrecimientoExcel(
     anchos: [13, 16, 15, 19, 19, 15, 15, 18, 15, 16],
     alturas,
     combinaciones: banner.combinaciones,
+    imagen: banner.imagen,
+    ocultarCuadricula: true,
+  }]
+}
+
+export function hojasEjecutivoExcel(
+  lote: Lote,
+  indicadores: IndicadorLote[],
+  curva: CurvaCrecimiento | null,
+  alimento: PlanAlimentoGuia | null,
+  logo: Uint8Array | null = null,
+): HojaXlsx[] {
+  const validos = indicadores
+    .filter((i) => i.estado_calculo === 'calculado' && i.dia_vida !== null)
+    .sort((a, b) => (a.dia_vida ?? 0) - (b.dia_vida ?? 0))
+  const ultimoIndicador = validos.length > 0 ? validos[validos.length - 1] : null
+
+  const avesIniciales = lote.cantidad_inicial
+  const avesFinales = lote.cantidad_aves_vendidas ?? avesIniciales
+  const pesoFinalG =
+    lote.peso_promedio_final_g ??
+    ultimoIndicador?.peso_promedio_g ??
+    curva?.resumen.ultimo_pesaje.peso_g ??
+    0
+  const carneTotalKg = Math.round((avesFinales * pesoFinalG) / 1000)
+  const alimentoTotalKg =
+    alimento?.resultado.consumo_total_kg ??
+    (ultimoIndicador?.consumo_acumulado_g
+      ? Math.round((ultimoIndicador.consumo_acumulado_g * avesFinales) / 1000)
+      : 0)
+  const fcrFinal = lote.fcr_final ?? ultimoIndicador?.fcr ?? (carneTotalKg > 0 ? alimentoTotalKg / carneTotalKg : null)
+  const mortalidadPct =
+    lote.mortalidad_acumulada_final_pct ??
+    (avesIniciales > 0 ? ((avesIniciales - avesFinales) / avesIniciales) * 100 : 0)
+
+  const costoAlimentoCop = alimentoTotalKg * 2600
+  const precioKgCop = lote.precio_venta_kg_cop ?? 6200
+  const ingresoVentaCop = lote.valor_venta_total_cop ?? (carneTotalKg * precioKgCop)
+  const margenCop = ingresoVentaCop - costoAlimentoCop
+
+  const nombreGranja = lote.galpon?.granja?.nombre ?? 'Granja'
+  const nombreGalpon = lote.galpon?.nombre ?? 'Galpón'
+  const banner = cabeceraBanner(
+    'AVISENS · Reporte Ejecutivo del Lote',
+    `${nombreGranja} · ${nombreGalpon} · Lote ${lote.codigo} · ${fechaGeneracion()}`,
+    7,
+    logo,
+  )
+
+  const filas: ValorCelda[][] = [...banner.filas]
+  const combinaciones: RangoCombinado[] = [...banner.combinaciones]
+  const alturas: Record<number, number> = { ...banner.alturas }
+
+  const agregarSeccion = (titulo: string) => {
+    const idx = filas.length
+    filas.push(Array.from({ length: 7 }, (_, c) => ({ valor: c === 0 ? titulo : null, estilo: 'subtituloSeccion' })))
+    combinaciones.push({ filaInicio: idx, colInicio: 0, filaFin: idx, colFin: 6 })
+    alturas[idx] = 22
+  }
+
+  agregarSeccion('1. Indicadores Zootécnicos Clave')
+  filas.push([
+    { valor: 'Aves iniciales', estilo: 'etiquetaMeta' },
+    { valor: avesIniciales, estilo: 'entero' },
+    { valor: 'Aves vendidas / actuales', estilo: 'etiquetaMeta' },
+    { valor: avesFinales, estilo: 'entero' },
+    { valor: 'Mortalidad (%)', estilo: 'etiquetaMeta' },
+    { valor: Number(mortalidadPct.toFixed(2)), estilo: 'decimalTabla' },
+    null,
+  ])
+  alturas[filas.length - 1] = 20
+  filas.push([
+    { valor: 'Peso promedio (g)', estilo: 'etiquetaMeta' },
+    { valor: pesoFinalG, estilo: 'decimalTabla' },
+    { valor: 'Peso promedio (lb)', estilo: 'etiquetaMeta' },
+    { valor: Number(gramosALibras(pesoFinalG).toFixed(2)), estilo: 'decimalTabla' },
+    { valor: 'FCR', estilo: 'etiquetaMeta' },
+    { valor: fcrFinal !== null ? Number(fcrFinal.toFixed(2)) : null, estilo: 'decimalTabla' },
+    null,
+  ])
+  alturas[filas.length - 1] = 20
+  filas.push([])
+  alturas[filas.length - 1] = 10
+
+  agregarSeccion('2. Balance Financiero Preliminar (COP)')
+  filas.push([
+    'Concepto', 'Cantidad', 'Unidad', 'Valor estimado (COP)', 'Detalle', '', '',
+  ].map((t) => ({ valor: t, estilo: 'cabeceraTabla' })))
+  alturas[filas.length - 1] = 22
+  filas.push([
+    celdaTexto('Carne producida / ingreso', false),
+    celdaEntero(carneTotalKg, false),
+    celdaTexto('kg', false),
+    { valor: ingresoVentaCop, estilo: 'monedaTabla' },
+    celdaTexto(`Base $ ${precioKgCop.toLocaleString('es-CO')} / kg`, false),
+    celdaTexto('', false),
+    celdaTexto('', false),
+  ])
+  alturas[filas.length - 1] = 19
+  filas.push([
+    celdaTexto('Alimento consumido / costo', true),
+    celdaEntero(alimentoTotalKg, true),
+    celdaTexto('kg', true),
+    { valor: costoAlimentoCop, estilo: 'monedaZebra' },
+    celdaTexto('Base $ 2.600 / kg', true),
+    celdaTexto('', true),
+    celdaTexto('', true),
+  ])
+  alturas[filas.length - 1] = 19
+  filas.push([
+    { valor: 'Margen bruto preliminar', estilo: 'totalEtiqueta' },
+    { valor: null, estilo: 'totalEtiqueta' },
+    { valor: 'COP', estilo: 'totalEtiqueta' },
+    { valor: margenCop, estilo: 'totalMoneda' },
+    { valor: 'Venta carne − costo alimento', estilo: 'totalEtiqueta' },
+    { valor: null, estilo: 'totalEtiqueta' },
+    { valor: null, estilo: 'totalEtiqueta' },
+  ])
+  alturas[filas.length - 1] = 21
+  filas.push([])
+  alturas[filas.length - 1] = 10
+
+  agregarSeccion('3. Historial de Crecimiento y Consumo')
+  filas.push([
+    'Día de vida', 'Fecha', 'Peso promedio (g)', 'Peso (lb)',
+    'Consumo acum. (g/ave)', 'FCR', 'Estado',
+  ].map((t) => ({ valor: t, estilo: 'cabeceraTabla' })))
+  alturas[filas.length - 1] = 24
+
+  validos.forEach((ind, idx) => {
+    const zebra = idx % 2 === 1
+    const pesoG = ind.peso_promedio_g ?? null
+    filas.push([
+      celdaEntero(ind.dia_vida, zebra),
+      celdaTexto(ind.fecha.slice(0, 10), zebra),
+      celdaDecimal(pesoG, zebra),
+      celdaDecimal(pesoG !== null ? Number(gramosALibras(pesoG).toFixed(2)) : null, zebra),
+      celdaDecimal(ind.consumo_acumulado_g ?? null, zebra),
+      celdaDecimal(ind.fcr ?? null, zebra),
+      celdaTexto(ind.estado_peso ?? 'Registrado', zebra),
+    ])
+    alturas[filas.length - 1] = 19
+  })
+
+  return [{
+    nombre: 'Ejecutivo',
+    filas,
+    anchos: [24, 16, 18, 22, 24, 14, 16],
+    alturas,
+    combinaciones,
     imagen: banner.imagen,
     ocultarCuadricula: true,
   }]

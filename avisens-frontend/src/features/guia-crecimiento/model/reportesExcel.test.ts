@@ -4,7 +4,7 @@ import type { Lote } from '@features/lotes/api/lotes'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import { crearLibroXlsx } from '@shared/utils/xlsx'
 import type { IndicadorLote, PlanAlimentoGuia } from '../api/guiaCrecimiento'
-import { hojasAlimentacionExcel, hojasCrecimientoExcel } from './reportesExcel'
+import { hojasAlimentacionExcel, hojasCrecimientoExcel, hojasEjecutivoExcel } from './reportesExcel'
 
 const loteMock: Lote = {
   id: 7,
@@ -87,5 +87,16 @@ describe('reportesExcel', () => {
     const texto = new TextDecoder().decode(crearLibroXlsx(hojas))
     expect(texto).toContain('AVISENS · Reporte de Crecimiento y Proyección')
     expect(texto).toContain('185')
+  })
+
+  it('arma el reporte ejecutivo con indicadores, balance y logo', () => {
+    const logo = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    const hojas = hojasEjecutivoExcel(loteMock, [], null, null, logo)
+    expect(hojas[0].nombre).toBe('Ejecutivo')
+    const texto = new TextDecoder().decode(crearLibroXlsx(hojas))
+    expect(texto).toContain('AVISENS · Reporte Ejecutivo del Lote')
+    expect(texto).toContain('1. Indicadores Zootécnicos Clave')
+    expect(texto).toContain('2. Balance Financiero Preliminar (COP)')
+    expect(texto).toContain('xl/media/image1.png')
   })
 })

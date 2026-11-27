@@ -7,8 +7,7 @@ import { descargarBlob, nombreConFecha } from '@shared/utils/descargas'
 import { mensajeDeError } from '@shared/utils/errores'
 import { cargarLogoAvisens, crearLibroXlsx, TIPO_XLSX } from '@shared/utils/xlsx'
 import type { PlanAlimentoGuia, IndicadorLote } from '../api/guiaCrecimiento'
-import { hojasAlimentacionExcel, hojasCrecimientoExcel } from '../model/reportesExcel'
-import ModalReporteImprimible from './ModalReporteImprimible'
+import { hojasAlimentacionExcel, hojasCrecimientoExcel, hojasEjecutivoExcel } from '../model/reportesExcel'
 
 type Props = {
   lote: Lote
@@ -39,9 +38,22 @@ function ReportesCrecimiento({
   onAbrirComparativa,
 }: Props) {
   const [exportando, setExportando] = useState(false)
-  const [verReporteImprimible, setVerReporteImprimible] = useState(false)
   const crecimientoDisponible = indicadores.some((dato) => dato.estado_calculo === 'calculado' && dato.dia_vida !== null)
     || (curva?.serie.length ?? 0) > 0
+
+  async function exportarEjecutivo() {
+    setExportando(true)
+    try {
+      const logo = await cargarLogoAvisens()
+      const libro = crearLibroXlsx(hojasEjecutivoExcel(lote, indicadores, curva, alimento, logo))
+      descargarExcel(lote.codigo, 'ejecutivo', libro)
+      toast.success('Reporte ejecutivo descargado')
+    } catch (fallo) {
+      toast.error(mensajeDeError(fallo, 'No se pudo descargar el reporte ejecutivo.'))
+    } finally {
+      setExportando(false)
+    }
+  }
 
   async function exportarCrecimiento() {
     if (!crecimientoDisponible) {
@@ -88,15 +100,16 @@ function ReportesCrecimiento({
   return (
     <section className="gdc-reportes" aria-label="Reportes del lote">
       <p className="gdc-reportes-nota">
-        Descarga informes técnicos en PDF/impresión o Excel (.xlsx) con los datos del lote. Evalúa el rendimiento zootécnico y compara ciclos históricos.
+        Descarga informes técnicos en Excel (.xlsx) con los datos del lote. Evalúa el rendimiento zootécnico y compara ciclos históricos.
       </p>
       <div className="gdc-reportes-acciones">
         <button
           type="button"
           className="adm-btn adm-btn--primario"
-          onClick={() => setVerReporteImprimible(true)}
+          onClick={() => void exportarEjecutivo()}
+          disabled={exportando || cargandoAlimento}
         >
-          Reporte imprimible / PDF
+          Excel Ejecutivo
         </button>
         {onAbrirComparativa && (
           <button
@@ -124,16 +137,6 @@ function ReportesCrecimiento({
           {exportando ? 'Preparando reporte…' : 'Excel Alimentación'}
         </button>
       </div>
-
-      {verReporteImprimible && (
-        <ModalReporteImprimible
-          lote={lote}
-          indicadores={indicadores}
-          curva={curva}
-          alimento={alimento}
-          onCerrar={() => setVerReporteImprimible(false)}
-        />
-      )}
     </section>
   )
 }
