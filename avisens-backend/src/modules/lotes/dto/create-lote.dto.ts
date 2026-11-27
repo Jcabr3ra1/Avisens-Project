@@ -1,12 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
+  Max,
+  Min,
 } from 'class-validator';
+import {
+  MARCAS_ALIMENTO,
+  SEXOS_LOTE,
+  VALOR_MAXIMO_MOVIMIENTO_COP,
+} from '../../../common/avicultura/vocabulario';
+import {
+  AVES_MAXIMO_LOTE,
+  NombreEntidad,
+} from '../../../common/validation/texto';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -14,21 +25,8 @@ export class CreateLoteDto {
     description: 'ID del galpón al que pertenece el lote',
   })
   @IsInt()
+  @Min(1)
   galpon_id: number;
-
-  @ApiProperty({
-    example: 1,
-    description: 'ID del proveedor que vendio los pollitos',
-  })
-  @IsInt()
-  proveedor_id: number;
-
-  @ApiProperty({
-    example: 'LOTE-2026-01',
-    description: 'Codigo unico del lote',
-  })
-  @IsString()
-  codigo: string;
 
   @ApiProperty({
     example: '2026-08-06',
@@ -43,27 +41,42 @@ export class CreateLoteDto {
   })
   @IsInt()
   @IsPositive()
+  @Max(AVES_MAXIMO_LOTE)
   cantidad_inicial: number;
 
   @ApiPropertyOptional({ example: 'Ross 308', description: 'Raza de las aves' })
-  @IsString()
+  @NombreEntidad('La raza', 80, false)
   @IsOptional()
   raza?: string;
 
   @ApiPropertyOptional({
     example: 'mixto',
-    description: 'Sexo del lote (macho, hembra, mixto)',
+    description: 'Sexo del lote: macho | hembra | mixto',
+    enum: SEXOS_LOTE,
   })
-  @IsString()
+  @IsIn(SEXOS_LOTE)
   @IsOptional()
   sexo?: string;
 
   @ApiPropertyOptional({
+    example: 1,
+    description:
+      'ID de la línea genética del lote. null desvincula la línea asignada.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  linea_genetica_id?: number | null;
+
+  @ApiPropertyOptional({
     example: 'italcol',
     description:
-      'Marca de alimento del lote: italcol | solla | contegral | finca',
+      'Marca de alimento del lote. Sólo italcol y solla tienen curva sembrada: ' +
+      'con las otras el lote sale sin referencia con la que compararse.',
+    enum: MARCAS_ALIMENTO,
   })
-  @IsString()
+  @IsIn(MARCAS_ALIMENTO)
   @IsOptional()
   marca_alimento?: string;
 
@@ -73,6 +86,7 @@ export class CreateLoteDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   @IsOptional()
   costo_pollito_unitario?: number;
 
@@ -82,6 +96,7 @@ export class CreateLoteDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   @IsOptional()
   presupuesto_total_cop?: number;
 

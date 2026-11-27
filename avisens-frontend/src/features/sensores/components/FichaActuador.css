@@ -1,0 +1,57 @@
+/* FichaActuador.css — Solo lo que el modal compartido no trae: la lista de
+   identidad física y el aviso de guardado. */
+
+.fa-identidad {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.fa-identidad > div { min-width: 0; }
+
+.fa-identidad dt {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fa-identidad dd {
+  margin: 0.15rem 0 0;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.fa-identidad code {
+  margin-left: 0.25rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.fa-alerta { color: var(--warning-text, var(--warning)); }
+
+.fa-ok {
+  margin: 0 0 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--success-border, color-mix(in srgb, var(--success) 30%, transparent));
+  border-radius: var(--radius-md);
+  color: var(--success);
+  background: var(--success-soft, color-mix(in srgb, var(--success) 10%, transparent));
+  font-size: 0.83rem;
+}
+
+.fa-reintentar {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}

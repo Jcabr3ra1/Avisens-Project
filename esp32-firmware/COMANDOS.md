@@ -76,12 +76,32 @@ pio run -t upload -t monitor
 
 ---
 
+## Comandos del monitor serie (firmware modular de esta rama)
+
+Con el monitor abierto se puede escribir (una línea y Enter):
+
+| Comando | Efecto |
+|---|---|
+| `TARA` | Calibra el cero del HX711 con la celda vacía |
+| `RELES` | Lista el estado de K1-K4 y si están en manual |
+| `K1 ON`, `K2 OFF`, `BOMBA AUTO`… | Fuerza un relé o lo devuelve al automático (`K1`-`K4`, `CALEFACTOR`, `VENTILADOR`, `EXTRACTOR`, `BOMBA`) |
+| `REARME` o `RESET` | Reinicia la máquina de estados desde `INIT` |
+
+Un relé forzado por aquí queda en **manual local**: la web no puede cambiarlo.
+
+---
+
 ## Salida esperada (todo funcionando)
+
+> **Alcance:** la salida de ejemplo y la «prueba en vivo» de abajo son las del
+> firmware monolítico de `develop` (un DHT22 y un ventilador). El firmware
+> modular de esta rama imprime más información por ciclo; descríbelo según lo
+> que veas en el monitor, no según este ejemplo.
 
 ```
 === Nodo ESP32 Avisens ===
 [WiFi] Conectado. IP: 10.83.202.176
-[Envío] galpon1 → temp=24.8 C  hum=69.2 %  ventilador=off
+[Envío] GPIO 18: temp=24.8 C  hum=69.2 %
 ```
 
 Prueba en vivo: calienta el DHT22 con la mano; al pasar de 30 °C, el relé hace

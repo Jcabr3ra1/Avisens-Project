@@ -1,0 +1,14 @@
+meta {
+  name: Ver organización
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/organizaciones/1
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,7 @@
+.pros-eliminacion { display: grid; gap: 1rem; color: var(--text-primary); font-size: .95rem; line-height: 1.6; }
+.pros-eliminacion p, .pros-eliminacion ul { margin: 0; }
+.pros-eliminacion ul { padding-left: 1.25rem; color: var(--text-secondary); }
+.pros-eliminacion-confirmar { display: grid; gap: .5rem; }
+.pros-eliminacion-confirmar input { width: 100%; min-height: 44px; padding: .65rem .85rem; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-primary); font: inherit; }
+.pros-eliminacion-confirmar input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.pros-eliminacion .pros-eliminacion-error { color: var(--danger3); }

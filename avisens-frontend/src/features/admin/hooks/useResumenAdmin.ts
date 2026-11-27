@@ -1,0 +1,46 @@
+import { useMemo } from 'react'
+import type { Usuario } from '@shared/api'
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
+import type { Prospecto } from '@features/crm/api/prospectos'
+import type { ConectividadPlataforma } from '../model/conectividad'
+import type { AtencionAdminData } from '../api/admin'
+import {
+  calcularAtencionAdmin,
+  calcularConversionCrm,
+  calcularEtapasCrmAdmin,
+  calcularKpisAdmin,
+  ultimosProspectos,
+} from '../model/adminResumen'
+
+type Datos = {
+  usuarios: Usuario[]
+  organizaciones: Organizacion[]
+  prospectos: Prospecto[]
+  conectividad: ConectividadPlataforma | null
+  errorConectividad: boolean
+  atencion: AtencionAdminData
+}
+
+export function useResumenAdmin({ usuarios, organizaciones, prospectos, conectividad, errorConectividad, atencion }: Datos) {
+  return useMemo(() => {
+    const etapasCrm = calcularEtapasCrmAdmin(prospectos)
+    const totalPropietarios = usuarios.filter((usuario) => usuario.rol.nombre === 'Propietario').length
+    const actividadReciente = [...usuarios]
+      .sort((a, b) => new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime())
+      .slice(0, 5)
+
+    return {
+      kpis: calcularKpisAdmin(organizaciones, usuarios, calcularAtencionAdmin(atencion), conectividad, errorConectividad),
+      atencion: calcularAtencionAdmin(atencion),
+      etapasCrm,
+      conversionCrm: calcularConversionCrm(prospectos),
+      prospectosRecientes: ultimosProspectos(prospectos),
+      totalProspectos: prospectos.length,
+      actividadReciente,
+      totalPropietarios,
+      totalOperarios: usuarios.filter((usuario) => usuario.rol.nombre === 'Operario').length,
+      totalAdministradores: usuarios.filter((usuario) => usuario.rol.nombre === 'Administrador').length,
+      totalActivos: usuarios.filter((usuario) => usuario.activo).length,
+    }
+  }, [atencion, conectividad, errorConectividad, organizaciones, prospectos, usuarios])
+}

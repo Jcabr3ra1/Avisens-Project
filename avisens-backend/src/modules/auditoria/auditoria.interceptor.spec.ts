@@ -1,3 +1,4 @@
+import { usernameDePrueba } from '../../../test/soporte/username';
 import { of } from 'rxjs';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { AuditoriaInterceptor } from './auditoria.interceptor';
@@ -68,7 +69,7 @@ describe('AuditoriaInterceptor', () => {
       {
         method: 'POST',
         path: '/v1/auth/login',
-        body: { email: 'a@a.com', password: 'secreto' },
+        body: { username: usernameDePrueba('a@a.com'), password: 'secreto' },
         headers: {},
       },
       { usuario: { id: 9 } },

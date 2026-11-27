@@ -1,0 +1,374 @@
+.est {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.est-aviso-propietario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft, #fbf4dc);
+  color: var(--warning3);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.est-aviso-propietario > span { flex: 1 1 18rem; }
+.est-aviso-propietario a { text-decoration: none; }
+
+/* ─── Botones limpios del módulo ─── */
+.est-boton {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+
+.est-boton:disabled { opacity: 0.5; cursor: not-allowed; }
+.est-boton--principal { background: var(--primary); color: var(--on-primary); }
+.est-boton--principal:hover:not(:disabled) { background: var(--primary-hover); }
+.est-boton--secundario { border-color: var(--border-default); background: var(--surface-base); color: var(--text-primary); }
+.est-boton--secundario:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-hover); }
+.est-boton--suave { border-color: color-mix(in srgb, var(--primary) 24%, transparent); background: color-mix(in srgb, var(--primary) 8%, var(--surface-base)); color: var(--primary); }
+.est-boton--suave:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 14%, var(--surface-base)); }
+.est-boton--monitoreo { border-color: color-mix(in srgb, var(--avisens-maize, #e3c565) 65%, transparent); background: var(--accent-soft, #fbf4dc); color: var(--avisens-ink, #203b32); }
+.est-boton--monitoreo:hover:not(:disabled) { background: color-mix(in srgb, var(--avisens-maize, #e3c565) 42%, var(--surface-base)); }
+
+/* ─── Selector horizontal de granjas ─── */
+.est-selector-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.est-selector-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.est-selector-pill {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.est-selector-pill:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.est-selector-pill.is-activa {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--primary-soft) 65%, var(--surface-base));
+  color: var(--primary);
+}
+
+.est-selector-pill small {
+  padding: 0.06rem 0.42rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.est-selector-pill.is-activa small {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--primary);
+}
+
+/* ─── Cabecera limpia de la granja activa ─── */
+.est-granja-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.est-granja-resumen-info { display: grid; gap: 0.25rem; min-width: 0; }
+.est-granja-titulo-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; }
+.est-granja-titulo-fila h2 { margin: 0; color: var(--text-primary); font-size: 1.15rem; font-weight: 750; letter-spacing: -0.015em; }
+
+.est-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.16rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.est-estado.is-activo { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success3); }
+.est-estado-punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.est-granja-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+}
+
+.est-meta-ubicacion { display: inline-flex; align-items: center; gap: 0.28rem; }
+.est-granja-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+/* ─── Cuadrícula plana de galpones (cero acordeones) ─── */
+.est-galpones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+.est-card:hover { border-color: var(--border-default); box-shadow: var(--shadow-md); }
+.est-card.is-inactiva { background: var(--surface-tinted); opacity: 0.78; }
+
+.est-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.est-card-ident { display: grid; gap: 0.2rem; min-width: 0; }
+.est-card-titulo-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+.est-card-titulo-fila h3 { margin: 0; color: var(--text-primary); font-size: 1rem; font-weight: 750; }
+.est-card-sub { margin: 0; color: var(--text-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+.est-codigo {
+  padding: 0.08rem 0.4rem;
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.est-etiqueta--inactivo {
+  padding: 0.12rem 0.48rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.est-card-editar {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.est-card-editar:hover { border-color: var(--border-default); background: var(--surface-subtle); color: var(--text-primary); }
+
+/* ─── Bloque de lote dentro de la tarjeta ─── */
+.est-card-lote {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.est-card-lote-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.est-card-lote-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-base));
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.est-enlace {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.est-enlace:hover { text-decoration: underline; }
+
+.est-card-lote-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.9rem;
+  margin: 0;
+}
+
+.est-card-lote-datos > div { display: grid; gap: 0.1rem; min-width: 0; }
+.est-card-lote-datos dt { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.est-card-lote-datos dd { margin: 0; color: var(--text-primary); font-size: 0.84rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.est-card-lotes-lista {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.est-card-lote-item {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.est-card-lote-item + .est-card-lote-item {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.est-card-lote-pie {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.est-card-sin-lote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ─── Pie IoT de la tarjeta ─── */
+.est-card-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.est-card-iot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.est-card-iot > span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.est-card-iot > span.is-activo { color: var(--primary); }
+
+.est-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.est-card-link:hover { color: var(--primary); }
+
+/* ─── Estados vacíos y carga ─── */
+.est-vacio {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: var(--space-7) var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.est-vacio--compacto { padding: var(--space-6) var(--space-4); }
+.est-vacio h3 { margin: 0; color: var(--text-primary); font-size: 1rem; font-weight: 700; }
+.est-vacio p { max-width: 28rem; margin: 0; font-size: 0.85rem; line-height: 1.5; }
+.est-vacio .est-boton { margin-top: var(--space-2); }
+
+.est-esqueleto { height: 220px; border-radius: var(--radius-lg); }
+
+@media (max-width: 50rem) {
+  .est-galpones-grid { grid-template-columns: 1fr; }
+  .est-granja-resumen { padding: var(--space-4); }
+}

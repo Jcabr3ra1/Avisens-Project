@@ -1,0 +1,27 @@
+meta {
+  name: [Admin] Responder solicitud PQRS
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/solicitudes-pqrs/1/responder
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "estado": "resuelta",
+    "respuesta": "Se contactó al prospecto y se envió la cotización por correo.",
+    "responsable_id": 1
+  }
+}

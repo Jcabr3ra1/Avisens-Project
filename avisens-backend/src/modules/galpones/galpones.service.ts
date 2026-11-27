@@ -1,11 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroGalpones,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
+import { randomUUID } from 'node:crypto';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
+import { MENSAJE_GALPON_OCUPADO } from '../../common/errores/bloqueo';
+import {
+  eliminarAsignacionesDelGalpon,
+  revocarAsignacionesDelGalpon,
+} from '../../common/bloqueos/revocar-acceso';
+import {
+  esEsperaVencida,
+  TOPE_ESPERA_ESCRITURA_MS,
+  transaccionConPresupuesto,
+} from '../../common/bloqueos/presupuesto-transaccion';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 
 const GALPON_SELECT = {
   id: true,
@@ -16,10 +38,20 @@ const GALPON_SELECT = {
   largo_metros: true,
   orientacion: true,
   tipo_techo: true,
-  plano_url: true,
+  foto_mime_type: true,
   activo: true,
   fecha_construccion: true,
   granja: { select: { id: true, nombre: true, propietario_id: true } },
+} as const;
+
+const GALPON_LECTURA_SELECT = {
+  ...GALPON_SELECT,
+  granja: {
+    select: {
+      ...GALPON_SELECT.granja.select,
+      organizacion: { select: { id: true, nombre: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -41,34 +73,39 @@ export class GalponesService {
   async crear(dto: CreateGalponDto, solicitante: Solicitante) {
     await this.validarGranja(dto.granja_id, solicitante);
 
-    return this.prisma.galpon.create({
-      data: {
-        granja_id: dto.granja_id,
-        codigo: dto.codigo,
-        nombre: dto.nombre,
-        capacidad_aves: dto.capacidad_aves,
-        ancho_metros: dto.ancho_metros,
-        largo_metros: dto.largo_metros,
-        orientacion: dto.orientacion,
-        tipo_techo: dto.tipo_techo,
-        plano_url: dto.plano_url,
-        fecha_construccion: dto.fecha_construccion
-          ? new Date(dto.fecha_construccion)
-          : undefined,
-      },
-      select: GALPON_SELECT,
+    return this.prisma.$transaction(async (transaccion) => {
+      const creado = await transaccion.galpon.create({
+        data: {
+          granja_id: dto.granja_id,
+          codigo: `TEMP-${randomUUID()}`,
+          nombre: dto.nombre,
+          capacidad_aves: dto.capacidad_aves,
+          ancho_metros: dto.ancho_metros,
+          largo_metros: dto.largo_metros,
+          orientacion: dto.orientacion,
+          tipo_techo: dto.tipo_techo,
+          fecha_construccion: dto.fecha_construccion
+            ? new Date(dto.fecha_construccion)
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      return transaccion.galpon.update({
+        where: { id: creado.id },
+        data: { codigo: `GAL-${String(creado.id).padStart(6, '0')}` },
+        select: GALPON_SELECT,
+      });
     });
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { granja: { propietario_id: solicitante.id } }
-      : undefined;
+    const where = filtroGalpones(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.galpon.findMany({
         where,
-        select: GALPON_SELECT,
+        select: GALPON_LECTURA_SELECT,
         orderBy: { id: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -82,49 +119,101 @@ export class GalponesService {
   async obtener(id: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id },
-      select: GALPON_SELECT,
+      select: GALPON_LECTURA_SELECT,
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      id,
       solicitante,
-      galpon.granja.propietario_id,
       'Solo puedes gestionar galpones de tus propias granjas',
+      galpon.granja.propietario_id,
     );
     return galpon;
   }
 
   async actualizar(id: number, dto: UpdateGalponDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.granja_id) {
-      await this.validarGranja(dto.granja_id, solicitante);
+    if (dto.granja_id !== undefined && dto.granja_id !== actual.granja.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un galpón a otra granja; crea un galpón nuevo para conservar la integridad histórica',
+      );
     }
 
-    return this.prisma.galpon.update({
-      where: { id },
-      data: {
-        granja_id: dto.granja_id,
-        codigo: dto.codigo,
-        nombre: dto.nombre,
-        capacidad_aves: dto.capacidad_aves,
-        ancho_metros: dto.ancho_metros,
-        largo_metros: dto.largo_metros,
-        orientacion: dto.orientacion,
-        tipo_techo: dto.tipo_techo,
-        plano_url: dto.plano_url,
-        activo: dto.activo,
-        fecha_construccion: dto.fecha_construccion
-          ? new Date(dto.fecha_construccion)
-          : undefined,
-      },
-      select: GALPON_SELECT,
-    });
+    const data = {
+      granja_id: undefined,
+      nombre: dto.nombre,
+      capacidad_aves: dto.capacidad_aves,
+      ancho_metros: dto.ancho_metros,
+      largo_metros: dto.largo_metros,
+      orientacion: dto.orientacion,
+      tipo_techo: dto.tipo_techo,
+      activo: dto.activo,
+      fecha_construccion: dto.fecha_construccion
+        ? new Date(dto.fecha_construccion)
+        : undefined,
+    };
+
+    if (dto.activo !== false) {
+      return this.prisma.galpon.update({
+        where: { id },
+        data,
+        select: GALPON_SELECT,
+      });
+    }
+
+    try {
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('actualizar galpón', (tx) =>
+            tx.galpon.update({ where: { id }, data, select: { id: true } }),
+          );
+          const galpon = await p.paso(
+            'leer galpón actualizado',
+            (tx) =>
+              tx.galpon.findUniqueOrThrow({
+                where: { id },
+                select: GALPON_SELECT,
+              }),
+            2,
+          );
+          await revocarAsignacionesDelGalpon(p, id);
+          return galpon;
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
+      throw error;
+    }
+  }
+
+  private traducirTimeoutDeBloqueo(error: unknown): void {
+    if (esEsperaVencida(error)) {
+      throw new ConflictException(MENSAJE_GALPON_OCUPADO);
+    }
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.galpon.update({ where: { id }, data: { activo: false } });
+    try {
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('desactivar galpón', (tx) =>
+            tx.galpon.update({ where: { id }, data: { activo: false } }),
+          );
+          await revocarAsignacionesDelGalpon(p, id);
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
+      throw error;
+    }
     return { id, activo: false };
   }
 
@@ -138,7 +227,75 @@ export class GalponesService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.galpon.delete({ where: { id } });
+    try {
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear galpón',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`,
+          );
+          await eliminarAsignacionesDelGalpon(p, id);
+          await p.paso('eliminar galpón', (tx) =>
+            tx.galpon.delete({ where: { id } }),
+          );
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
+      if (esViolacionDeLlaveForanea(error)) {
+        throw new ConflictException(
+          'No se puede eliminar: el galpón tiene lotes, sensores, equipos u otros registros asociados. Elimínalos primero, o desactiva el galpón en su lugar.',
+        );
+      }
+      throw error;
+    }
     return { id, eliminado: true };
+  }
+
+  async subirFoto(id: number, cuerpo: unknown, solicitante: Solicitante) {
+    const galpon = await this.obtener(id, solicitante);
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes subir fotos en galpones de tus propias granjas',
+    );
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+    await this.prisma.galpon.update({
+      where: { id },
+      data: { foto: buffer, foto_mime_type: mimeType },
+    });
+    return { id, tiene_foto: true, mime_type: mimeType, tamano_bytes: tamano };
+  }
+
+  async eliminarFoto(id: number, solicitante: Solicitante) {
+    const galpon = await this.obtener(id, solicitante);
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes gestionar fotos en galpones de tus propias granjas',
+    );
+    await this.prisma.galpon.update({
+      where: { id },
+      data: { foto: null, foto_mime_type: null },
+    });
+    return { id, tiene_foto: false };
+  }
+
+  async obtenerFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id },
+      select: { foto: true, foto_mime_type: true },
+    });
+    if (!galpon?.foto || !galpon.foto_mime_type) {
+      throw new NotFoundException('Este galpón no tiene foto almacenada');
+    }
+    return {
+      buffer: Buffer.from(galpon.foto),
+      mimeType: galpon.foto_mime_type,
+    };
   }
 }

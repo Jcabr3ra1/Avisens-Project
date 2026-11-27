@@ -1,0 +1,428 @@
+.cs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Sub-pestañas limpias (sin acordeones) ────────────────── */
+.cs-subtabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: .25rem;
+  padding: .25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+}
+
+.cs-subtab {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: .45rem;
+  padding: 0 .85rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.cs-subtab:hover { color: var(--text-primary); }
+
+.cs-subtab.is-activa {
+  background: var(--surface-base);
+  color: var(--avisens-deep);
+  box-shadow: var(--shadow-sm);
+}
+
+.cs-subtab span {
+  min-width: 1.3rem;
+  padding: .03rem .38rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.cs-subtab.is-activa span {
+  background: var(--primary-soft);
+  color: var(--avisens-deep);
+}
+
+.cs-panel { display: flex; flex-direction: column; gap: var(--space-4); }
+.cs-panel--stack { gap: var(--space-5); }
+
+/* ── Secciones planas ─────────────────────────────────────── */
+.cs-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cs-seccion + .cs-seccion {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cs-seccion-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cs-seccion-head h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.cs-seccion-head p {
+  margin: .15rem 0 0;
+  color: var(--text-muted);
+  font-size: .78rem;
+}
+
+.cs-btn-desactivados {
+  padding: .35rem .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cs-btn-desactivados:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+/* ── Catálogo de variables a agregar ──────────────────────── */
+.cs-catalogo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-3);
+}
+
+.cs-opcion {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 70px;
+  padding: .7rem .85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), background var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.cs-opcion:hover:not(:disabled) { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+.cs-opcion.is-elegida { border-color: var(--primary); background: color-mix(in srgb, var(--primary-soft) 45%, var(--surface-base)); }
+.cs-opcion:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.cs-opcion:disabled { opacity: .55; cursor: wait; }
+
+.cs-opcion-icono {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--avisens-deep);
+}
+
+.cs-opcion-texto { display: flex; min-width: 0; flex-direction: column; gap: .12rem; }
+.cs-opcion-texto strong { color: var(--text-primary); font-size: .86rem; font-weight: 700; line-height: 1.25; }
+.cs-opcion-texto small { display: -webkit-box; overflow: hidden; color: var(--text-muted); font-size: .74rem; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cs-opcion-lado { display: flex; height: 100%; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: .35rem; }
+.cs-opcion-unidad { color: var(--text-secondary); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.cs-opcion-mas { display: grid; min-width: 24px; height: 24px; place-items: center; border-radius: var(--radius-full); background: var(--surface-subtle); color: var(--avisens-deep); font-size: .72rem; font-weight: 800; }
+.cs-opcion.is-elegida .cs-opcion-mas { background: var(--primary); color: var(--on-primary); }
+
+/* ── Pendientes por registrar ─────────────────────────────── */
+.cs-pendientes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border-subtle));
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.cs-pendientes-cabecera { display: flex; flex-direction: column; gap: .15rem; }
+.cs-pendientes-cabecera strong { color: var(--text-primary); font-size: .88rem; }
+.cs-pendientes-cabecera small { color: var(--text-muted); font-size: .76rem; }
+
+.cs-pendiente {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.cs-pendiente-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cs-pendiente-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.cs-campo { display: flex; min-width: 0; flex-direction: column; gap: .25rem; }
+.cs-campo span { color: var(--text-muted); font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.cs-campo select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .84rem;
+}
+
+.cs-campo select:focus-visible { border-color: var(--primary); outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+.cs-pendientes-pie { display: flex; justify-content: flex-end; }
+
+/* ── Tarjetas limpias de sensores registrados ─────────────── */
+.cs-sensores-lista {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cs-sensores-lista--desactivados { opacity: .82; }
+
+.cs-sensor-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.cs-sensor-card.is-inactivo { background: var(--surface-tinted); }
+.cs-sensor-card[aria-busy='true'] { pointer-events: none; opacity: .6; }
+
+.cs-sensor-card-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cs-sensor-card-info { display: flex; min-width: 0; flex-direction: column; gap: .25rem; }
+
+.cs-sensor-card-linea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+}
+
+.cs-sensor-card-linea strong { color: var(--text-primary); font-size: .92rem; font-weight: 700; }
+
+.cs-sensor-estado {
+  padding: .08rem .48rem;
+  border-radius: var(--radius-full);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.cs-sensor-estado--activo { background: var(--primary-soft); color: var(--avisens-deep); }
+.cs-sensor-estado--inactivo { background: var(--surface-subtle); color: var(--text-muted); }
+
+.cs-sensor-card-codigos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .38rem;
+}
+
+.cs-codigo {
+  padding: .1rem .42rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: .74rem;
+}
+
+.cs-sensor-unidad { color: var(--text-muted); font-size: .74rem; font-weight: 600; }
+
+.cs-sensor-card-conexion {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cs-sensor-card-conexion .mon-conexion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.cs-sensor-card-conexion .mon-contexto-campo {
+  min-width: 12rem;
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.cs-sensor-card-conexion .mon-contexto-campo > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.cs-sensor-card-conexion select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .82rem;
+}
+
+.cs-sensor-card-conexion button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: 0 .85rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cs-sensor-card-conexion button:hover:not(:disabled) { border-color: var(--primary); color: var(--avisens-deep); background: var(--primary-soft); }
+.cs-sensor-card-conexion button:disabled { opacity: .45; cursor: not-allowed; }
+.cs-sensor-card-conexion .mon-asignar-error { flex-basis: 100%; margin: 0; color: var(--danger3); font-size: .78rem; }
+
+/* ── Botones, avisos y vacíos ─────────────────────────────── */
+.cs-acciones { display: inline-flex; align-items: center; gap: .35rem; }
+
+.cs-accion {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0 .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cs-accion:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-tinted); color: var(--text-primary); }
+.cs-accion--peligro { padding: 0; color: var(--danger3); }
+.cs-accion--peligro:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-soft); }
+.cs-accion:disabled { opacity: .5; cursor: not-allowed; }
+
+.cs-boton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 .9rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cs-boton:hover:not(:disabled) { border-color: var(--border-strong); color: var(--text-primary); }
+.cs-boton:disabled { opacity: .55; cursor: not-allowed; }
+.cs-boton--principal { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+.cs-boton--principal:hover:not(:disabled) { border-color: var(--primary-hover); background: var(--primary-hover); color: var(--on-primary); }
+.cs-boton--quitar { min-height: 32px; padding: 0 .65rem; font-size: .76rem; }
+.cs-boton--quitar:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger3); }
+
+.cs-nota { margin: 0; color: var(--text-muted); font-size: .8rem; }
+.cs-nota--celda { align-self: center; font-size: .78rem; }
+
+.cs-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: .7rem var(--space-4);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: .82rem;
+}
+
+.cs-aviso--error { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger3); }
+.cs-aviso--ok { border-color: color-mix(in srgb, var(--primary) 30%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--avisens-deep); }
+
+.cs-vacio {
+  padding: var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.cs-vacio p { margin: 0; font-size: .84rem; }
+
+@media (max-width: 40rem) {
+  .cs-subtabs { width: 100%; }
+  .cs-subtab { flex: 1; justify-content: center; }
+  .cs-pendiente-campos { grid-template-columns: 1fr; }
+  .cs-sensor-card-top { grid-template-columns: auto minmax(0, 1fr); }
+  .cs-sensor-card-top .cs-acciones { grid-column: 1 / -1; justify-content: flex-end; }
+}

@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { GranjasService } from './granjas.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -20,11 +21,16 @@ describe('GranjasService', () => {
       delete: jest.fn(),
     },
     usuario: { findUnique: jest.fn() },
+    usuarioGalpon: { updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
   const admin = { id: 1, rol: 'Administrador' };
-  const propietario = { id: 5, rol: 'Propietario' };
+  const propietario = {
+    id: 5,
+    rol: 'Propietario',
+    organizacion_id: 10,
+  };
 
   const dataDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
@@ -49,12 +55,12 @@ describe('GranjasService', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('crear', () => {
-    it('un Propietario crea la granja a su propio nombre', async () => {
-      prisma.granja.create.mockResolvedValue({ id: 1 });
+    it('un Propietario no puede crear granjas', async () => {
+      await expect(
+        service.crear({ nombre: 'La Esperanza' }, propietario),
+      ).rejects.toThrow(ForbiddenException);
 
-      await service.crear({ nombre: 'La Esperanza' }, propietario);
-
-      expect(dataDe(prisma.granja.create).propietario_id).toBe(5);
+      expect(prisma.granja.create).not.toHaveBeenCalled();
     });
 
     it('un Admin sin propietario_id recibe 400', async () => {
@@ -74,12 +80,30 @@ describe('GranjasService', () => {
     });
 
     it('un Admin crea la granja para el propietario indicado', async () => {
-      prisma.usuario.findUnique.mockResolvedValue({ id: 7 });
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Propietario' },
+      });
       prisma.granja.create.mockResolvedValue({ id: 1 });
 
       await service.crear({ nombre: 'X', propietario_id: 7 }, admin);
 
       expect(dataDe(prisma.granja.create).propietario_id).toBe(7);
+      expect(dataDe(prisma.granja.create).organizacion_id).toBe(20);
+    });
+
+    it('un Admin no puede asignar una granja a un usuario que no sea Propietario', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Operario' },
+      });
+
+      await expect(
+        service.crear({ nombre: 'X', propietario_id: 7 }, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.granja.create).not.toHaveBeenCalled();
     });
   });
 
@@ -143,6 +167,36 @@ describe('GranjasService', () => {
       ).rejects.toThrow(NotFoundException);
       expect(prisma.granja.update).not.toHaveBeenCalled();
     });
+
+    it('desactiva asignaciones si la granja cambia de organización', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        organizacion_id: 10,
+        propietario: { id: 5 },
+      });
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Propietario' },
+      });
+      prisma.granja.update.mockResolvedValue({ id: 1, organizacion_id: 20 });
+      prisma.$transaction.mockResolvedValue([
+        { count: 2 },
+        { id: 1, organizacion_id: 20 },
+      ]);
+
+      const resultado = await service.actualizar(
+        1,
+        { propietario_id: 7 },
+        admin,
+      );
+
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { activa: true, galpon: { granja_id: 1 } },
+        data: { activa: false },
+      });
+      expect(resultado).toEqual({ id: 1, organizacion_id: 20 });
+    });
   });
 
   describe('desactivar / eliminarPermanente', () => {
@@ -167,6 +221,27 @@ describe('GranjasService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+    });
+
+    it('con galpones dentro avisa que hay que borrarlos primero', async () => {
+      prisma.granja.delete.mockRejectedValue(
+        Object.assign(new Error('FK'), { code: 'P2003' }),
+      );
+
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toThrow(/galpones registrados/);
+    });
+
+    it('un error que no sea de llave foránea se propaga tal cual', async () => {
+      prisma.granja.delete.mockRejectedValue(new Error('se cayó la conexión'));
+
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        'se cayó la conexión',
+      );
     });
   });
 });

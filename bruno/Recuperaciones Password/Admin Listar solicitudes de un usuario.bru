@@ -1,0 +1,20 @@
+meta {
+  name: [Admin] Listar solicitudes de un usuario
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/recuperaciones-password/usuario/1
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Alimenta la pantalla hija que se abre desde la fila de Personas.
+
+  Solo Administrador: con otro rol responde 403.
+}

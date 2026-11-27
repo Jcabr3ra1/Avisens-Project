@@ -5,7 +5,17 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  Max,
+  Min,
+  Matches,
+  MaxLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  CodigoAlfanumerico,
+  DIMENSION_MAXIMA_M,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateSensorDto {
   @ApiProperty({
@@ -13,6 +23,7 @@ export class CreateSensorDto {
     description: 'ID del galpón donde está instalado',
   })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiProperty({
@@ -20,31 +31,54 @@ export class CreateSensorDto {
     description: 'ID del dispositivo (ESP32) que lo reporta',
   })
   @IsInt()
+  @Min(1)
   dispositivo_id: number;
 
   @ApiProperty({
     example: 'TEMP-G1-01',
-    description: 'Código único del sensor',
+    description:
+      'Código único del sensor; si se omite, el backend genera el serial',
+    required: false,
   })
-  @IsString()
-  codigo: string;
+  @IsOptional()
+  @CodigoAlfanumerico('El código del sensor', 60, false)
+  codigo?: string;
 
   @ApiProperty({ example: 'temperatura', description: 'Variable que mide' })
-  @IsString()
+  @TextoSeguro('El tipo de sensor', 40, { requerido: true })
   tipo: string;
 
-  @ApiProperty({ example: '°C', description: 'Unidad de medida' })
+  @ApiPropertyOptional({
+    example: 'gpio:18',
+    nullable: true,
+    description:
+      'Conexión física estable dentro del ESP32: gpio:<n> para un DHT22 o rele:k1..rele:k4 para un relé; null conserva ingesta por código',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  @IsOptional()
   @IsString()
-  unidad_medida: string;
+  @MaxLength(64)
+  @Matches(/^(gpio:(0|[1-9]\d*)|rele:k[1-4])$/)
+  canal?: string | null;
+
+  @ApiPropertyOptional({
+    example: '°C',
+    description: 'Unidad de medida; si se omite, se deriva del tipo de sensor',
+  })
+  @IsOptional()
+  @TextoSeguro('La unidad de medida', 20)
+  unidad_medida?: string;
 
   @ApiPropertyOptional({ example: 'DHT22' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El modelo', 80)
   modelo?: string;
 
   @ApiPropertyOptional({ example: 'Aosong' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El fabricante', 80)
   fabricante?: string;
 
   @ApiPropertyOptional({
@@ -52,6 +86,8 @@ export class CreateSensorDto {
     description: 'Posición X en el galpón (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_x?: number;
 
@@ -60,6 +96,8 @@ export class CreateSensorDto {
     description: 'Posición Y en el galpón (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   coordenada_y?: number;
 
@@ -68,6 +106,8 @@ export class CreateSensorDto {
     description: 'Altura de instalación (metros)',
   })
   @IsNumber()
+  @Min(0)
+  @Max(100)
   @IsOptional()
   altura_metros?: number;
 

@@ -1,0 +1,571 @@
+import { Prisma } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
+
+import {
+  A14_DOLOR,
+  A16_MORTALIDAD,
+  A18_PAGO,
+  A19_MOMENTO,
+  A20_DECIDE,
+  OPCIONES_CALIFICADAS,
+  textosDe,
+} from '../../src/modules/chatbot/dominio/calificacion';
+
+// La matriz sale del dominio, no se escribe a mano. Antes el texto de cada
+// opcion vivia aqui y en el cuestionario por separado, y si no coincidian al
+// caracter la pregunta no puntuaba: nada fallaba, solo calificaba mal.
+const MATRIZ_CALIFICACION = Object.entries(OPCIONES_CALIFICADAS).flatMap(
+  ([codigo, opciones]) =>
+    opciones.map((o) => ({
+      bloque: 'A',
+      codigo_pregunta: codigo,
+      opcion_respuesta: o.texto,
+      puntaje: o.puntaje,
+      descripcion: `Calificacion comercial (${codigo})`,
+    })),
+);
+
+export const PREGUNTAS_CHATBOT = [
+  // =========================================================================
+  // MENU PRINCIPAL
+  // =========================================================================
+  {
+    codigo: 'M1',
+    bloque: 'M',
+    orden: 0,
+    texto:
+      'Hola, soy *AVIA*, de AVISENS 🐔\n\n' +
+      'Te ayudo a saber qué pasa en tu galpón antes de que se pierdan aves.\n\n' +
+      '¿En qué te puedo ayudar?',
+    tipo: 'opcion_unica',
+    opciones: ['Quiero cotizar', 'Tengo dudas primero', 'Ya soy cliente'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A1',
+    saltos: {
+      'Quiero cotizar': 'A1',
+      'Tengo dudas primero': 'BMP',
+      'Ya soy cliente': 'S1',
+    },
+  },
+
+  // =========================================================================
+  // BLOQUE A — COTIZACION (calificacion del prospecto)
+  // =========================================================================
+
+  // --- Identificacion ---
+  {
+    codigo: 'A1',
+    bloque: 'A',
+    orden: 1,
+    texto:
+      'Antes de seguir necesito tu permiso para guardar tus datos, como ' +
+      'manda la Ley de Hábeas Data (Ley 1581). Aquí puedes leer la política:\n' +
+      'https://avisens-project-production.up.railway.app/privacidad\n\n' +
+      '¿Me autorizas?',
+    tipo: 'si_no',
+    opciones: ['Sí autorizo', 'No autorizo'],
+    campo_prospecto: 'consentimiento_habeas_data',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A2',
+    saltos: { 'No autorizo': 'FIN' },
+  },
+  {
+    codigo: 'A2',
+    bloque: 'A',
+    orden: 2,
+    texto: '¿Cómo te llamas?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'nombre',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A3',
+    saltos: null,
+  },
+  {
+    codigo: 'A3',
+    bloque: 'A',
+    orden: 3,
+    texto: '¿En qué municipio y departamento está tu granja? (Ej.: Timbío, Cauca)',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'municipio',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A14',
+    saltos: null,
+  },
+
+  // --- La granja ---
+
+  // --- El dolor ---
+  {
+    codigo: 'A14',
+    bloque: 'A',
+    orden: 4,
+    texto: '¿Qué te gustaría vigilar mejor en tus galpones?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A14_DOLOR),
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A16',
+    saltos: null,
+  },
+  {
+    codigo: 'A16',
+    bloque: 'A',
+    orden: 5,
+    texto:
+      'En el último año, ¿se te han muerto aves durante épocas de calor, frío o humedad?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A16_MORTALIDAD),
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A19',
+    saltos: null,
+  },
+
+  // --- La compra ---
+  {
+    codigo: 'A18',
+    bloque: 'A',
+    orden: 8,
+    texto: '¿Cómo te gustaría pagarlo?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A18_PAGO),
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'C1',
+    saltos: null,
+  },
+  {
+    codigo: 'A19',
+    bloque: 'A',
+    orden: 6,
+    texto: '¿Estás mirando otras opciones además de AVISENS?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A19_MOMENTO),
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A20',
+    saltos: null,
+  },
+  {
+    codigo: 'A20',
+    bloque: 'A',
+    orden: 7,
+    texto: '¿La decisión de comprar la tomas tú?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A20_DECIDE),
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A18',
+    saltos: { No: 'A21' },
+  },
+
+  // --- Contacto ---
+  {
+    codigo: 'C1',
+    bloque: 'A',
+    orden: 9,
+    texto: '¿A qué número te puede llamar el asesor?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'telefono',
+    omitir_si_canal: 'whatsapp',
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+
+  // =========================================================================
+  // BLOQUE B — PQRS / CONSULTAS GENERALES (sin puntaje comercial)
+  // =========================================================================
+
+  // --- Peticiones ---
+  {
+    codigo: 'BMP',
+    bloque: 'B',
+    orden: 2,
+    texto: '¿Qué quieres saber?',
+    tipo: 'opcion_unica',
+    opciones: [
+      '¿Cuánto cuesta?',
+      '¿Qué incluye?',
+      '¿Sin internet estable?',
+      '¿Cuánto tarda?',
+      '¿Fácil de usar?',
+      '¿Financiación?',
+      '¿Y si se va la luz?',
+      'Clientes en el Cauca',
+      'Hablar con un asesor',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BP1',
+    saltos: {
+      '¿Cuánto cuesta?': 'BP1',
+      '¿Qué incluye?': 'BP2',
+      '¿Sin internet estable?': 'BP3',
+      '¿Cuánto tarda?': 'BP4',
+      '¿Fácil de usar?': 'BP5',
+      '¿Financiación?': 'BP6',
+      '¿Y si se va la luz?': 'BP7',
+      'Clientes en el Cauca': 'BP8',
+      'Hablar con un asesor': 'A1',
+    },
+  },
+  {
+    codigo: 'BP1',
+    bloque: 'B',
+    orden: 3,
+    texto:
+      'La instalación de AVISENS cuesta desde $3.500.000 COP. El valor final ' +
+      'depende del tamaño de tu granja, de cuántos galpones tenga y de cuántos ' +
+      'sensores hagan falta. Incluye los equipos, la instalación y la ' +
+      'configuración inicial.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP2',
+    bloque: 'B',
+    orden: 4,
+    texto:
+      'Incluye sensores ambientales, la unidad de comunicación, la plataforma ' +
+      'web y la app, la configuración y la instalación técnica. Cuántos ' +
+      'sensores lleva depende de tus galpones y de lo que necesites. También ' +
+      'va una capacitación básica para que lo uses con confianza.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP3',
+    bloque: 'B',
+    orden: 5,
+    texto:
+      'Sí. AVISENS está pensado para el campo. Si tu granja tiene internet ' +
+      'inestable o poca señal, hay alternativas de comunicación y los datos se ' +
+      'guardan temporalmente para no perder el monitoreo. Antes de instalar ' +
+      'revisamos la conectividad y elegimos la mejor opción.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP4',
+    bloque: 'B',
+    orden: 6,
+    texto:
+      'La instalación tarda entre 1 y 2 días por granja, según el tamaño y los ' +
+      'equipos. La hace nuestro equipo técnico: instala, configura y verifica ' +
+      'que todo quede funcionando.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP5',
+    bloque: 'B',
+    orden: 7,
+    texto:
+      'No necesitas ser experto en tecnología. Ves los indicadores de tu ' +
+      'granja y recibes las alertas desde el celular o el computador, y durante ' +
+      'la instalación te damos una capacitación básica.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP6',
+    bloque: 'B',
+    orden: 8,
+    texto:
+      'Sí, hay financiación hasta en 12 cuotas, sujeta a aprobación. También ' +
+      'estamos armando alianzas con cooperativas y entidades del sector ' +
+      'agropecuario para que sea más fácil acceder a la tecnología.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP7',
+    bloque: 'B',
+    orden: 9,
+    texto:
+      'El sistema tiene respaldo de energía para seguir monitoreando cuando se ' +
+      'va la luz. Según la configuración instalada, puede operar varias horas y ' +
+      'guarda los datos para sincronizarlos cuando vuelva la energía.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP8',
+    bloque: 'B',
+    orden: 10,
+    texto:
+      'Sí, tenemos clientes en el Cauca. Podemos conseguirte una referencia ' +
+      'comercial o, si el cliente lo autoriza, coordinar una visita para que ' +
+      'veas cómo funciona AVISENS en una granja.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+
+  // --- Reclamos ---
+
+  // --- Quejas ---
+
+  // --- Sugerencias ---
+
+  // --- Tramites ---
+
+  // --- Radicacion PQRS ---
+  // =========================================================================
+  // BLOQUE S — SOPORTE A CLIENTES (PQRS)
+  // =========================================================================
+  // Solo para quien ya compro. Aqui SI se pide la cedula, porque sirve para
+  // ubicar su granja y su contrato: es el unico sitio del chatbot donde ese
+  // dato hace un trabajo. En la cotizacion se retiro justamente por eso.
+  //
+  // Tres preguntas y se radica. La version anterior tenia dieciseis, con una
+  // respuesta guionizada por cada tipo de falla; eso no es soporte, es un
+  // arbol de respuestas que envejece mal. Quien tiene un problema quiere
+  // contarlo y que alguien lo lea.
+  {
+    codigo: 'S1',
+    bloque: 'S',
+    orden: 200,
+    texto:
+      'Para encontrar tu granja y tu contrato, ¿cuál es tu número de cédula?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'S2',
+    saltos: null,
+  },
+  {
+    codigo: 'S2',
+    bloque: 'S',
+    orden: 201,
+    texto: '¿Qué está pasando?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Los sensores no reportan',
+      'Las alertas no llegan o llegan tarde',
+      'Un cobro que no cuadra',
+      'Una visita o instalación pendiente',
+      'Quiero sugerir una mejora',
+      'Otra cosa',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'S3',
+    saltos: null,
+  },
+  {
+    codigo: 'S3',
+    bloque: 'S',
+    orden: 202,
+    texto:
+      'Cuéntame qué pasó, con el detalle que puedas. ' +
+      'Entre más me digas, más rápido lo resolvemos.',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// !!! PRECIOS PROVISIONALES !!!
+// Estos valores NO son los precios reales de Avisens. Se pusieron para poder
+// construir y demostrar el modulo de cotizacion (2026-08-20). ANTES de mostrar
+// una cotizacion a un cliente real o en la sustentacion, reemplazarlos por la
+// lista de precios oficial. Se cambian en la tabla catalogo_sensores, sin
+// desplegar: basta editar aqui y re-correr el seed.
+// ---------------------------------------------------------------------------
+const CATALOGO_SENSORES = [
+  {
+    tipo_sensor: 'nodo_esp32',
+    nombre: 'Nodo de control ESP32',
+    descripcion: 'Concentra los sensores del galpon y reporta por MQTT',
+    precio_unitario_cop: 250000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'temperatura_humedad',
+    nombre: 'Sensor de temperatura y humedad',
+    descripcion: 'Mide el ambiente del galpon; uno cada 120 m2',
+    precio_unitario_cop: 180000,
+    cobertura_m2: 120,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'amoniaco',
+    nombre: 'Sensor de amoniaco (NH3)',
+    descripcion: 'Detecta acumulacion por mala ventilacion o cama humeda',
+    precio_unitario_cop: 320000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'nivel_agua',
+    nombre: 'Sensor de nivel de agua',
+    descripcion: 'Vigila el consumo de agua, el primer aviso de enfermedad',
+    precio_unitario_cop: 150000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'co2',
+    nombre: 'Sensor de dioxido de carbono',
+    descripcion: 'Opcional: control fino de la ventilacion',
+    precio_unitario_cop: 450000,
+    cobertura_m2: null,
+    obligatorio: false,
+  },
+  {
+    tipo_sensor: 'luminosidad',
+    nombre: 'Sensor de luminosidad',
+    descripcion: 'Opcional: programas de luz; uno cada 300 m2',
+    precio_unitario_cop: 90000,
+    cobertura_m2: 300,
+    obligatorio: false,
+  },
+
+];
+
+export async function sembrarCatalogoSensores(prisma: PrismaClient) {
+  for (const sensor of CATALOGO_SENSORES) {
+    const datos = { ...sensor, cobertura_m2: sensor.cobertura_m2 ?? null };
+    await prisma.catalogoSensor.upsert({
+      where: { tipo_sensor: sensor.tipo_sensor },
+      update: datos,
+      create: datos,
+    });
+  }
+}
+
+export async function sembrarPreguntasChatbot(prisma: PrismaClient) {
+  for (const pregunta of PREGUNTAS_CHATBOT) {
+    const datos = {
+      ...pregunta,
+      opciones: pregunta.opciones ?? Prisma.DbNull,
+      saltos: pregunta.saltos ?? Prisma.DbNull,
+      activa: true,
+    };
+    await prisma.preguntaChatbot.upsert({
+      where: { codigo: pregunta.codigo },
+      update: datos,
+      create: datos,
+    });
+  }
+
+  // Las preguntas que se retiran del cuestionario se desactivan, no se borran:
+  // los prospectos que ya las respondieron conservan su historial, y el flujo
+  // deja de ofrecerlas. Sin esto, quitar una pregunta del seed la dejaba viva
+  // en cualquier base que ya la tuviera.
+  const vigentes = PREGUNTAS_CHATBOT.map((p) => p.codigo);
+  await prisma.preguntaChatbot.updateMany({
+    where: { codigo: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
+}
+
+export async function sembrarMatrizCalificacion(prisma: PrismaClient) {
+  for (const fila of MATRIZ_CALIFICACION) {
+    await prisma.matrizCalificacion.upsert({
+      where: {
+        codigo_pregunta_opcion_respuesta: {
+          codigo_pregunta: fila.codigo_pregunta,
+          opcion_respuesta: fila.opcion_respuesta,
+        },
+      },
+      update: fila,
+      create: fila,
+    });
+  }
+
+  // Las filas que salen del modelo se desactivan, igual que las preguntas.
+  // Sin esto, cambiar el puntaje de una pregunta dejaba viva la fila anterior
+  // y el maximo dejaba de cuadrar: el upsert agrega, no reemplaza.
+  const vigentes = MATRIZ_CALIFICACION.map((f) => f.codigo_pregunta);
+  await prisma.matrizCalificacion.updateMany({
+    where: { codigo_pregunta: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
+
+  // Y dentro de las preguntas que siguen calificando, las redacciones que ya
+  // no se usan tampoco deben puntuar.
+  for (const [codigo, opciones] of Object.entries(OPCIONES_CALIFICADAS)) {
+    await prisma.matrizCalificacion.updateMany({
+      where: {
+        codigo_pregunta: codigo,
+        opcion_respuesta: { notIn: opciones.map((o) => o.texto) },
+        activa: true,
+      },
+      data: { activa: false },
+    });
+  }
+}
+

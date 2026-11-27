@@ -1,0 +1,20 @@
+meta {
+  name: [Admin]  Listar versiones de firmware
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/firmware
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Versiones subidas, sin el binario: versión, sha256, tamaño, notas y si es la
+  publicada (vigente). Solo administrador.
+}

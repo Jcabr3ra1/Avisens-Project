@@ -29,7 +29,9 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      // El formato lo pone Prettier (format-on-save y `pnpm format`), no ESLint.
+      // Con la regla en "error" cada espacio o salto de linea salia subrayado en rojo.
+      'prettier/prettier': 'off',
     },
   },
 );

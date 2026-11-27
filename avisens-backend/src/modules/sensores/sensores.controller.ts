@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -16,16 +18,17 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { SensoresService } from './sensores.service';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
+import { RegistrarRelesDto } from './dto/registrar-reles.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }
@@ -33,15 +36,30 @@ interface AuthRequest extends Request {
 @ApiTags('sensores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('sensores')
 export class SensoresController {
   constructor(private sensoresService: SensoresService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Registrar un sensor en un galpón' })
   crear(@Body() dto: CreateSensorDto, @Req() req: AuthRequest) {
     return this.sensoresService.crear(dto, req.user);
+  }
+
+  // Registra de una vez los relés K1-K4 de un ESP32, identificados por canal.
+  // Idempotente: repetirlo no duplica nada. Responde 200 aunque haya
+  // conflictos: el detalle por canal dice qué se creó, qué se asoció, qué ya
+  // estaba y qué no se pudo resolver.
+  @Post('reles')
+  @Roles(ROLES.ADMINISTRADOR)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Registrar los relés K1-K4 de un ESP32 por canal (idempotente)',
+  })
+  registrarReles(@Body() dto: RegistrarRelesDto, @Req() req: AuthRequest) {
+    return this.sensoresService.registrarReles(dto, req.user);
   }
 
   @Get()
@@ -60,6 +78,7 @@ export class SensoresController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un sensor' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -70,12 +89,14 @@ export class SensoresController {
   }
 
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un sensor (estado → activo)' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.sensoresService.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Desactivar un sensor (borrado suave, estado → inactivo)',
   })
@@ -83,7 +104,10 @@ export class SensoresController {
     return this.sensoresService.desactivar(id, req.user);
   }
 
+  // Toda modificación del sensor, incluida la baja suave y definitiva, es del
+  // administrador. Las mediciones históricas quedan en el sensor al desactivarlo.
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un sensor de forma permanente (casos legales)',
   })

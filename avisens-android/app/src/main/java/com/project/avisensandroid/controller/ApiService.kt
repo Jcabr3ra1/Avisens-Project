@@ -32,7 +32,6 @@ import com.project.avisensandroid.model.NotificacionResponse
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.PesajeResponse
 import com.project.avisensandroid.model.PlanLoteApiResponse
-import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.RecalcularPlanLoteRequest
 import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
@@ -253,16 +252,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<TipoAlimentoResponse>>
-
-    // =========================================================
-    // PROVEEDORES
-    // =========================================================
-
-    @GET("v1/proveedores")
-    suspend fun listarProveedores(
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
-    ): Response<PaginatedResponse<ProveedorResponse>>
 
     // =========================================================
     // GRANJAS

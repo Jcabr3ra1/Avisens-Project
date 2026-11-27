@@ -18,6 +18,8 @@ export const Icon = ({ children, size = 18, style, ...rest }: IconProps) => (
     width={size}
     height={size}
     viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
     {...iconBase}
     style={{ display: 'block', ...style }}
     {...rest}
@@ -115,6 +117,12 @@ export const IcSun = (p: P) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="3.6" />
     <path d="M12 4V2.5M12 21.5V20M20 12h1.5M2.5 12H4M17.5 6.5l1-1M5.5 18.5l1-1M17.5 17.5l1 1M5.5 5.5l1 1" />
+  </Icon>
+)
+
+export const IcMoon = (p: P) => (
+  <Icon {...p}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
   </Icon>
 )
 
@@ -292,6 +300,14 @@ export const IcBox = (p: P) => (
   </Icon>
 )
 
+export const IcChip = (p: P) => (
+  <Icon {...p}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="1.6" />
+    <rect x="9.5" y="9.5" width="5" height="5" rx="0.6" />
+    <path d="M9.5 3.5v3M14.5 3.5v3M9.5 17.5v3M14.5 17.5v3M3.5 9.5h3M3.5 14.5h3M17.5 9.5h3M17.5 14.5h3" />
+  </Icon>
+)
+
 export const IcServer = (p: P) => (
   <Icon {...p}>
     <rect x="3.5" y="4" width="17" height="7" rx="1.4" />
@@ -380,5 +396,60 @@ export const IcClock = (p: P) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="8.5" />
     <path d="M12 7v5l3.5 2" />
+  </Icon>
+)
+
+export const IcBuilding = (p: P) => (
+  <Icon {...p}>
+    <rect x="4.5" y="3.5" width="11" height="17" rx="1" />
+    <path d="M15.5 9.5h3a1 1 0 0 1 1 1v10h-15" />
+    <path d="M8 7.5h1M11 7.5h1M8 11h1M11 11h1M8 14.5h1M11 14.5h1" />
+    <path d="M9 20.5v-3h2v3" />
+  </Icon>
+)
+
+export const IcBarn = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 10 12 4.5l8.5 5.5" />
+    <path d="M5 9v11h14V9" />
+    <path d="M8.5 20v-6.5h7V20" />
+    <path d="M8.5 13.5l7 6.5M15.5 13.5l-7 6.5" />
+  </Icon>
+)
+
+export const IcArrowRight = (p: P) => (
+  <Icon {...p}>
+    <path d="M4.5 12h15" />
+    <path d="M13.5 6l6 6-6 6" />
+  </Icon>
+)
+
+export const IcPointer = (p: P) => (
+  <Icon {...p}>
+    <path d="M5 4.5l13.5 5.2-6 1.8-1.8 6L5 4.5Z" />
+    <path d="M12.6 11.6 18 17" />
+  </Icon>
+)
+
+export const IcArrowDown = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 4.5v15" />
+    <path d="M6 13.5l6 6 6-6" />
+  </Icon>
+)
+
+export const IcEdit = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
+    <path d="M14.5 7.5l3 3" />
+  </Icon>
+)
+
+export const IcTrash = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7h16" />
+    <path d="M9 7V4.5h6V7" />
+    <path d="M6 7l1 13h10l1-13" />
+    <path d="M10 11v6M14 11v6" />
   </Icon>
 )

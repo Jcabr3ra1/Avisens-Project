@@ -1,0 +1,14 @@
+meta {
+  name: [Admin] Marcar notificacion leida
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/notificaciones/1/leer
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

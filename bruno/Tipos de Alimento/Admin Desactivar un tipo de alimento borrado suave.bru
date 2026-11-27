@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Desactivar un tipo de alimento (borrado suave)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/v1/tipos-alimento/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

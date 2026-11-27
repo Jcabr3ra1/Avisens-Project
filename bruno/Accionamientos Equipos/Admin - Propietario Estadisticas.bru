@@ -1,0 +1,14 @@
+meta {
+  name: [Admin · Propietario] Estadisticas accionamientos
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/accionamientos-equipos/estadisticas/resumen
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

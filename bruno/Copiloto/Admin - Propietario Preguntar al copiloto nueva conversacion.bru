@@ -1,0 +1,47 @@
+meta {
+  name: [Admin · Propietario]  Preguntar al copiloto (nueva conversacion)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/copiloto/preguntar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "pregunta": "¿Como va mi lote? Dame los numeros clave"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201 || res.getStatus() === 200) {
+    bru.setEnvVar("conversacion_id", res.getBody().conversacion_id);
+  }
+}
+
+docs {
+  Copiloto conversacional (Claude + tool use).
+
+  Sin `conversacion_id` abre una conversacion nueva. El script guarda el id
+  devuelto en la variable de entorno `conversacion_id` para encadenar la
+  siguiente pregunta.
+
+  La respuesta trae:
+  - conversacion_id: para continuar el hilo
+  - respuesta: el texto en espanol
+  - herramientas_usadas: cuantas vueltas del bucle agentico hizo Claude.
+    Si es 0 y aun asi da cifras, las invento.
+
+  Limite: 10 peticiones por minuto y por usuario (cada llamada cuesta dinero).
+}

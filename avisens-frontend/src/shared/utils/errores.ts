@@ -1,0 +1,47 @@
+import { isAxiosError } from 'axios'
+
+const POR_ESTADO: Record<number, string> = {
+  400: 'Los datos enviados no son válidos.',
+  401: 'Tu sesión expiró. Vuelve a entrar.',
+  403: 'No tienes permisos para esta acción.',
+  404: 'No encontramos lo que buscabas.',
+  409: 'Ese registro ya existe.',
+  422: 'Los datos enviados no se pudieron procesar.',
+  429: 'Vas muy rápido. Espera un momento y vuelve a intentarlo.',
+  500: 'El servidor tuvo un problema. Intenta de nuevo.',
+  502: 'El servicio no respondió a tiempo. Intenta de nuevo.',
+  503: 'El servicio está temporalmente no disponible. Intenta en unos segundos.',
+  504: 'La solicitud tardó demasiado. Intenta de nuevo.',
+}
+
+function mensajeDelCuerpo(data: unknown): string {
+  const cuerpo = data as { message?: string | string[]; errors?: string[] } | undefined
+
+  const message = Array.isArray(cuerpo?.message)
+    ? cuerpo.message.join(', ')
+    : cuerpo?.message ?? ''
+
+  const errors = Array.isArray(cuerpo?.errors) ? cuerpo.errors.join(', ') : ''
+
+  return [message, errors].filter(Boolean).join(': ')
+}
+
+export function mensajeDeError(err: unknown, respaldo: string): string {
+  if (!isAxiosError(err)) return respaldo
+
+  if (!err.response) {
+    return 'No se pudo conectar con el servidor. Revisa tu conexión.'
+  }
+
+  return (
+    mensajeDelCuerpo(err.response.data) ||
+    POR_ESTADO[err.response.status] ||
+    respaldo
+  )
+}
+
+// GET de un recurso "vigente" que todavia no existe (sin plan, sin
+// estimacion) responde 404 -- es un estado de negocio, no un fallo.
+export function esNotFound(error: unknown): boolean {
+  return isAxiosError(error) && error.response?.status === 404
+}

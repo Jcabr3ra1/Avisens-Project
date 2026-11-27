@@ -1,0 +1,28 @@
+meta {
+  name: [Admin · Propietario] Crear accionamiento
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/accionamientos-equipos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "equipo_id": 1,
+    "origen": "manual",
+    "estado": "encendido",
+    "valor_disparo": 31.5
+  }
+}

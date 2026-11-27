@@ -1689,7 +1689,6 @@ class MainActivity : AperturaReanudableActivity() {
             binding
         )
 
-
         binding.btnCancelarInsumo.setOnClickListener {
             dialog.dismiss()
         }
@@ -1733,7 +1732,6 @@ class MainActivity : AperturaReanudableActivity() {
                 return@setOnClickListener
             }
 
-
             val tipoAlimentoValidado = tipoAlimento ?: return@setOnClickListener
             val cantidadValidada = cantidad ?: return@setOnClickListener
             val total = if (esBultos) cantidadValidada * (numeroBultos ?: return@setOnClickListener) else cantidadValidada
@@ -1749,7 +1747,6 @@ class MainActivity : AperturaReanudableActivity() {
                 categoria = "alimento",
                 cantidad = total,
                 unidad = if (esBultos) "Kg" else unidad,
-                proveedorId = null,
                 stockMinimo = stockMinimo
             )
         }
@@ -1832,7 +1829,6 @@ class MainActivity : AperturaReanudableActivity() {
         categoria: String,
         cantidad: Double,
         unidad: String,
-        proveedorId: Int?,
         stockMinimo: Double?
     ) {
         binding.btnAgregarInsumo.isEnabled = false
@@ -1849,7 +1845,6 @@ class MainActivity : AperturaReanudableActivity() {
                     stock_actual = cantidad,
                     stock_minimo = stockMinimo,
                     precio_unitario_cop = null,
-                    proveedor_habitual_id = proveedorId,
                     ubicacion_almacen = null,
                     fecha_vencimiento = null
                 )
@@ -2750,8 +2745,8 @@ class MainActivity : AperturaReanudableActivity() {
                 ids.add(null)
 
                 // Para el selector solo necesitamos id y código. Así evitamos
-                // que un campo anidado opcional de la respuesta (/galpon o
-                // /proveedor) impida deserializar los lotes.
+                // que un campo anidado opcional de la respuesta (/galpon)
+                // impida deserializar los lotes.
                 lotesDeSeleccion
                     .filter { it.codigo.isNotBlank() }
                     .distinctBy { it.id }

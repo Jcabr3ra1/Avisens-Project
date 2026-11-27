@@ -16,25 +16,26 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { UmbralesService } from './umbrales.service';
 import { CreateUmbralDto } from './dto/create-umbral.dto';
 import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('umbrales')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('umbrales')
 export class UmbralesController {
   constructor(private umbralesService: UmbralesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Crear un umbral (versión 1, vigente)' })
   crear(@Body() dto: CreateUmbralDto, @Req() req: AuthRequest) {
     return this.umbralesService.crear(dto, req.user);
@@ -56,6 +57,7 @@ export class UmbralesController {
   }
 
   @Patch(':id/revisar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Revisar un umbral: crea una versión nueva y jubila la anterior',
   })
@@ -68,6 +70,7 @@ export class UmbralesController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Jubilar un umbral (vigente=false, sin reemplazo)' })
   jubilar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.umbralesService.jubilar(id, req.user);

@@ -1,0 +1,36 @@
+meta {
+  name: [Admin]  Subir firmware (.bin)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/firmware?version=1.1.2&notas=Mejora la reconexión
+  body: file
+  auth: bearer
+}
+
+params:query {
+  version: 1.1.2
+  notas: Mejora la reconexión
+}
+
+headers {
+  Content-Type: application/octet-stream
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:file {
+  file: @file(../esp32-firmware/.pio/build/esp32dev/firmware.bin) @contentType(application/octet-stream)
+}
+
+docs {
+  Sube el .bin que genera PlatformIO. Queda sin publicar.
+
+  Valida: imagen de ESP32 (primer byte 0xE9), máximo 1,25 MB (partición de
+  actualización), versión con formato 1.2.3 y no repetida (409).
+  La versión debe coincidir con FIRMWARE_VERSION del código.
+}

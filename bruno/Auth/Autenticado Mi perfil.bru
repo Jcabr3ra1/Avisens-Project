@@ -1,0 +1,23 @@
+meta {
+  name: [Autenticado]  Mi perfil
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/auth/perfil
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("devuelve la cuenta propia sin el hash de la contraseña", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.have.property("rol");
+    expect(res.getBody()).to.not.have.property("password_hash");
+  });
+}

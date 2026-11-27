@@ -1,0 +1,120 @@
+/* Pantalla de una entidad hija: se abre desde la pantalla de su padre.
+   La animación es la misma que ya usaba el panel de detalle del CRM. */
+
+.hija-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--avisens-ink) 42%, transparent);
+  backdrop-filter: blur(3px);
+  animation: hija-fade 0.2s ease;
+}
+
+@keyframes hija-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hija-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 61;
+  display: flex;
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-base);
+  border-radius: 26px;
+  box-shadow: -24px 0 70px color-mix(in srgb, var(--avisens-ink) 26%, transparent);
+  animation: hija-entrada 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes hija-entrada {
+  from { opacity: 0; transform: translateX(28px) scale(0.98); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.hija-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1.4rem 1.5rem;
+  color: var(--on-primary);
+  background: var(--avisens-deep);
+}
+
+.hija-ident {
+  min-width: 0;
+  flex: 1;
+}
+
+.hija-titulo {
+  margin: 0;
+  overflow: hidden;
+  color: var(--on-primary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.18rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hija-sub {
+  display: block;
+  margin-top: 2px;
+  color: color-mix(in srgb, var(--surface-base) 66%, transparent);
+  font-size: 0.79rem;
+  font-weight: 500;
+}
+
+.hija-cerrar {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  color: color-mix(in srgb, var(--surface-base) 78%, transparent);
+  background: color-mix(in srgb, var(--surface-base) 12%, transparent);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.hija-cerrar:hover { color: var(--on-primary); background: color-mix(in srgb, var(--surface-base) 22%, transparent); }
+
+.hija-cerrar:focus-visible {
+  outline: 2px solid var(--avisens-yellow);
+  outline-offset: 2px;
+}
+
+.hija-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.4rem 1.5rem;
+  color: var(--dash-ink, var(--text-primary));
+}
+
+@media (max-width: 620px) {
+  .hija-panel {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-width: none;
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hija-overlay,
+  .hija-panel { animation: none; }
+  .hija-cerrar { transition: none; }
+}

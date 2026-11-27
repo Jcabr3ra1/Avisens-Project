@@ -1,0 +1,46 @@
+meta {
+  name: [Admin]  Registrar los relés K1-K4 de un ESP32 por canal
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/sensores/reles
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "galpon_id": 1,
+    "dispositivo_id": 1
+  }
+}
+
+docs {
+  Registra de una vez los relés K1-K4 del ESP32 indicado, identificados por
+  canal (rele:k1..rele:k4) y no por un código compilado en el firmware.
+  Solo Administrador. Responde 200 con el detalle por canal.
+
+  Idempotente: repetirla no duplica nada.
+  - creado: no había nada en ese canal; se registró el relé.
+  - asociado: un registro antiguo REL-K<n>-... de ESTE ESP32 recibió el
+    canal. Conserva su id, código, lecturas, órdenes y estado.
+  - existente: el canal ya estaba registrado.
+  - conflicto: no se pudo resolver sin riesgo (p. ej. dos registros
+    antiguos REL-K2 en el mismo ESP32); no se cambió nada en ese canal y
+    "motivo" explica qué revisar. Los demás canales sí se procesan.
+
+  "completo" es true cuando los cuatro canales quedaron con su relé.
+
+  Errores: 400 si el ESP32 no es del galpón, 404 si no existe, 409 si está
+  desactivado o retirado, 403 si no es Administrador.
+}

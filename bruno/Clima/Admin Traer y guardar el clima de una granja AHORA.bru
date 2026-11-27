@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Traer y guardar el clima de una granja AHORA
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/granjas/1/clima/traer
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

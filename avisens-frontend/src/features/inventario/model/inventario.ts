@@ -1,0 +1,145 @@
+import type { Insumo } from '../api/insumos'
+import type { TipoMovimiento } from '../api/movimientos'
+
+export type EstadoStock = 'ok' | 'bajo' | 'critico' | 'agotado'
+
+export const ETIQUETA_STOCK: Record<EstadoStock, string> = {
+  ok: 'Stock OK',
+  bajo: 'Stock bajo',
+  critico: 'Stock crítico',
+  agotado: 'Agotado',
+}
+
+// El semáforo se mide contra el mínimo que el usuario definió para ese
+// insumo, no contra un número fijo: 20 sacos de alimento son mucho o poco
+// según la granja.
+export function estadoStock(insumo: Insumo): EstadoStock {
+  if (insumo.stock_actual <= 0) return 'agotado'
+  // Sin mínimo declarado no hay contra qué comparar; no se inventa una alarma.
+  if (insumo.stock_minimo <= 0) return 'ok'
+  const ratio = insumo.stock_actual / insumo.stock_minimo
+  if (ratio < 0.5) return 'critico'
+  if (ratio < 1) return 'bajo'
+  return 'ok'
+}
+
+// Cuánto llenar la barra. El tope visual es el doble del mínimo: por encima
+// de eso ya no aporta información, solo alarga la barra.
+export function porcentajeDeStock(insumo: Insumo): number {
+  if (insumo.stock_minimo <= 0) return insumo.stock_actual > 0 ? 100 : 0
+  const pct = (insumo.stock_actual / (insumo.stock_minimo * 2)) * 100
+  return Math.max(0, Math.min(100, pct))
+}
+
+export type ResumenInventario = {
+  total: number
+  criticos: number
+  bajos: number
+  agotados: number
+  valorTotalCop: number
+}
+
+export function resumirInventario(insumos: Insumo[]): ResumenInventario {
+  const estados = insumos.map(estadoStock)
+  return {
+    total: insumos.length,
+    criticos: estados.filter((estado) => estado === 'critico').length,
+    bajos: estados.filter((estado) => estado === 'bajo').length,
+    agotados: estados.filter((estado) => estado === 'agotado').length,
+    valorTotalCop: insumos.reduce(
+      (total, insumo) => total + insumo.stock_actual * (insumo.precio_unitario_cop ?? 0),
+      0,
+    ),
+  }
+}
+
+// Los que necesitan reposición van primero: es la razón por la que alguien
+// entra a la bodega.
+const ORDEN_URGENCIA: Record<EstadoStock, number> = {
+  agotado: 0,
+  critico: 1,
+  bajo: 2,
+  ok: 3,
+}
+
+export function ordenarPorUrgencia(insumos: Insumo[]): Insumo[] {
+  return [...insumos].sort((a, b) => {
+    const diferencia = ORDEN_URGENCIA[estadoStock(a)] - ORDEN_URGENCIA[estadoStock(b)]
+    if (diferencia !== 0) return diferencia
+    return a.nombre.localeCompare(b.nombre, 'es-CO')
+  })
+}
+
+export type FiltroStock = 'todos' | 'reposicion' | 'agotados' | 'inactivos'
+
+function normalizarTexto(valor: string): string {
+  return valor
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+export function filtrarInsumos(
+  insumos: Insumo[],
+  busqueda: string,
+  filtro: FiltroStock,
+): Insumo[] {
+  const termino = normalizarTexto(busqueda)
+  return insumos.filter((insumo) => {
+    if (filtro === 'inactivos' && insumo.activo) return false
+    if (filtro !== 'inactivos' && !insumo.activo) return false
+    if (filtro === 'reposicion' && estadoStock(insumo) === 'ok') return false
+    if (filtro === 'agotados' && estadoStock(insumo) !== 'agotado') return false
+    if (!termino) return true
+    return (
+      normalizarTexto(insumo.nombre).includes(termino) ||
+      (insumo.tipo ? normalizarTexto(insumo.tipo).includes(termino) : false) ||
+      (insumo.ubicacion_almacen ? normalizarTexto(insumo.ubicacion_almacen).includes(termino) : false)
+    )
+  })
+}
+
+export function siguienteInsumo(
+  insumos: Insumo[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (insumos.length === 0) return null
+  if (tecla === 'Home') return insumos[0].id
+  if (tecla === 'End') return insumos[insumos.length - 1].id
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = insumos.findIndex((item) => item.id === actualId)
+  if (indice === -1) return insumos[0].id
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(insumos.length - 1, indice + 1)
+    : Math.max(0, indice - 1)
+  return insumos[siguiente].id
+}
+
+export const ETIQUETA_MOVIMIENTO: Record<TipoMovimiento, string> = {
+  entrada: 'Entrada',
+  salida: 'Salida',
+  ajuste: 'Ajuste',
+}
+
+// Cómo se lee la cantidad en el historial: una salida resta, un ajuste no
+// suma ni resta sino que fija el stock, así que no lleva signo.
+export function signoDeMovimiento(tipo: TipoMovimiento): '+' | '−' | '' {
+  if (tipo === 'entrada') return '+'
+  if (tipo === 'salida') return '−'
+  return ''
+}
+
+// Texto de la bodega vacía según lo que cada rol puede hacer en ella (QA-06).
+// Antes el propietario veía el texto del operario («lo que saques para tu
+// galpón»), aunque él gestiona entradas, ajustes y costos.
+export function textoBodegaVacia(permisos: { crear: boolean; verCostos: boolean }): string {
+  if (permisos.crear) {
+    return 'Registra el primero para llevar su stock y dejar rastro de cada entrada y salida.'
+  }
+  if (permisos.verCostos) {
+    return 'Cuando el administrador registre los insumos de tu granja aparecerán aquí. Desde entonces podrás registrar entradas, salidas y ajustes, y ver el valor de tu bodega.'
+  }
+  return 'Cuando se registren los insumos de la granja aparecerán aquí, con su stock y su mínimo.'
+}

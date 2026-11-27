@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Obtener un tipo de alimento por ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/tipos-alimento/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

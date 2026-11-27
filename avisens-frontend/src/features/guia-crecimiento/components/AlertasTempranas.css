@@ -1,0 +1,128 @@
+.gat {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.gat-resumen {
+  margin: 0;
+  color: var(--guia-tinta-suave);
+  line-height: 1.5;
+}
+
+.gat-resumen--alta {
+  color: var(--guia-alerta);
+  font-weight: 650;
+}
+
+.gat-lista {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gat-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--guia-linea);
+  border-left-width: 4px;
+  border-radius: var(--guia-radio);
+  background: var(--guia-fondo);
+}
+
+.gat-item--alta {
+  border-left-color: var(--guia-alerta);
+}
+
+.gat-item--media {
+  border-left-color: var(--guia-grano);
+}
+
+.gat-item--baja {
+  border-left-color: var(--guia-linea);
+}
+
+.gat-etiqueta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gat-item--alta .gat-etiqueta {
+  color: var(--guia-alerta);
+}
+
+.gat-dia {
+  color: var(--guia-tinta-suave);
+  font-size: 0.8125rem;
+}
+
+.gat-mensaje {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .gat-item {
+    grid-template-columns: auto 1fr;
+  }
+
+  .gat-mensaje {
+    grid-column: 1 / -1;
+  }
+}
+
+.gcf {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--guia-linea);
+  border-radius: var(--guia-radio);
+  background: var(--guia-hoja);
+}
+
+.gcf-rango {
+  margin: 0;
+  font-weight: 600;
+}
+
+.gcf-nivel {
+  justify-self: start;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--guia-linea);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.gcf-nivel--baja {
+  border-color: var(--guia-alerta);
+  color: var(--guia-alerta);
+}
+
+.gcf-nivel--media {
+  border-color: var(--guia-grano);
+}
+
+.gcf-motivos {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--guia-tinta-suave);
+  line-height: 1.5;
+}
+
+.gpf-sub {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--guia-tinta-suave);
+  font-size: 0.75rem;
+  font-weight: 400;
+}

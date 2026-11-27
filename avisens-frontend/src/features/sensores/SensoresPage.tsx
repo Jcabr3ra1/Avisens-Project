@@ -1,27 +1,28 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
-import {
-  listarSensores,
-  crearSensor,
-  activarSensor,
-  desactivarSensor,
-  eliminarSensor,
-  getRol,
-  type Sensor,
-  type CrearSensorPayload,
-} from '@shared/api'
-import { MedicionesVivas } from './MedicionesVivas'
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
+import { useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { ROL_ADMIN } from '@shared/auth/permisos'
+import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { IcAlert, IcCheck, IcPlus, IcThermo } from '@shared/ui/icons/icons'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
+import { mensajeDeError } from '@shared/utils/errores'
+import { validarCodigo, validarTextoSeguro } from '@shared/utils/validacion'
+import { useCatalogoSensores } from './hooks/useCatalogoSensores'
+import { useOpcionesSensor } from './hooks/useOpcionesSensor'
+import { useSensores } from './hooks/useSensores'
+import { MedicionesVivas } from './components/MedicionesVivas'
+import '@shared/ui/admin/AdminKit.css'
 import './SensoresPage.css'
 
-// Página de PRUEBA del backend de sensores (EP-08). Pensada para que el equipo
-// verifique en vivo el CRUD real contra la API: registrar, listar, activar,
-// desactivar y eliminar. No es el dashboard de monitoreo (ese usa mock).
+// Vista transversal de sensores: el inventario completo, sin bajar galpón por
+// galpón. Los sensores de UN galpón se ven desde su propia pantalla hija.
 
-// El form pide galpon_id y dispositivo_id como números crudos: el equipo conoce
-// los IDs de su seed. El backend valida que el dispositivo pertenezca al galpón.
+// Sin galpón ni dispositivo elegidos: 0 no es un id válido, así que el
+// formulario no puede enviarse hasta que el usuario escoja ambos.
 const FORM_INICIAL: CrearSensorPayload = {
-  galpon_id: 1,
-  dispositivo_id: 1,
+  galpon_id: 0,
+  dispositivo_id: 0,
   codigo: '',
   tipo: 'temperatura',
   unidad_medida: '°C',
@@ -29,50 +30,22 @@ const FORM_INICIAL: CrearSensorPayload = {
   fabricante: '',
 }
 
-// Variables ambientales frecuentes (el backend acepta cualquier string).
-const TIPOS = ['temperatura', 'humedad', 'co2', 'nh3', 'luz']
-
-// Traduce un error de axios a un mensaje legible.
-function mensajeError(err: unknown, fallback: string): string {
-  if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) {
-      return 'No tienes permisos para esta acción.'
-    }
-    const data = err.response.data as { message?: string | string[] }
-    if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
-    }
-  }
-  return fallback
-}
-
 function SensoresPage() {
-  const [sensores, setSensores] = useState<Sensor[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-
+  const { sensores, cargando, error, crear, alternar, eliminar, recargar } =
+    useSensores()
+  useRefetchOnFocus(recargar)
+  const { tipos } = useCatalogoSensores()
   const [form, setForm] = useState<CrearSensorPayload>(FORM_INICIAL)
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  const [errorAccion, setErrorAccion] = useState('')
   const [errorForm, setErrorForm] = useState('')
   const [ok, setOk] = useState('')
 
   const rol = getRol()
-
-  async function cargar() {
-    setCargando(true)
-    setError('')
-    try {
-      setSensores(await listarSensores())
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudieron cargar los sensores.'))
-    } finally {
-      setCargando(false)
-    }
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [])
+  const puedeGestionar = rol === ROL_ADMIN
+  const { galpones, dispositivosDelGalpon, cargando: cargandoOpciones } =
+    useOpcionesSensor(form.galpon_id)
 
   function campo<K extends keyof CrearSensorPayload>(
     k: K,
@@ -85,6 +58,15 @@ function SensoresPage() {
     e.preventDefault()
     setErrorForm('')
     setOk('')
+    const errCodigo = validarCodigo(form.codigo, 'El código del sensor', { requerido: false, max: 60 })
+    const errUnidad = validarTextoSeguro(form.unidad_medida, 'La unidad de medida', { max: 20 })
+    const errModelo = validarTextoSeguro(form.modelo ?? '', 'El modelo', { max: 80 })
+    const errFab = validarTextoSeguro(form.fabricante ?? '', 'El fabricante', { max: 80 })
+    const problema = errCodigo ?? errUnidad ?? errModelo ?? errFab
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
     setGuardando(true)
     try {
       // Los opcionales vacíos no se mandan.
@@ -97,120 +79,167 @@ function SensoresPage() {
         modelo: form.modelo?.trim() || undefined,
         fabricante: form.fabricante?.trim() || undefined,
       }
-      const creado = await crearSensor(payload)
+      const creado = await crear(payload)
       setOk(`Sensor "${creado.codigo}" creado (id ${creado.id}).`)
       setForm((prev) => ({ ...prev, codigo: '' })) // limpia solo el código
-      await cargar()
     } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo crear el sensor.'))
+      setErrorForm(mensajeDeError(err, 'No se pudo crear el sensor.'))
     } finally {
       setGuardando(false)
     }
   }
 
   async function handleToggle(s: Sensor) {
-    setError('')
+    setErrorAccion('')
     try {
-      if (s.estado === 'activo') {
-        await desactivarSensor(s.id)
-      } else {
-        await activarSensor(s.id)
-      }
-      await cargar()
+      await alternar(s)
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del sensor.'))
+      setErrorAccion(
+        mensajeDeError(err, 'No se pudo cambiar el estado del sensor.'),
+      )
     }
   }
 
   async function handleEliminar(s: Sensor) {
-    const confirmar = window.confirm(
-      `¿Eliminar PERMANENTEMENTE el sensor "${s.codigo}"?\n` +
-        'Falla si ya tiene mediciones asociadas. Esta acción no se deshace.',
-    )
-    if (!confirmar) return
-    setError('')
-    try {
-      await eliminarSensor(s.id)
-      await cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el sensor.'))
-    }
+    await confirmarAccion({
+      titulo: '¿Eliminar este sensor?',
+      entidad: s.codigo,
+      descripcion: 'Dejará de aparecer en AVISENS. Si tiene lecturas o alertas, su historial se conserva para los reportes.',
+      textoConfirmar: 'Eliminar sensor',
+      textoProcesando: 'Eliminando…',
+      onConfirmar: async () => {
+        setErrorAccion('')
+        await eliminar(s.id)
+      },
+    })
   }
 
   const activos = sensores.filter((s) => s.estado === 'activo').length
 
   return (
-    <div className="page-container sensores">
-      <header className="sensores-head">
-        <div>
-          <h1 className="sensores-title">Sensores · prueba de API</h1>
-          <p className="sensores-sub">
-            CRUD real contra el backend <code>/sensores</code>. Sesión:{' '}
-            <strong>{rol ?? 'sin rol'}</strong>.
-          </p>
-        </div>
-        <button className="sn-btn" onClick={cargar} disabled={cargando}>
-          {cargando ? 'Cargando…' : '↻ Recargar'}
-        </button>
-      </header>
+    <div className="page-container adm-page sensores">
+      <CabeceraAdmin
+        eyebrow="Monitoreo IoT"
+        titulo="Sensores"
+        subtitulo="Inventario de sensores instalados en los galpones a tu alcance."
+        acciones={puedeGestionar ? (
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={() => { setMostrarForm((v) => !v); setErrorForm('') }}
+          >
+            <IcPlus size={15} aria-hidden="true" />
+            {mostrarForm ? 'Ocultar formulario' : 'Registrar sensor'}
+          </button>
+        ) : undefined}
+      />
 
       {/* ── Resumen ─────────────────────────────────────────────────────── */}
-      <div className="sensores-resumen">
-        <div className="sn-stat">
-          <span className="sn-stat-valor">{sensores.length}</span>
-          <span className="sn-stat-label">Total</span>
-        </div>
-        <div className="sn-stat sn-stat--activo">
-          <span className="sn-stat-valor">{activos}</span>
-          <span className="sn-stat-label">Activos</span>
-        </div>
-        <div className="sn-stat">
-          <span className="sn-stat-valor">{sensores.length - activos}</span>
-          <span className="sn-stat-label">Inactivos</span>
-        </div>
-      </div>
+      <ul className="adm-kpis adm-kpis--3" aria-label="Resumen de sensores">
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Total</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcThermo size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{sensores.length.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Sensores registrados</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Activos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{activos.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Habilitados para lectura</span>
+          </div>
+        </li>
+        <li>
+          <div className={`adm-kpi adm-kpi--${sensores.length - activos > 0 ? 'alerta' : 'ok'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Inactivos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcAlert size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{(sensores.length - activos).toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">{sensores.length - activos > 0 ? 'Fuera de monitoreo' : 'Todos activos'}</span>
+          </div>
+        </li>
+      </ul>
 
       {error && (
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>Reintentar</button>
+        </div>
+      )}
+      {errorAccion && (
         <div className="sn-alert sn-alert--error" role="alert">
-          {error}
+          {errorAccion}
         </div>
       )}
 
       {/* ── Alta de sensor ──────────────────────────────────────────────── */}
-      <form className="sn-card sn-form" onSubmit={handleCrear}>
+      {puedeGestionar && mostrarForm && <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
           <label className="sn-campo">
-            <span>galpon_id</span>
-            <input
-              type="number"
-              min={1}
-              value={form.galpon_id}
-              onChange={(e) => campo('galpon_id', Number(e.target.value))}
+            <span>Galpón</span>
+            <select
+              value={form.galpon_id || ''}
+              onChange={(e) => {
+                campo('galpon_id', Number(e.target.value))
+                // El dispositivo elegido pertenecía al galpón anterior.
+                campo('dispositivo_id', 0)
+              }}
+              disabled={cargandoOpciones}
               required
-            />
+            >
+              <option value="" disabled>
+                {cargandoOpciones ? 'Cargando…' : 'Elige un galpón'}
+              </option>
+              {galpones.map((galpon) => (
+                <option key={galpon.id} value={galpon.id}>
+                  {galpon.nombre}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="sn-campo">
-            <span>dispositivo_id</span>
-            <input
-              type="number"
-              min={1}
-              value={form.dispositivo_id}
+            <span>Dispositivo</span>
+            <select
+              value={form.dispositivo_id || ''}
               onChange={(e) => campo('dispositivo_id', Number(e.target.value))}
+              disabled={!form.galpon_id || dispositivosDelGalpon.length === 0}
               required
-            />
+            >
+              <option value="" disabled>
+                {!form.galpon_id
+                  ? 'Elige primero el galpón'
+                  : dispositivosDelGalpon.length === 0
+                    ? 'Este galpón no tiene dispositivos'
+                    : 'Elige un dispositivo'}
+              </option>
+              {dispositivosDelGalpon.map((dispositivo) => (
+                <option key={dispositivo.id} value={dispositivo.id}>
+                  {dispositivo.nombre}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="sn-campo">
-            <span>código único</span>
+            <span>Código único</span>
             <input
               value={form.codigo}
               onChange={(e) => campo('codigo', e.target.value)}
               placeholder="TEMP-G1-01"
+              maxLength={60}
               required
             />
           </label>
           <label className="sn-campo">
-            <span>tipo</span>
+            <span>Tipo</span>
             <input
               list="tipos-sensor"
               value={form.tipo}
@@ -218,7 +247,7 @@ function SensoresPage() {
               required
             />
             <datalist id="tipos-sensor">
-              {TIPOS.map((t) => (
+              {tipos.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>
@@ -270,7 +299,7 @@ function SensoresPage() {
             {guardando ? 'Registrando…' : '+ Registrar sensor'}
           </button>
         </div>
-      </form>
+      </form>}
 
       {/* ── Listado ─────────────────────────────────────────────────────── */}
       <div className="sn-card">
@@ -279,7 +308,7 @@ function SensoresPage() {
         ) : sensores.length === 0 ? (
           <div className="sn-vacio">
             <p className="sn-vacio-titulo">No hay sensores registrados.</p>
-            <p className="sn-vacio-sub">Crea el primero con el formulario de arriba.</p>
+            {puedeGestionar && <p className="sn-vacio-sub">Crea el primero con el formulario de arriba.</p>}
           </div>
         ) : (
           <div className="sn-tabla-scroll">
@@ -293,7 +322,7 @@ function SensoresPage() {
                   <th>Galpón</th>
                   <th>Dispositivo</th>
                   <th>Estado</th>
-                  <th aria-label="Acciones"></th>
+                  {puedeGestionar && <th aria-label="Acciones"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -310,7 +339,7 @@ function SensoresPage() {
                     <td>
                       <span className={`sn-badge sn-badge--${s.estado}`}>{s.estado}</span>
                     </td>
-                    <td className="sn-acciones">
+                    {puedeGestionar && <td className="sn-acciones">
                       <button className="sn-btn sn-btn--sm" onClick={() => handleToggle(s)}>
                         {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
                       </button>
@@ -320,7 +349,7 @@ function SensoresPage() {
                       >
                         Eliminar
                       </button>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

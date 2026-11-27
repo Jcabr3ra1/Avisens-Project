@@ -1,0 +1,14 @@
+meta {
+  name: [Admin] Marcar todas leidas
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/notificaciones/leer-todas
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

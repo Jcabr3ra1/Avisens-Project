@@ -1,0 +1,34 @@
+meta {
+  name: [Admin · Propietario · Operario]  Riesgo de calor del galpon (72 h)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/predicciones/galpon/31/riesgo-calor
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Riesgo de estres por calor del galpon en las proximas 72 horas con el
+  indice THI de Tao y Xin (2003). No guarda nada.
+
+  Toma el pronostico hora a hora de Open-Meteo con las coordenadas de la
+  granja o, si no tiene, con su municipio y departamento. Lo ajusta al
+  interior del galpon con el promedio de la ultima hora de sus sensores de
+  temperatura y humedad. Si hay lote activo, los pollitos menores de 14 dias
+  toleran 3 puntos mas.
+
+  Devuelve serie (hora, temperatura, humedad, thi, nivel), pico, nivel_maximo,
+  horas_por_nivel, primera_alerta, ajuste_aplicado, recomendaciones, modelo,
+  ademas de galpon, lote, ubicacion e interior.
+
+  Errores: 401 sin sesion, 403 galpon de otro propietario, 404 galpon
+  inexistente, 422 codigo sin_ubicacion si la granja no tiene municipio ni
+  coordenadas, 400 si Open-Meteo o el servicio de ML no responden.
+}

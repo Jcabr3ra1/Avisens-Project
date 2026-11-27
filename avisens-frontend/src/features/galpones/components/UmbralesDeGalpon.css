@@ -1,0 +1,282 @@
+/* UmbralesDeGalpon.css — Selector por variable + tarjetas limpias por semana */
+
+.umb-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.umb-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: .9rem 1rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-lg);
+  background: var(--warning-soft);
+  color: var(--text-primary);
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+.umb-aviso-texto {
+  flex: 1 1 20rem;
+}
+
+.umb-aviso-btn {
+  white-space: nowrap;
+}
+
+.umb-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: .86rem;
+}
+
+.umb-vacio {
+  margin: 0;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: .88rem;
+}
+
+/* ── Selector de variable en píldoras ─────────────────────── */
+.umb-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.umb-var-tab {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: .45rem;
+  padding: 0 .85rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard),
+    background var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.umb-var-tab:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.umb-var-tab.is-activa {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.umb-var-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.umb-var-cuenta {
+  padding: .08rem .42rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.umb-var-cuenta.is-pendiente {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+.umb-var-tab.is-activa .umb-var-cuenta {
+  background: rgb(255 255 255 / 0.22);
+  color: var(--on-primary);
+}
+
+/* ── Grilla de tarjetas por semana (0 scroll horizontal) ──── */
+.umb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.umb-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .95rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.umb-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--primary);
+}
+
+.umb-card--alta::before { background: var(--danger); }
+.umb-card--media::before { background: var(--warning2); }
+.umb-card--baja::before { background: var(--primary); }
+
+.umb-card--vacia {
+  border-style: dashed;
+  border-color: var(--warning-border);
+  background: color-mix(in srgb, var(--warning-soft) 55%, var(--surface-base));
+}
+
+.umb-card--vacia::before {
+  background: var(--warning);
+}
+
+.umb-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .4rem;
+}
+
+.umb-card-semana {
+  display: block;
+  color: var(--text-primary);
+  font-size: .88rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.umb-card-dias {
+  display: block;
+  margin-top: .12rem;
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: 600;
+}
+
+.umb-crit {
+  flex: none;
+  padding: .12rem .48rem;
+  border-radius: var(--radius-full);
+  font-size: .68rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.umb-crit--alta  { background: var(--danger-soft); color: var(--danger); }
+.umb-crit--media { background: var(--warning-soft); color: var(--warning-text); }
+.umb-crit--baja  { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--avisens-deep); }
+.umb-crit--vacia { background: var(--surface-base); color: var(--warning-text); }
+
+.umb-card-rango {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+
+.umb-card-acciones {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.umb-card-btn {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  padding: 0 .65rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.umb-card-btn:first-child {
+  flex: 1;
+}
+
+.umb-card-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.umb-card-btn--peligro {
+  padding: 0 .5rem;
+  color: var(--danger3);
+}
+
+.umb-card-btn--peligro:hover {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.umb-card-definir {
+  display: inline-flex;
+  min-height: 36px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  padding: 0 .75rem;
+  border: 1px dashed var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--avisens-deep);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.umb-card-definir:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-base));
+}
+
+.umb-card-btn:focus-visible,
+.umb-card-definir:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.umb-sin {
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-style: italic;
+}

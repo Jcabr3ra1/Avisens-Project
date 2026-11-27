@@ -1,0 +1,22 @@
+meta {
+  name: [Admin]  Opciones de filtro
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/auditoria/opciones
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("devuelve acciones, entidades y usuarios", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.have.keys("acciones", "entidades", "usuarios");
+  });
+}

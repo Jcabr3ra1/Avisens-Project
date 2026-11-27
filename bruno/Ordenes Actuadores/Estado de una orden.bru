@@ -1,0 +1,24 @@
+meta {
+  name: [Admin · Propietario · Operario]  Estado de una orden
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/ordenes-actuadores/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  estado: pendiente -> enviada -> aplicada | rechazada | expirada. Una
+  aplicada puede pasar luego a revertida si el ESP32 devolvió el relé a
+  automático (una protección local, o se perdió el contacto).
+
+  estado_real es lo que el ESP32 dice que quedó en el relé; motivo explica
+  un rechazo o una reversión.
+}

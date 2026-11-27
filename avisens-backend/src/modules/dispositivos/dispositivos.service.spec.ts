@@ -1,7 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { DispositivosService } from './dispositivos.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { hashDeviceToken } from '../../common/security/device-token';
 
 describe('DispositivosService', () => {
   let service: DispositivosService;
@@ -10,11 +17,13 @@ describe('DispositivosService', () => {
     dispositivo: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
+    sensor: { deleteMany: jest.fn(), updateMany: jest.fn() },
     galpon: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -24,14 +33,13 @@ describe('DispositivosService', () => {
 
   const dtoCrear = {
     galpon_id: 3,
-    mac_address: 'A4:CF:12:8B:00:1A',
     codigo_topic: 'galpon1',
     nombre: 'Nodo entrada norte',
   };
 
-  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+  const dataDe = (mock: jest.Mock, indice = 0): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
-    return calls[0][0].data;
+    return calls[indice][0].data;
   };
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<
@@ -50,9 +58,12 @@ describe('DispositivosService', () => {
     service = module.get<DispositivosService>(DispositivosService);
 
     prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.dispositivo.create.mockReset();
+    prisma.dispositivo.findMany.mockResolvedValue([]);
     // Por defecto el galpón 3 es del propietario 5.
     prisma.galpon.findUnique.mockResolvedValue({
       id: 3,
+      codigo: 'GAL-000003',
       granja: { propietario_id: 5 },
     });
   });
@@ -68,9 +79,10 @@ describe('DispositivosService', () => {
       expect(prisma.dispositivo.create).toHaveBeenCalled();
       expect(typeof res.token_ingesta).toBe('string');
       expect(res.token_ingesta.length).toBeGreaterThan(0);
-      // El mismo token se guarda en la BD.
-      expect(dataDe(prisma.dispositivo.create).token_ingesta).toBe(
-        res.token_ingesta,
+      // Solo se persiste el hash; el secreto se revela una única vez.
+      expect(dataDe(prisma.dispositivo.create).token_ingesta).toBeUndefined();
+      expect(dataDe(prisma.dispositivo.create).token_ingesta_hash).toBe(
+        hashDeviceToken(res.token_ingesta),
       );
     });
 
@@ -84,6 +96,64 @@ describe('DispositivosService', () => {
         ForbiddenException,
       );
       expect(prisma.dispositivo.create).not.toHaveBeenCalled();
+    });
+
+    it('genera el código y el nombre desde el galpón sin pedir identidad manual', async () => {
+      prisma.dispositivo.create.mockResolvedValue({ id: 1 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create)).toMatchObject({
+        galpon_id: 3,
+        codigo_topic: 'GAL-000003-ESP32-001',
+        nombre: 'GAL-000003-ESP32-001',
+      });
+    });
+
+    it('avanza después del último consecutivo del galpón', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        { galpon_id: 3, codigo_topic: 'GAL-000003-ESP32-001' },
+        { galpon_id: 3, codigo_topic: 'GAL-000003-ESP32-003' },
+      ]);
+      prisma.dispositivo.create.mockResolvedValue({ id: 4 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create).codigo_topic).toBe(
+        'GAL-000003-ESP32-004',
+      );
+    });
+
+    it('salta un código ocupado por un galpón histórico con el mismo prefijo', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        { galpon_id: 99, codigo_topic: 'GAL-000003-ESP32-001' },
+      ]);
+      prisma.dispositivo.create.mockResolvedValue({ id: 2 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create).codigo_topic).toBe(
+        'GAL-000003-ESP32-002',
+      );
+    });
+
+    it('reintenta con el siguiente número si otro registro reserva el mismo código', async () => {
+      prisma.dispositivo.create
+        .mockRejectedValueOnce(
+          new Prisma.PrismaClientKnownRequestError('Código ocupado', {
+            code: 'P2002',
+            clientVersion: 'test',
+            meta: { target: ['codigo_topic'] },
+          }),
+        )
+        .mockResolvedValueOnce({ id: 2 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(prisma.dispositivo.create).toHaveBeenCalledTimes(2);
+      expect(dataDe(prisma.dispositivo.create, 1).codigo_topic).toBe(
+        'GAL-000003-ESP32-002',
+      );
     });
 
     it('rechaza (404) si el galpón no existe', async () => {
@@ -103,12 +173,15 @@ describe('DispositivosService', () => {
       expect(whereDe(prisma.dispositivo.findMany).galpon).toEqual({
         granja: { propietario_id: 5 },
       });
+      expect(whereDe(prisma.dispositivo.findMany).retirado_en).toBeNull();
     });
 
     it('un Admin no filtra por dueño', async () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
-      expect(whereDe(prisma.dispositivo.findMany)).toBeUndefined();
+      expect(whereDe(prisma.dispositivo.findMany)).toEqual({
+        retirado_en: null,
+      });
     });
   });
 
@@ -116,7 +189,7 @@ describe('DispositivosService', () => {
     it('genera y revela un token nuevo', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
       prisma.dispositivo.update.mockResolvedValue({});
 
@@ -125,6 +198,10 @@ describe('DispositivosService', () => {
       expect(typeof res.token_ingesta).toBe('string');
       expect(res.token_ingesta.length).toBeGreaterThan(0);
       expect(prisma.dispositivo.update).toHaveBeenCalled();
+      expect(dataDe(prisma.dispositivo.update).token_ingesta).toBeNull();
+      expect(dataDe(prisma.dispositivo.update).token_ingesta_hash).toBe(
+        hashDeviceToken(res.token_ingesta),
+      );
     });
 
     it('un Propietario no puede regenerar el token de un dispositivo ajeno (403)', async () => {
@@ -153,19 +230,15 @@ describe('DispositivosService', () => {
       expect(prisma.dispositivo.update).toHaveBeenCalled();
     });
 
-    it('al mover a otro galpón, re-valida que el nuevo sea suyo (403)', async () => {
+    it('impide trasladar un dispositivo con historial a otro galpón', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
-      });
-      prisma.galpon.findUnique.mockResolvedValue({
-        id: 9,
-        granja: { propietario_id: 999 },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
 
       await expect(
         service.actualizar(1, { galpon_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.dispositivo.update).not.toHaveBeenCalled();
     });
   });
@@ -194,12 +267,118 @@ describe('DispositivosService', () => {
       expect(res).toEqual({ id: 1, activo: true });
     });
 
-    it('elimina permanentemente cuando es dueño', async () => {
-      prisma.dispositivo.delete.mockResolvedValue({ id: 1 });
+    it('sin historial borra el controlador y los sensores que nunca midieron', async () => {
+      prisma.$transaction.mockImplementation(
+        (fn: (tx: typeof prisma) => unknown) => fn(prisma),
+      );
+      prisma.dispositivo.findFirst.mockResolvedValue(null);
 
       const res = await service.eliminarPermanente(1, propietario);
 
-      expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.sensor.deleteMany).toHaveBeenCalledWith({
+        where: {
+          dispositivo_id: 1,
+          estado: { not: 'retirado' },
+          mediciones: { none: {} },
+          alertas: { none: {} },
+        },
+      });
+      expect(prisma.dispositivo.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(res).toEqual({ id: 1, eliminado: true, retirado: false });
+    });
+
+    it('con historial retira sensores y controlador, y revoca su token', async () => {
+      prisma.$transaction.mockImplementation(
+        (fn: (tx: typeof prisma) => unknown) => fn(prisma),
+      );
+      prisma.dispositivo.findFirst.mockResolvedValue({ id: 1 });
+
+      const res = await service.eliminarPermanente(1, propietario);
+
+      expect(prisma.sensor.updateMany).toHaveBeenCalledWith({
+        where: { dispositivo_id: 1, estado: { not: 'retirado' } },
+        data: { estado: 'retirado', canal: null },
+      });
+      expect(prisma.dispositivo.delete).not.toHaveBeenCalled();
+      const [{ where, data }] = prisma.dispositivo.update.mock.calls[0] as [
+        { where: { id: number }; data: Record<string, unknown> },
+      ];
+      expect(where).toEqual({ id: 1 });
+      expect(data).toMatchObject({
+        activo: false,
+        token_ingesta: null,
+        token_ingesta_hash: null,
+      });
+      expect(data.retirado_en).toBeInstanceOf(Date);
+      expect(res).toEqual({ id: 1, eliminado: false, retirado: true });
+    });
+
+    it('un controlador retirado no se activa, edita ni regenera token', async () => {
+      prisma.dispositivo.findUnique.mockResolvedValue({
+        id: 1,
+        retirado_en: new Date(),
+        galpon: { granja: { propietario_id: 5 } },
+      });
+
+      await expect(service.activar(1, propietario)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(
+        service.regenerarToken(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.dispositivo.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('conectividad', () => {
+    const ahora = new Date('2026-10-17T12:00:00Z');
+    const fila = (id: number, minutos: number | null) => ({
+      id,
+      nombre: `ESP-${id}`,
+      codigo_topic: `t${id}`,
+      ultima_conexion:
+        minutos === null ? null : new Date(ahora.getTime() - minutos * 60_000),
+      galpon: {
+        id: 1,
+        nombre: 'G1',
+        granja: {
+          id: 1,
+          nombre: 'Finca',
+          organizacion: { id: 1, nombre: 'Org' },
+        },
+      },
+    });
+
+    it('solo considera dispositivos activos y cuenta cada estado', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        fila(1, null),
+        fila(2, 40),
+        fila(3, 2),
+      ]);
+
+      const res = await service.conectividad(ahora);
+
+      expect(prisma.dispositivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { activo: true } }),
+      );
+      expect(res).toEqual(
+        expect.objectContaining({
+          ventana_minutos: 15,
+          total: 3,
+          conectados: 1,
+          sin_reportar: 1,
+          nunca: 1,
+        }),
+      );
+      expect(res.problemas.map((d) => [d.id, d.estado])).toEqual([
+        [1, 'nunca'],
+        [2, 'sin_reportar'],
+      ]);
     });
   });
 });

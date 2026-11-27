@@ -1,0 +1,44 @@
+meta {
+  name: [Admin]  Listar prospectos del chatbot
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/prospectos?estado=calificado&sin_asignar=true&page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  estado: calificado
+  sin_asignar: true
+  page: 1
+  limit: 20
+  ~clasificacion: caliente
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Bandeja del equipo comercial. Solo Admin (un Propietario es cliente, no vendedor).
+  
+  Viene ordenada por puntaje DESCENDENTE y luego por fecha: lo primero que ve el
+  vendedor es lo que mas vale.
+  
+  Filtros (todos opcionales, se combinan):
+    clasificacion  caliente | tibio | frio
+    estado         nuevo | en_proceso | calificado | asignado | cerrado
+    sin_asignar    true  -> solo los que nadie ha tomado todavia
+  
+  OJO: `sin_asignar=false` NO devuelve "los que si tienen asesor", simplemente no
+  filtra por ese campo.
+  
+  La lista NO trae documento, email ni ip_origen: para decidir a quien llamar basta
+  con nombre, telefono, municipio y puntaje. Menos datos personales por la red.
+  
+  Los que salen en `en_proceso` son conversaciones abandonadas a mitad. No son cola
+  de trabajo, pero si dejaron telefono valen una llamada.
+}

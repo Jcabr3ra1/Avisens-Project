@@ -1,0 +1,20 @@
+meta {
+  name: [Admin] Listar solicitudes de un prospecto
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/solicitudes-pqrs/prospecto/1
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Alimenta la sección PQRS del panel de detalle del prospecto en el CRM.
+
+  Solo Administrador: el guardia está a nivel de controlador.
+}

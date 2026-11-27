@@ -1,453 +1,508 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
-import {
-  listarUsuarios,
-  crearUsuario,
-  actualizarUsuario,
-  eliminarUsuario,
-  getRol,
-  type Usuario,
-  type CrearUsuarioPayload,
-} from '@shared/api'
-import { IcUsers, IcSearch, IcEye, IcEyeOff } from '@shared/ui/icons/icons'
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
+import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
+import { listarAsignacionesGalpon } from './api/asignacionesGalpon'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
+import { IcChevronRight, IcPlus, IcSearch, IcUsers } from '@shared/ui/icons/icons'
+import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
+import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
+import BarraUsuarios from './components/BarraUsuarios'
+import FormularioUsuario from './components/FormularioUsuario'
+import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
+import ModalRestablecerPassword from './components/ModalRestablecerPassword'
+import PanelUsuario from './components/PanelUsuario'
+import ResumenUsuarios from './components/ResumenUsuarios'
+import { useCatalogosUsuarios } from './hooks/useCatalogosUsuarios'
+import { useAsignacionesGalpon } from './hooks/useAsignacionesGalpon'
+import { useFiltroUsuarios } from './hooks/useFiltroUsuarios'
+import { useFormularioUsuario } from './hooks/useFormularioUsuario'
+import { useResumenUsuarios } from './hooks/useResumenUsuarios'
+import { useUsuarios } from './hooks/useUsuarios'
+import { siguienteUsuarioId } from './model/directorioUsuarios'
+import '@shared/ui/admin/AdminKit.css'
 import './UsuariosPage.css'
 
-// El backend no expone un endpoint de roles, así que los listamos aquí.
-// Coinciden con los insertados en database/init/01-init.sql.
-const ROLES = [
-  { id: 1, nombre: 'Administrador' },
-  { id: 2, nombre: 'Propietario' },
-  { id: 3, nombre: 'Operario' },
-]
-
-const FORM_INICIAL: CrearUsuarioPayload = {
-  nombre_completo: '',
-  cedula: '',
-  email: '',
-  password: '',
-  telefono: '',
-  rol_id: 2,
+type RolSeccion = {
+  rol: 'Administrador' | 'Propietario' | 'Operario'
+  titulo: string
+  subtitulo: string
+  botonCrear: string
+  tono: 'administrador' | 'propietario' | 'operario'
 }
 
-// Traduce un error de axios a un mensaje legible para el usuario.
-function mensajeError(err: unknown, fallback: string): string {
-  if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) {
-      return 'No tienes permisos para esta acción.'
-    }
-    const data = err.response.data as { message?: string | string[] }
-    if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
-    }
-  }
-  return fallback
+const SECCIONES_ROL: RolSeccion[] = [
+  {
+    rol: 'Administrador',
+    titulo: 'Administradores',
+    subtitulo: 'Gobierno global de la plataforma y soporte',
+    botonCrear: 'Nuevo administrador',
+    tono: 'administrador',
+  },
+  {
+    rol: 'Propietario',
+    titulo: 'Propietarios',
+    subtitulo: 'Titulares de empresas, granjas y finanzas',
+    botonCrear: 'Nuevo propietario',
+    tono: 'propietario',
+  },
+  {
+    rol: 'Operario',
+    titulo: 'Operarios',
+    subtitulo: 'Personal de campo asignado a galpones',
+    botonCrear: 'Nuevo operario',
+    tono: 'operario',
+  },
+]
+
+function iniciales(nombre: string): string {
+  return (
+    nombre
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((parte) => parte[0])
+      .join('')
+      .toUpperCase() || 'U'
+  )
 }
 
 function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-
-  const [modalAbierto, setModalAbierto] = useState(false)
-  // null = creando un usuario nuevo; un id = editando ese usuario.
-  const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [form, setForm] = useState<CrearUsuarioPayload>(FORM_INICIAL)
-  const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
-
-  // Menú de acciones (⋯) abierto: guarda la fila y dónde dibujarlo.
-  const [menu, setMenu] = useState<{ user: Usuario; top: number; left: number } | null>(null)
-
-  // Búsqueda por nombre, correo o cédula (filtro en el cliente).
-  const [busqueda, setBusqueda] = useState('')
-
-  // Mostrar/ocultar el texto de la contraseña en el formulario.
-  const [mostrarPassword, setMostrarPassword] = useState(false)
-
-  const modoEdicion = editandoId !== null
-
-  // El Propietario solo gestiona operarios; el Admin gestiona todos los roles.
   const esPropietario = getRol() === 'Propietario'
-  const rolesDisponibles = esPropietario
-    ? ROLES.filter((r) => r.nombre === 'Operario')
-    : ROLES
+  const esAdmin = getRol() === 'Administrador'
+  const [parametros, setParametros] = useSearchParams()
+  const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)
+  const [usuarioRestablecer, setUsuarioRestablecer] = useState<Usuario | null>(null)
+  const [panelMovilAbierto, setPanelMovilAbierto] = useState(false)
+  const buscadorRef = useRef<HTMLInputElement>(null)
 
-  // Cifras del resumen — cuentan sobre TODOS los usuarios, sin filtrar por búsqueda.
-  const totalUsuarios  = usuarios.length
-  const totalActivos   = usuarios.filter((u) => u.activo).length
-  const totalPropietarios = usuarios.filter((u) => u.rol.nombre === 'Propietario').length
-  const totalOperarios    = usuarios.filter((u) => u.rol.nombre === 'Operario').length
+  const {
+    usuarios,
+    cargando,
+    error,
+    recargar,
+    crear,
+    actualizar,
+    alternarActivo,
+    eliminar,
+  } = useUsuarios()
 
-  // Lista filtrada por el término de búsqueda (nombre, correo o cédula).
-  const usuariosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return usuarios
-    return usuarios.filter((u) =>
-      u.nombre_completo.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.cedula.toLowerCase().includes(q),
-    )
-  }, [usuarios, busqueda])
+  useRefetchOnFocus(() => { void recargar(true) })
 
-  async function cargarUsuarios() {
-    setCargando(true)
-    setError('')
-    try {
-      setUsuarios(await listarUsuarios())
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudieron cargar los usuarios.'))
-    } finally {
-      setCargando(false)
-    }
-  }
+  const catalogos = useCatalogosUsuarios(esPropietario)
+  const {
+    roles: rolesCatalogo,
+    organizaciones,
+    cargando: catalogosCargando,
+    error: catalogosError,
+    recargar: recargarCatalogos,
+  } = catalogos
+  const asignaciones = useAsignacionesGalpon()
+  const filtro = useFiltroUsuarios(usuarios)
+  const resumen = useResumenUsuarios(usuarios)
+  const [galpones, setGalpones] = useState<Galpon[]>([])
 
   useEffect(() => {
-    cargarUsuarios()
+    if (esPropietario) {
+      void listarGalpones().then(setGalpones).catch(() => setGalpones([]))
+    }
+  }, [esPropietario])
+
+  useEffect(() => {
+    function atajoBuscar(evento: globalThis.KeyboardEvent) {
+      if (evento.key !== '/' || evento.metaKey || evento.ctrlKey || evento.altKey) return
+      const activo = document.activeElement
+      if (activo instanceof HTMLInputElement || activo instanceof HTMLTextAreaElement || activo instanceof HTMLSelectElement) return
+      evento.preventDefault()
+      buscadorRef.current?.focus()
+    }
+    window.addEventListener('keydown', atajoBuscar)
+    return () => window.removeEventListener('keydown', atajoBuscar)
   }, [])
 
-  function abrirCrear() {
-    setEditandoId(null)
-    // Para el Dueño, el rol por defecto (y único) es Operario.
-    setForm({ ...FORM_INICIAL, rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id })
-    setErrorForm('')
-    setMostrarPassword(false)
-    setModalAbierto(true)
+  const seccionesVisibles = useMemo(() => {
+    const base = esPropietario
+      ? SECCIONES_ROL.filter((s) => s.rol === 'Operario')
+      : filtro.rolFiltro === 'todos'
+        ? SECCIONES_ROL
+        : SECCIONES_ROL.filter((s) => s.rol === filtro.rolFiltro)
+
+    return base
+      .map((seccion) => ({
+        ...seccion,
+        cuentas: filtro.visibles.filter((u) => u.rol.nombre === seccion.rol),
+      }))
+      .filter((seccion) => seccion.cuentas.length > 0 || filtro.rolFiltro === seccion.rol)
+  }, [esPropietario, filtro.rolFiltro, filtro.visibles])
+
+  const listaOrdenada = useMemo(
+    () => seccionesVisibles.flatMap((seccion) => seccion.cuentas),
+    [seccionesVisibles],
+  )
+  const idsVisibles = useMemo(() => listaOrdenada.map((u) => u.id), [listaOrdenada])
+  const idPedido = Number(parametros.get('usuario'))
+  const seleccionado = listaOrdenada.find((u) => u.id === idPedido) ?? listaOrdenada[0] ?? null
+  const hayFiltros = filtro.busqueda.trim() !== '' || filtro.estadoFiltro !== 'todos' || filtro.rolFiltro !== 'todos'
+
+  function seleccionar(id: number, abrirEnMovil = false) {
+    setParametros((actuales) => {
+      const siguientes = new URLSearchParams(actuales)
+      siguientes.set('usuario', String(id))
+      return siguientes
+    }, { replace: true })
+    if (abrirEnMovil && window.matchMedia('(max-width: 64rem)').matches) {
+      setPanelMovilAbierto(true)
+    }
   }
 
-  function abrirEditar(u: Usuario) {
-    setEditandoId(u.id)
-    setForm({
-      nombre_completo: u.nombre_completo,
-      cedula: u.cedula,
-      email: u.email,
-      password: '', // vacío = no cambiar la contraseña
-      telefono: u.telefono ?? '',
-      rol_id: u.rol.id,
-    })
-    setErrorForm('')
-    setMostrarPassword(false)
-    setModalAbierto(true)
+  function manejarTecladoLista(evento: KeyboardEvent<HTMLDivElement>) {
+    const siguienteId = siguienteUsuarioId(idsVisibles, seleccionado?.id ?? null, evento.key)
+    if (siguienteId === null) return
+    evento.preventDefault()
+    seleccionar(siguienteId, false)
   }
 
-  function actualizarCampo<K extends keyof CrearUsuarioPayload>(
-    campo: K,
-    valor: CrearUsuarioPayload[K],
-  ) {
-    setForm((prev) => ({ ...prev, [campo]: valor }))
-  }
+  const guardarUsuario = useCallback(
+    async (datos: CrearUsuarioPayload, editandoId: number | null) => {
+      const telefono = datos.telefono?.trim()
 
-  async function handleGuardar(e: FormEvent) {
-    e.preventDefault()
-    setErrorForm('')
-    setGuardando(true)
-    try {
-      const telefono = form.telefono?.trim() || undefined
-      if (modoEdicion && editandoId !== null) {
-        // En edición solo mandamos la contraseña si el campo no quedó vacío.
-        const { password, ...resto } = form
-        await actualizarUsuario(editandoId, {
-          ...resto,
-          telefono,
-          ...(password ? { password } : {}),
+      if (editandoId !== null) {
+        await actualizar(editandoId, {
+          nombre_completo: datos.nombre_completo.trim(),
+          cedula: datos.cedula.trim(),
+          username: datos.username.trim().toLowerCase(),
+          email: datos.email?.trim().toLowerCase() || null,
+          telefono: telefono || '',
+          rol_id: datos.rol_id,
+          galpon_ids: datos.galpon_ids,
         })
-      } else {
-        await crearUsuario({ ...form, telefono })
+        return
       }
-      setModalAbierto(false)
-      await cargarUsuarios()
-    } catch (err) {
-      setErrorForm(
-        mensajeError(err, `No se pudo ${modoEdicion ? 'actualizar' : 'crear'} el usuario.`),
-      )
-    } finally {
-      setGuardando(false)
+
+      const rol = rolesCatalogo.find((r) => r.id === datos.rol_id)
+      const nombreOrgNueva = datos.organizacion_nombre?.trim() || undefined
+      let organizacionId = datos.organizacion_id
+
+      if (rol?.nombre === 'Operario' && !organizacionId && nombreOrgNueva) {
+        const nueva = await crearOrganizacion({ nombre: nombreOrgNueva })
+        organizacionId = nueva.id
+        void recargarCatalogos()
+      }
+
+      await crear({
+        ...datos,
+        nombre_completo: datos.nombre_completo.trim(),
+        cedula: datos.cedula.trim(),
+        username: datos.username.trim().toLowerCase(),
+        email: datos.email?.trim().toLowerCase() || null,
+        telefono: telefono || undefined,
+        organizacion_id: organizacionId,
+        organizacion_nombre: rol?.nombre === 'Propietario' ? nombreOrgNueva : undefined,
+        galpon_ids: datos.galpon_ids,
+      })
+    },
+    [actualizar, crear, recargarCatalogos, rolesCatalogo],
+  )
+
+  const formulario = useFormularioUsuario(guardarUsuario)
+
+  async function abrirEditarUsuario(usuario: Usuario) {
+    let galponIds = usuario.usuarios_galpones?.map((a) => a.galpon_id) ?? []
+    if (galponIds.length === 0 && esPropietario) {
+      try {
+        const asignacionesActuales = await listarAsignacionesGalpon(usuario.id)
+        galponIds = asignacionesActuales.filter((a) => a.activa).map((a) => a.galpon_id)
+      } catch {
+        // si falla, abrir con array vacío
+      }
+    }
+    formulario.abrirEditar(usuario, galponIds)
+  }
+
+  async function abrirCrearUsuario(nombreRolPreseleccionado?: 'Administrador' | 'Propietario' | 'Operario') {
+    const roles = rolesCatalogo.length > 0
+      ? rolesCatalogo
+      : await recargarCatalogos()
+    if (roles.length === 0) return
+
+    if (esPropietario) {
+      const rolOperario = roles.find((r) => r.nombre === 'Operario')
+      formulario.abrirCrear(rolOperario ? rolOperario.id : 0)
+      return
+    }
+
+    if (nombreRolPreseleccionado) {
+      const encontrado = roles.find((r) => r.nombre === nombreRolPreseleccionado)
+      formulario.abrirCrear(encontrado ? encontrado.id : 0)
+      return
+    }
+
+    formulario.abrirCrear(roles.length === 1 ? roles[0].id : 0)
+  }
+
+  async function confirmarEliminacion(usuario: Usuario) {
+    const confirmado = await confirmarAccion({
+      titulo: '¿Eliminar este usuario?',
+      entidad: usuario.nombre_completo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar usuario',
+      tono: 'peligro',
+    })
+    if (confirmado) {
+      setPanelMovilAbierto(false)
+      void eliminar(usuario.id)
     }
   }
 
-  // Interruptor de Estado: enciende/apaga la cuenta (borrado lógico).
-  async function handleToggleActivo(u: Usuario) {
-    try {
-      await actualizarUsuario(u.id, { activo: !u.activo })
-      await cargarUsuarios()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del usuario.'))
-    }
-  }
-
-  // Borrado permanente (con confirmación).
-  async function handleEliminar(u: Usuario) {
-    const ok = window.confirm(
-      `¿Eliminar PERMANENTEMENTE a ${u.nombre_completo}?\nEsta acción no se puede deshacer.`,
-    )
-    if (!ok) return
-    try {
-      await eliminarUsuario(u.id)
-      await cargarUsuarios()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el usuario.'))
-    }
-  }
-
-  // Abre el menú ⋯ justo debajo del botón que se pulsó.
-  function abrirMenu(e: React.MouseEvent, u: Usuario) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setMenu({ user: u, top: r.bottom + 4, left: r.right - 152 })
-  }
+  const tituloFormulario = formulario.modoEdicion
+    ? `Editar ${esPropietario ? 'operario' : 'persona'}`
+    : `Registrar ${esPropietario ? 'operario' : 'persona'}`
 
   return (
-    <div className="page-container usuarios">
-      <header className="usuarios-head">
+    <div className="page-container usuarios adm-page">
+      <header className="usuarios-cabecera">
         <div>
-          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y Roles'}</h1>
-          <p className="usuarios-sub">
+          <span className="adm-eyebrow">
+            <span className="adm-eyebrow-punto" aria-hidden="true" />
+            {esPropietario ? 'Equipo de trabajo' : 'Plataforma · Control de acceso'}
+          </span>
+          <h1 className="usuarios-titulo">{esPropietario ? 'Operarios' : 'Personas y roles'}</h1>
+          <p className="usuarios-subtitulo">
             {esPropietario
-              ? 'Gestiona los operarios de tu granja.'
-              : 'Gestiona las cuentas que acceden al sistema.'}
+              ? 'Gestiona los operarios de tu organización y sus asignaciones a galpón.'
+              : 'Cuentas del sistema por nivel de responsabilidad: administradores, propietarios y operarios.'}
           </p>
         </div>
-        <button className="btn-primary" onClick={abrirCrear}>
-          + {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
+        <button
+          type="button"
+          className="usuarios-boton-nuevo"
+          onClick={() => void abrirCrearUsuario(
+            filtro.rolFiltro !== 'todos' ? filtro.rolFiltro : undefined,
+          )}
+          disabled={catalogosCargando}
+        >
+          <IcPlus size={17} aria-hidden="true" />
+          {esPropietario ? 'Registrar operario' : 'Registrar persona'}
         </button>
       </header>
 
-      {/* ── Resumen de cifras ─────────────────────────────────────────────── */}
-      <div className="usuarios-resumen">
-        <div className="usuarios-stat">
-          <span className="usuarios-stat-valor">{totalUsuarios}</span>
-          <span className="usuarios-stat-label">{esPropietario ? 'Operarios' : 'Total'}</span>
+      <ResumenUsuarios
+        resumen={resumen}
+        esPropietario={esPropietario}
+        rolActivo={filtro.rolFiltro}
+        estadoActivo={filtro.estadoFiltro}
+        onSeleccionarRol={filtro.setRolFiltro}
+        onSeleccionarEstado={filtro.setEstadoFiltro}
+      />
+
+      {(error || catalogosError) && (
+        <div className="adm-alerta" role="alert">
+          <span>{error || catalogosError}</span>
+          <button
+            type="button"
+            onClick={() => void (error ? recargar() : recargarCatalogos())}
+          >
+            Reintentar
+          </button>
         </div>
-        <div className="usuarios-stat usuarios-stat--activo">
-          <span className="usuarios-stat-valor">{totalActivos}</span>
-          <span className="usuarios-stat-label">Activos</span>
-        </div>
-        {!esPropietario && (
-          <>
-            <div className="usuarios-stat">
-              <span className="usuarios-stat-valor">{totalPropietarios}</span>
-              <span className="usuarios-stat-label">Propietarios</span>
-            </div>
-            <div className="usuarios-stat">
-              <span className="usuarios-stat-valor">{totalOperarios}</span>
-              <span className="usuarios-stat-label">Operarios</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {error && <div className="usuarios-alert" role="alert">{error}</div>}
-
-      <div className="usuarios-card">
-        {/* ── Buscador ─────────────────────────────────────────────────────── */}
-        {!cargando && usuarios.length > 0 && (
-          <div className="usuarios-toolbar">
-            <label className="usuarios-search">
-              <IcSearch size={15} />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, correo o cédula…"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
-            </label>
-            <span className="usuarios-toolbar-count">
-              {usuariosFiltrados.length} de {usuarios.length}
-            </span>
-          </div>
-        )}
-
-        {cargando ? (
-          <p className="usuarios-empty">Cargando usuarios…</p>
-        ) : usuarios.length === 0 ? (
-          <div className="usuarios-vacio">
-            <IcUsers size={32} />
-            <p className="usuarios-vacio-titulo">No hay usuarios registrados.</p>
-            <p className="usuarios-vacio-sub">Crea el primero con el botón de arriba.</p>
-          </div>
-        ) : usuariosFiltrados.length === 0 ? (
-          <div className="usuarios-vacio">
-            <IcSearch size={28} />
-            <p className="usuarios-vacio-titulo">Sin resultados para "{busqueda}"</p>
-            <p className="usuarios-vacio-sub">Prueba con otro nombre, correo o cédula.</p>
-          </div>
-        ) : (
-          <table className="usuarios-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Cédula</th>
-                <th>Teléfono</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th aria-label="Acciones"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => (
-                <tr key={u.id} className={u.activo ? '' : 'is-inactive'}>
-                  <td>{u.nombre_completo}</td>
-                  <td>{u.email}</td>
-                  <td>{u.cedula}</td>
-                  <td>{u.telefono ?? '—'}</td>
-                  <td><span className={`rol-badge rol-badge--${u.rol.nombre.toLowerCase()}`}>{u.rol.nombre}</span></td>
-                  <td>
-                    <label className="switch" title={u.activo ? 'Desactivar' : 'Activar'}>
-                      <input
-                        type="checkbox"
-                        checked={u.activo}
-                        onChange={() => handleToggleActivo(u)}
-                      />
-                      <span className="switch-slider" />
-                    </label>
-                    <span className={`estado-text ${u.activo ? 'activo' : 'inactivo'}`}>
-                      {u.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="col-acciones">
-                    <button
-                      className="btn-kebab"
-                      onClick={(e) => (menu?.user.id === u.id ? setMenu(null) : abrirMenu(e, u))}
-                      aria-label="Acciones"
-                    >
-                      ⋯
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {menu && (
-        <>
-          <div className="menu-overlay" onClick={() => setMenu(null)} />
-          <div className="menu-dropdown" style={{ top: menu.top, left: menu.left }}>
-            <button
-              className="menu-item"
-              onClick={() => { const u = menu.user; setMenu(null); abrirEditar(u) }}
-            >
-              Editar
-            </button>
-            <button
-              className="menu-item menu-item-danger"
-              onClick={() => { const u = menu.user; setMenu(null); handleEliminar(u) }}
-            >
-              Eliminar
-            </button>
-          </div>
-        </>
       )}
 
-      {modalAbierto && (
-        <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">
-              {modoEdicion
-                ? esPropietario ? 'Editar operario' : 'Editar usuario'
-                : esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
-            </h2>
+      {!cargando && usuarios.length > 0 && (
+        <BarraUsuarios
+          buscadorRef={buscadorRef}
+          busqueda={filtro.busqueda}
+          visibles={filtro.visibles.length}
+          total={usuarios.length}
+          esPropietario={esPropietario}
+          estadoFiltro={filtro.estadoFiltro}
+          hayFiltros={hayFiltros}
+          onBuscar={filtro.setBusqueda}
+          onCambiarEstado={filtro.setEstadoFiltro}
+          onLimpiar={filtro.limpiarFiltros}
+        />
+      )}
 
-            <form className="modal-form" onSubmit={handleGuardar}>
-              <label className="campo">
-                <span>Nombre completo</span>
-                <input
-                  value={form.nombre_completo}
-                  onChange={(e) => actualizarCampo('nombre_completo', e.target.value)}
-                  required
-                />
-              </label>
-
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>Cédula</span>
-                  <input
-                    value={form.cedula}
-                    onChange={(e) => actualizarCampo('cedula', e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="campo">
-                  <span>Teléfono <em>(opcional)</em></span>
-                  <input
-                    value={form.telefono}
-                    onChange={(e) => actualizarCampo('telefono', e.target.value)}
-                  />
-                </label>
-              </div>
-
-              <label className="campo">
-                <span>Correo electrónico</span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => actualizarCampo('email', e.target.value)}
-                  required
-                />
-              </label>
-
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>
-                    Contraseña{' '}
-                    <em>{modoEdicion ? '(vacío = sin cambio)' : '(mín. 8)'}</em>
-                  </span>
-                  <div className="campo-password">
-                    <input
-                      type={mostrarPassword ? 'text' : 'password'}
-                      minLength={8}
-                      placeholder={modoEdicion ? '••••••••' : ''}
-                      value={form.password}
-                      onChange={(e) => actualizarCampo('password', e.target.value)}
-                      required={!modoEdicion}
-                    />
-                    <button
-                      type="button"
-                      className="campo-password-toggle"
-                      onClick={() => setMostrarPassword((v) => !v)}
-                      aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    >
-                      {mostrarPassword ? <IcEyeOff size={16} /> : <IcEye size={16} />}
-                    </button>
-                  </div>
-                </label>
-                <label className="campo">
-                  <span>Rol</span>
-                  <select
-                    value={form.rol_id}
-                    onChange={(e) => actualizarCampo('rol_id', Number(e.target.value))}
-                    disabled={esPropietario}
-                  >
-                    {rolesDisponibles.map((r) => (
-                      <option key={r.id} value={r.id}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              {errorForm && <p className="modal-error" role="alert">{errorForm}</p>}
-
-              <div className="modal-acciones">
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => setModalAbierto(false)}
-                  disabled={guardando}
-                >
-                  Cancelar
+      <div className="usr-cuerpo">
+        <div className="usr-bandeja">
+          {cargando ? (
+            <ul className="usr-lista" aria-hidden="true">
+              {[0, 1, 2, 3].map((indice) => <li key={indice} className="usr-tarjeta-esqueleto org-brilla" />)}
+            </ul>
+          ) : usuarios.length === 0 ? (
+            <div className="usuarios-vacio">
+              <IcUsers size={30} />
+              <p className="usuarios-vacio-titulo">No hay personas registradas.</p>
+              <p className="usuarios-vacio-sub">Crea la primera cuenta con el botón superior.</p>
+            </div>
+          ) : listaOrdenada.length === 0 ? (
+            <div className="usuarios-vacio">
+              <IcSearch size={26} />
+              <p className="usuarios-vacio-titulo">Sin coincidencias</p>
+              <p className="usuarios-vacio-sub">Ninguna cuenta coincide con la búsqueda o los filtros activos.</p>
+              {hayFiltros && (
+                <button type="button" className="adm-btn adm-btn--secundario" onClick={filtro.limpiarFiltros}>
+                  Limpiar filtros
                 </button>
-                <button type="submit" className="btn-primary" disabled={guardando}>
-                  {guardando
-                    ? 'Guardando…'
-                    : modoEdicion
-                      ? 'Guardar cambios'
-                      : 'Crear usuario'}
-                </button>
-              </div>
-            </form>
-          </div>
+              )}
+            </div>
+          ) : (
+            <div
+              role="listbox"
+              aria-label="Directorio de personas"
+              tabIndex={0}
+              className="usr-listbox"
+              onKeyDown={manejarTecladoLista}
+            >
+              {seccionesVisibles.map((seccion) => (
+                <section key={seccion.rol} className="usr-seccion" aria-labelledby={`usr-grupo-${seccion.rol}`}>
+                  <header className="usr-seccion-cabecera">
+                    <div>
+                      <h2 id={`usr-grupo-${seccion.rol}`}>
+                        <span className={`usuarios-rol-dot usuarios-rol-dot--${seccion.tono}`} aria-hidden="true" />
+                        {seccion.titulo}
+                        <span className="usr-seccion-conteo">{seccion.cuentas.length}</span>
+                      </h2>
+                      <p>{seccion.subtitulo}</p>
+                    </div>
+                    {!esPropietario && (
+                      <button
+                        type="button"
+                        className="usr-seccion-agregar"
+                        onClick={() => void abrirCrearUsuario(seccion.rol)}
+                      >
+                        <IcPlus size={14} aria-hidden="true" />
+                        <span>{seccion.botonCrear}</span>
+                      </button>
+                    )}
+                  </header>
+
+                  {seccion.cuentas.length === 0 ? (
+                    <p className="usr-seccion-vacio">No hay cuentas en este grupo.</p>
+                  ) : (
+                    <ul className="usr-lista">
+                      {seccion.cuentas.map((usuario) => {
+                        const esSeleccionado = usuario.id === seleccionado?.id
+                        const rolClase = usuario.rol.nombre.toLowerCase()
+                        const secundario = [
+                          `@${usuario.username}`,
+                          usuario.organizacion?.nombre,
+                          usuario.email || usuario.telefono,
+                        ].filter(Boolean).join(' · ')
+
+                        return (
+                          <li
+                            key={usuario.id}
+                            className={`usr-item${esSeleccionado ? ' is-seleccionado' : ''}${usuario.activo ? '' : ' is-inactivo'}`}
+                            role="option"
+                            aria-selected={esSeleccionado}
+                          >
+                            <button
+                              type="button"
+                              className="usr-tarjeta"
+                              onClick={() => seleccionar(usuario.id, true)}
+                            >
+                              <span className={`usuarios-avatar usuarios-avatar--${rolClase}`} aria-hidden="true">
+                                {iniciales(usuario.nombre_completo)}
+                              </span>
+
+                              <span className="usr-tarjeta-info">
+                                <span className="usr-tarjeta-linea">
+                                  <strong className="usr-tarjeta-nombre">{usuario.nombre_completo}</strong>
+                                  <span className={`usr-estado-punto${usuario.activo ? ' is-activo' : ''}`} title={usuario.activo ? 'Activo' : 'Inactivo'}>
+                                    {usuario.activo ? 'Activo' : 'Inactivo'}
+                                  </span>
+                                </span>
+                                <span className="usr-tarjeta-meta">{secundario}</span>
+                              </span>
+
+                              <span className="usr-tarjeta-lado">
+                                <span className="usr-tarjeta-cedula">{usuario.cedula}</span>
+                                <IcChevronRight size={16} className="usr-tarjeta-flecha" aria-hidden="true" />
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
         </div>
+
+        {!cargando && usuarios.length > 0 && (
+          <PanelUsuario
+            usuario={seleccionado}
+            esAdmin={esAdmin}
+            abiertoMovil={panelMovilAbierto && seleccionado !== null}
+            onCerrarMovil={() => setPanelMovilAbierto(false)}
+            onAlternarActivo={(usuario) => void alternarActivo(usuario)}
+            onEditar={(usuario) => void abrirEditarUsuario(usuario)}
+            onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
+            onRestablecerPassword={
+              esAdmin || esPropietario ? setUsuarioRestablecer : undefined
+            }
+            onRecuperarAcceso={
+              esAdmin || esPropietario ? setUsuarioRecuperaciones : undefined
+            }
+            onEliminar={confirmarEliminacion}
+          />
+        )}
+      </div>
+
+      {formulario.abierto && (
+        <FormularioUsuario
+          form={formulario.form}
+          modoEdicion={formulario.modoEdicion}
+          guardando={formulario.guardando}
+          error={formulario.error}
+          errores={formulario.errores}
+          verPassword={formulario.verPassword}
+          roles={rolesCatalogo}
+          organizaciones={organizaciones}
+          rolBloqueado={esPropietario}
+          titulo={tituloFormulario}
+          esPropietario={esPropietario}
+          galpones={galpones}
+          onCambiar={formulario.cambiar}
+          onAlternarPassword={formulario.alternarPassword}
+          onGuardar={formulario.guardar}
+          onCerrar={formulario.cerrar}
+        />
+      )}
+
+      {asignaciones.abierto && asignaciones.usuario && (
+        <ModalAsignacionesGalpon
+          usuario={asignaciones.usuario}
+          asignaciones={asignaciones.asignaciones}
+          galpones={asignaciones.galpones}
+          cargando={asignaciones.cargando}
+          guardando={asignaciones.guardando}
+          error={asignaciones.error}
+          onCerrar={asignaciones.cerrar}
+          onAsignar={asignaciones.asignar}
+          onRetirar={asignaciones.retirar}
+        />
+      )}
+
+      {usuarioRecuperaciones && (
+        <PantallaHija
+          titulo={`Recuperar acceso · ${usuarioRecuperaciones.nombre_completo}`}
+          subtitulo={usuarioRecuperaciones.username}
+          onCerrar={() => setUsuarioRecuperaciones(null)}
+        >
+          <RecuperacionesDeUsuario usuario={usuarioRecuperaciones} />
+        </PantallaHija>
+      )}
+
+      {usuarioRestablecer && (
+        <ModalRestablecerPassword
+          usuario={usuarioRestablecer}
+          onCerrar={() => setUsuarioRestablecer(null)}
+        />
       )}
     </div>
   )

@@ -1,0 +1,35 @@
+meta {
+  name: Admin Convertir prospecto en cliente
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/prospectos/{{prospectoId}}/convertir
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "nombre_completo": "María López",
+    "cedula": "1098765432",
+    "username": "maria.lopez",
+    "password": "UnaClaveInicial123!",
+    "granja_nombre": "La Esperanza"
+  }
+}
+
+docs {
+  Solo Administrador. El usuario es obligatorio y único; el correo de contacto
+  es opcional. Omite email o envía null para crear la cuenta sin contacto.
+  Si el usuario ya existe, responde 409 sin crear otra organización ni granja.
+}

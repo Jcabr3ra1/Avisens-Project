@@ -1,0 +1,411 @@
+.float-chat {
+  --float-accent: var(--landing-primary);
+  --float-accent-h: var(--landing-primary-hover);
+  --float-ink: var(--landing-text);
+  --float-on-accent: var(--landing-on-primary);
+  position: fixed;
+  right: max(1.25rem, env(safe-area-inset-right, 0px));
+  bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+/* Sin fondo ni borde: el robot se apoya directo sobre la pagina. */
+.float-btn {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--float-accent);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, filter 0.25s ease;
+  pointer-events: auto;
+}
+
+.float-btn-icon {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+/* Al abrir, la equis si necesita un disco solido detras para leerse. */
+.float-btn-cerrar {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  color: var(--float-on-accent);
+  background: var(--landing-primary);
+  border-radius: 50%;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--avisens-ink) 30%, transparent);
+}
+
+/* La sombra sigue el contorno del dibujo, no una caja. */
+.float-btn-robot {
+  transform: scale(1);
+  transform-origin: center;
+  filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--avisens-ink) 28%, transparent));
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Respuesta sutil e interrumpible, disponible sólo con ratón. */
+@media (hover: hover) and (pointer: fine) {
+  .float-btn:hover .float-btn-robot {
+    transform: translateY(-3px);
+  }
+}
+
+.float-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  right: calc(100% + 0.6rem);
+  top: 50%;
+  padding: 0.4rem 0.7rem;
+  color: var(--landing-on-primary);
+  background: var(--landing-primary);
+  border-radius: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-50%) translateX(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.float-btn:hover::after,
+.float-btn:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.float-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.float-panel {
+  width: min(92vw, 390px);
+  max-height: calc(100svh - 10rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--landing-bg);
+  border: 1px solid var(--landing-border);
+  border-radius: 22px;
+  box-shadow: 0 26px 64px -24px color-mix(in srgb, var(--avisens-ink) 62%, transparent);
+  transform-origin: bottom right;
+  transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+
+.float-panel.hidden {
+  opacity: 0;
+  transform: scale(0.86) translateY(18px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.float-chat-topbar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.7rem;
+  padding: 1rem;
+  color: var(--on-primary);
+  background: var(--landing-primary);
+}
+
+.float-chat-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.float-chat-name {
+  color: var(--on-primary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.float-chat-online {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: color-mix(in srgb, var(--surface-base) 82%, transparent);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+}
+
+.float-chat-online::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  /* Verde: el punto dice «estoy disponible». En amarillo se leía como aviso. */
+  background: var(--success2);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--surface-subtle) 28%, transparent);
+  animation: pulse 2s infinite;
+}
+
+.float-chat-reset,
+.float-chat-close {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--surface-base) 85%, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.float-chat-reset:hover:not(:disabled),
+.float-chat-close:hover {
+  color: var(--on-primary);
+  background: color-mix(in srgb, var(--surface-base) 18%, transparent);
+  border-color: color-mix(in srgb, var(--surface-base) 30%, transparent);
+}
+
+.float-btn:focus-visible,
+.float-chat-reset:focus-visible,
+.float-chat-close:focus-visible,
+.float-chat-error button:focus-visible {
+  outline: 3px solid var(--landing-focus);
+  outline-offset: 3px;
+}
+
+.float-chat-reset:disabled,
+.float-chat-error button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.float-chat-progress {
+  flex: 0 0 auto;
+  height: 4px;
+  background: color-mix(in srgb, var(--border-default) 45%, transparent);
+}
+
+.float-chat-progress div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--landing-accent), var(--landing-primary));
+  transition: width 0.35s ease;
+}
+
+@keyframes float-opcion-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.float-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.float-dots span {
+  width: 6px;
+  height: 6px;
+  background: color-mix(in srgb, var(--avisens-ink) 56%, transparent);
+  border-radius: 50%;
+  animation: pulse 1.2s infinite;
+}
+
+.float-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.float-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.float-result {
+  align-self: stretch;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem;
+  background: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  border-left: 4px solid var(--avisens-green);
+  border-radius: 10px;
+}
+
+.float-result span {
+  color: var(--avisens-deep);
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.float-result strong {
+  color: var(--avisens-deep);
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.float-result small {
+  color: color-mix(in srgb, var(--avisens-ink) 72%, transparent);
+  font-size: 0.86rem;
+}
+
+.float-result p {
+  margin: 0;
+  color: color-mix(in srgb, var(--avisens-ink) 84%, transparent);
+  font-size: 0.86rem;
+}
+
+.float-chat-error {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.65rem 0.75rem;
+  color: var(--avisens-deep);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
+.float-chat-error span {
+  flex: 1;
+}
+
+.float-chat-error button {
+  color: var(--avisens-deep);
+  border: 1px solid var(--avisens-orange);
+  border-radius: 8px;
+  padding: 0.28rem 0.55rem;
+  font-weight: 700;
+}
+
+/* Separador de bloque: da estructura al cuestionario sin sumar otra burbuja
+   que leer. */
+
+@media (max-width: 640px) {
+  .float-chat {
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .float-btn {
+    width: 96px;
+    height: 96px;
+  }
+
+  .float-btn-icon {
+    width: 96px;
+    height: 96px;
+  }
+
+  .float-btn::after {
+    display: none;
+  }
+
+  .float-chat.is-open {
+    right: max(0.5rem, env(safe-area-inset-right, 0px));
+    left: max(0.5rem, env(safe-area-inset-left, 0px));
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
+  }
+
+  .float-chat.is-open .float-panel {
+    width: 100%;
+    max-height: calc(100svh - 1rem - env(safe-area-inset-bottom, 0px));
+    border-radius: 24px 24px 16px 16px;
+  }
+
+  .float-chat.is-open .float-btn {
+    display: none;
+  }
+}
+
+@media (max-height: 600px) {
+  .float-chat {
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .float-panel {
+    max-height: calc(100svh - 1rem - env(safe-area-inset-bottom, 0px));
+  }
+
+  .float-chat.is-open .float-btn {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-btn,
+  .float-panel,
+  .float-chat-online::before,
+  .float-dots span {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+
+}
+
+
+/* ── Cabecera: nombre, identidad y estado ─────────────────── */
+
+.float-chat-tagline {
+  align-self: flex-start;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-base) 16%, transparent);
+  color: color-mix(in srgb, var(--surface-base) 92%, transparent);
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.float-chat-heading { display: flex; flex-direction: column; }
+
+/* Terminada la conversación el punto deja de decir «disponible». */
+.float-chat-online--fin::before { background: color-mix(in srgb, var(--surface-base) 50%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .float-btn-robot { transition: none; }
+  .float-btn:hover .float-btn-robot { transform: none; }
+}
+
+/* Las tres puertas de entrada llegan en cascada corta y se hunden un poco al tocarlas. Con movimiento reducido solo
+   hay fundido. */
+.float-inicio-boton {
+  animation: float-opcion-entra 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.float-inicio-boton:nth-of-type(1) { animation-delay: 140ms; }
+.float-inicio-boton:nth-of-type(2) { animation-delay: 190ms; }
+.float-inicio-boton:nth-of-type(3) { animation-delay: 240ms; }
+
+.float-inicio-boton:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float-inicio-boton { animation: float-opcion-aparece 160ms ease both; animation-delay: 0ms; transition: none; }
+  .float-inicio-boton:active { transform: none; }
+}
+
+@keyframes float-opcion-aparece {
+  from { opacity: 0; }
+}

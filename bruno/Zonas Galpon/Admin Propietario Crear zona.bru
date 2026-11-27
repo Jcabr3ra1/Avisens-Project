@@ -1,0 +1,9 @@
+meta {
+  name: [Admin · Propietario] Crear zona
+  type: http
+  seq: 1
+}
+post { url: {{baseUrl}}/v1/zonas-galpon; body: json; auth: bearer }
+headers { Content-Type: application/json }
+auth:bearer { token: {{token}} }
+body:json { {"galpon_id":1,"nombre":"Zona norte","tipo_zona":"alimentacion"} }

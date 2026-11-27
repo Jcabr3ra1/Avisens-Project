@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Activar un tipo de alimento
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/tipos-alimento/1/activar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

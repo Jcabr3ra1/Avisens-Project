@@ -1,18 +1,210 @@
-import { useEffect, useState } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
-import { puedeAcceder, ROL_ADMIN } from './Sidebar/navConfig'
-import { getAccessToken, getRol } from '@shared/api'
-import { GALPONES } from '@shared/data/farm'
-import { GALPONES_MONITOREO } from '../../features/monitoreo/data'
+import CampanaNotificaciones from './CampanaNotificaciones'
+import { puedeAcceder, rutaInicioPorRol } from './Sidebar/navConfig'
+import { matchesPath, navigationSpaces, spaceForPath, tituloDeRuta, visibleSections } from './Sidebar/navigation'
+import { getAccessToken, getRol, getUsuario } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
-import { useLecturasVivas } from '@shared/hooks/useLecturasVivas'
-import { calcularEstadoSensor } from '@shared/utils/sensores'
+import { IcChevronRight, IcSearch, IcSidebar } from '@shared/ui/icons/icons'
+import logoAvisens from '@shared/assets/logo-avisens.png'
+import { obtenerFotoPerfil } from '@features/perfil/api/perfil'
+import AvatarUsuario from './AvatarUsuario'
 import './PanelLayout.css'
 
-// GP-01 es el único galpón con un ESP32 conectado (ver Monitoreo/Alertas).
-const CODIGO_GALPON_CON_ESP32 = 'GP-01'
-const UMBRAL_DESCONEXION_MS = 3 * 60 * 1000
+const NavigationSearch = lazy(() => import('./Sidebar/NavigationSearch'))
+
+function PanelShell({
+  sidebarCollapsed,
+  onToggle,
+  mobileMenuOpen,
+  onOpenMobileMenu,
+  onCloseMobileMenu,
+  rol,
+}: {
+  sidebarCollapsed: boolean
+  onToggle: () => void
+  mobileMenuOpen: boolean
+  onOpenMobileMenu: () => void
+  onCloseMobileMenu: () => void
+  rol: string | null
+}) {
+  const { pathname } = useLocation()
+  const panel = useRef<HTMLElement>(null)
+  const searchTrigger = useRef<HTMLElement | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [urlFotoPerfil, setUrlFotoPerfil] = useState<string | null>(null)
+  const usuario = getUsuario()
+  const usuarioId = usuario?.id ?? null
+
+  useEffect(() => {
+    if (!usuarioId) return
+    let vigente = true
+
+    const cargarFoto = () => {
+      void obtenerFotoPerfil()
+        .then((blob) => {
+          if (!vigente) return
+          const url = URL.createObjectURL(blob)
+          setUrlFotoPerfil((anterior) => {
+            if (anterior) URL.revokeObjectURL(anterior)
+            return url
+          })
+        })
+        .catch(() => {
+          if (!vigente) return
+          setUrlFotoPerfil((anterior) => {
+            if (anterior) URL.revokeObjectURL(anterior)
+            return null
+          })
+        })
+    }
+
+    cargarFoto()
+    window.addEventListener('avisens:foto-perfil-actualizada', cargarFoto)
+    return () => {
+      vigente = false
+      window.removeEventListener('avisens:foto-perfil-actualizada', cargarFoto)
+    }
+  }, [usuarioId])
+
+  useEffect(() => () => {
+    if (urlFotoPerfil) URL.revokeObjectURL(urlFotoPerfil)
+  }, [urlFotoPerfil])
+  const sections = visibleSections(rol)
+  const titulo = tituloDeRuta(pathname, rol)
+  const enInicio = ['/admin', '/dashboard', '/mi-jornada'].some((ruta) => matchesPath(pathname, ruta))
+  const espacio = enInicio ? 'Inicio' : spaceForPath(pathname, navigationSpaces(sections))?.label ?? 'Avisens'
+  const atajo = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
+
+  const openSearch = useCallback(() => {
+    // El buscador reemplaza al drawer móvil; no dejamos dos trampas de foco
+    // activas ni devolvemos el foco a un botón que haya quedado oculto.
+    const active = document.activeElement as HTMLElement | null
+    const fallback = Array.from(document.querySelectorAll<HTMLElement>('.dash-topbar-buscar, .dash-navigation-search, .dash-rail-search, .dash-mobile-search'))
+      .find((element) => element.getClientRects().length > 0)
+    searchTrigger.current = window.matchMedia('(max-width: 900px)').matches && mobileMenuOpen
+      ? document.querySelector<HTMLElement>('.dash-mobile-menu')
+      : active && active !== document.body ? active : fallback ?? null
+    onCloseMobileMenu()
+    setSearchOpen(true)
+  }, [mobileMenuOpen, onCloseMobileMenu])
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
+    window.requestAnimationFrame(() => {
+      const trigger = searchTrigger.current
+      if (trigger?.isConnected && trigger.getClientRects().length > 0) trigger.focus()
+    })
+  }, [])
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if (event.repeat || !(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return
+      if (!searchOpen && document.querySelector('[role="dialog"]')) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (searchOpen) closeSearch()
+      else openSearch()
+    }
+    window.addEventListener('keydown', handleSearchShortcut, true)
+    return () => window.removeEventListener('keydown', handleSearchShortcut, true)
+  }, [searchOpen, openSearch, closeSearch])
+
+  // El panel scrollea por dentro, así que el navegador no restaura la posición
+  // al cambiar de ruta: sin esto, la pantalla nueva entra a media altura.
+  useEffect(() => {
+    panel.current?.scrollTo({ top: 0 })
+    onCloseMobileMenu()
+  }, [onCloseMobileMenu, pathname])
+
+  return (
+    <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <div className="dash-shell">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          mobileOpen={mobileMenuOpen}
+          onCloseMobile={onCloseMobileMenu}
+          onToggle={onToggle}
+          onOpenSearch={openSearch}
+          rol={rol}
+        />
+        {mobileMenuOpen && (
+          <button
+            type="button"
+            className="dash-sidebar-backdrop is-visible"
+            onClick={onCloseMobileMenu}
+            aria-label="Cerrar menú de navegación"
+          />
+        )}
+        <div
+          className="dash-content"
+          aria-hidden={mobileMenuOpen || undefined}
+          inert={mobileMenuOpen || undefined}
+        >
+          <header className="dash-mobile-header">
+            <button
+              type="button"
+              className="dash-mobile-menu"
+              onClick={onOpenMobileMenu}
+              aria-label="Abrir menú de navegación"
+              aria-controls="navegacion-principal"
+              aria-expanded={mobileMenuOpen}
+            >
+              <IcSidebar size={20} />
+            </button>
+            <span className="dash-mobile-brand">
+              <img src={logoAvisens} alt="AVISENS" width={36} height={36} />
+            </span>
+            <span className="dash-mobile-location">{titulo}</span>
+            <button type="button" className="dash-mobile-search" onClick={openSearch} aria-label="Buscar en Avisens"><IcSearch size={20} /></button>
+          </header>
+          <div className="dash-acciones-superiores">
+            <nav className="dash-topbar-titulo" aria-label="Ubicación">
+              <span>{espacio}</span>
+              {titulo !== espacio && (
+                <>
+                  <IcChevronRight size={14} aria-hidden="true" />
+                  <strong aria-current="page">{titulo}</strong>
+                </>
+              )}
+            </nav>
+            <button type="button" className="dash-topbar-buscar" onClick={openSearch} aria-label="Buscar en Avisens">
+              <IcSearch size={16} aria-hidden="true" />
+              <span>Buscar en Avisens…</span>
+              <kbd aria-hidden="true">{atajo}</kbd>
+            </button>
+            <CampanaNotificaciones />
+            <Link
+              to="/perfil"
+              className="dash-header-perfil"
+              title={usuario?.nombre ? `${usuario.nombre} · ${usuario.rol}` : undefined}
+              aria-label="Abrir mi perfil"
+            >
+              <span className="dash-header-perfil-foto" aria-hidden="true">
+                <AvatarUsuario nombre={usuario?.nombre} fotoUrl={urlFotoPerfil} tamano={40} style={{ width: '100%', height: '100%' }} />
+              </span>
+              <span className="dash-header-perfil-copy">
+                <strong>{usuario?.nombre ?? 'Usuario'}</strong>
+                <small>{usuario?.rol ?? ''}</small>
+              </span>
+            </Link>
+          </div>
+          <main className="dash-main" ref={panel}>
+            <div className="dash-view" key={pathname}>
+              <Outlet />
+            </div>
+          </main>
+        </div>
+      </div>
+      {searchOpen && (
+        <Suspense fallback={null}>
+          <NavigationSearch sections={sections} rol={rol} onClose={closeSearch} />
+        </Suspense>
+      )}
+    </div>
+  )
+}
 
 /**
  * Shell de la aplicación interna: sidebar de navegación + área de contenido.
@@ -26,6 +218,10 @@ function PanelLayout() {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem('avisens.sidebarCollapsed') === '1'
   })
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
+  const openMobileMenu = useCallback(() => setMobileMenuOpen(true), [])
+  const toggleSidebar = useCallback(() => setSidebarCollapsed((valor) => !valor), [])
 
   const location = useLocation()
   usePauseOnHidden()
@@ -40,42 +236,17 @@ function PanelLayout() {
         e.preventDefault()
         setSidebarCollapsed((v) => !v)
       }
+      if (e.key === 'Escape') setMobileMenuOpen(false)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const totalAves = GALPONES.reduce((acc, g) => acc + g.aves, 0)
-  const galponesActivos = GALPONES.filter((g) => g.status !== 'empty').length
-
-  // Cuenta de alertas activas EN VIVO — igual regla que usa AlertasPage: por
-  // cada galpón, cada sensor fuera de rango (real para GP-01 si ya llegó un
-  // valor de Firebase, mock para el resto) cuenta como una alerta. Antes este
-  // número salía de un campo fijo en shared/data/farm.ts que se podía
-  // desincronizar del conteo real que muestra la página de Alertas — ahora
-  // los dos leen la misma fuente, así que nunca pueden mostrar números distintos.
-  const lecturasVivasGP01 = useLecturasVivas(CODIGO_GALPON_CON_ESP32)
-  let totalAlertas = 0
-  for (const galpon of GALPONES_MONITOREO) {
-    for (const sensor of galpon.sensores) {
-      if (sensor.estado === 'offline') continue
-      const vivo = galpon.codigo === CODIGO_GALPON_CON_ESP32 ? lecturasVivasGP01[sensor.variable] : undefined
-      const valor  = vivo ? vivo.valor : sensor.valor
-      const estado = calcularEstadoSensor(valor, sensor.minUmbral, sensor.maxUmbral)
-      if (estado !== 'optimo') totalAlertas++
-    }
-  }
-  const tsUltimaLecturaGP01 =
-    lecturasVivasGP01.temperatura?.ts ?? lecturasVivasGP01.humedad?.ts ?? lecturasVivasGP01.co2?.ts
-  if (tsUltimaLecturaGP01 && Date.now() - tsUltimaLecturaGP01 > UMBRAL_DESCONEXION_MS) {
-    totalAlertas++ // la alerta de "conexión del sensor" que también genera AlertasPage
-  }
-
   const rol = getRol()
 
-  // Ruta de inicio según el rol: el Admin va a su panel; los demás al dashboard operativo.
+  // Ruta de inicio según el rol: cada experiencia tiene su propio punto de entrada.
   // Esto evita el bucle infinito cuando un rol intenta acceder a una ruta que no le corresponde.
-  const rutaInicio = rol === ROL_ADMIN ? '/admin' : '/dashboard'
+  const rutaInicio = rutaInicioPorRol(rol)
 
   // Guardia 1: sin sesión iniciada → al login.
   if (!getAccessToken()) {
@@ -87,19 +258,14 @@ function PanelLayout() {
   }
 
   return (
-    <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((v) => !v)}
-        rol={rol}
-        galponesActivos={galponesActivos}
-        totalAves={totalAves}
-        totalAlertas={totalAlertas}
-      />
-      <main className="dash-main">
-        <Outlet />
-      </main>
-    </div>
+    <PanelShell
+      sidebarCollapsed={sidebarCollapsed}
+      onToggle={toggleSidebar}
+      mobileMenuOpen={mobileMenuOpen}
+      onOpenMobileMenu={openMobileMenu}
+      onCloseMobileMenu={closeMobileMenu}
+      rol={rol}
+    />
   )
 }
 

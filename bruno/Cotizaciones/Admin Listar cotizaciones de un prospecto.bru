@@ -1,0 +1,23 @@
+meta {
+  name: [Admin]  Listar cotizaciones de un prospecto
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/cotizaciones/prospecto/14
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Historico de cotizaciones del prospecto, la mas reciente primero, con el detalle
+  de sensores de cada una.
+
+  Sirve para comparar escenarios: la misma granja con 3 galpones y con 4, o con y
+  sin los sensores opcionales.
+}

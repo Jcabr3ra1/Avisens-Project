@@ -1,0 +1,29 @@
+meta {
+  name: [Admin] Actualizar item del catálogo
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/catalogo-sensores/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "precio_unitario_cop": 195000
+  }
+}
+
+docs {
+  Los precios viven en datos para poder actualizarlos sin desplegar.
+}

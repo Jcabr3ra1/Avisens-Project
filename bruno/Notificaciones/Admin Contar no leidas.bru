@@ -1,0 +1,14 @@
+meta {
+  name: [Admin] Contar no leidas
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/notificaciones/no-leidas
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

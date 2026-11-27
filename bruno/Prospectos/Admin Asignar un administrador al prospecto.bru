@@ -1,0 +1,40 @@
+meta {
+  name: [Admin]  Asignar un administrador al prospecto
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/prospectos/1/asignar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "asesor_id": 1
+  }
+}
+
+docs {
+  Asigna un prospecto calificado a un administrador. El unico campo es `asesor_id`.
+
+  Hubo un alias `admin_id` que se quito: estaba declarado opcional en TypeScript
+  pero sin `@IsOptional()`, asi que class-validator exigia los dos campos y la
+  ruta devolvia 400 mandara lo que mandara el cliente.
+
+  Guardas:
+    400  el prospecto no esta en estado 'calificado'
+    404  el prospecto no existe
+    404  el administrador no existe o esta INACTIVO
+
+  Al asignar, el prospecto pasa a `estado: asignado` y desaparece del filtro `sin_asignar=true`.
+}

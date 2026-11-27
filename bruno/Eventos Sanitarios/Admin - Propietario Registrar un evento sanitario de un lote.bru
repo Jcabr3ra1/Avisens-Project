@@ -1,0 +1,35 @@
+meta {
+  name: [Admin · Propietario]  Registrar un evento sanitario de un lote
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/eventos-sanitarios
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "lote_id": 1,
+    "tipo": "vacunacion",
+    "fecha": "2026-08-09",
+    "insumo_id": 1,
+    "diagnostico": "Newcastle",
+    "producto": "Vacuna Newcastle La Sota",
+    "dosis": "0.5 ml por ave",
+    "via_aplicacion": "ocular",
+    "cantidad_aves": 500,
+    "metodo_registro": "manual",
+    "observaciones": "Aplicada por la mañana antes del alimento"
+  }
+}

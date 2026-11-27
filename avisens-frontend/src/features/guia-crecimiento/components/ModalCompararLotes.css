@@ -1,0 +1,174 @@
+/* Modal de comparación entre dos lotes (HU-29) */
+
+.modal-comparar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mcl-selectores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  background: var(--bg-tint, #f8fafc);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.mcl-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mcl-campo label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text2, #475569);
+}
+
+.mcl-campo select {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border2, #cbd5e1);
+  background: var(--card, #ffffff);
+  color: var(--text, #0f172a);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.mcl-kpis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.mcl-kpi-card {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--card, #ffffff);
+}
+
+.mcl-kpi-card--1 {
+  border-top: 4px solid var(--primary, #059669);
+}
+
+.mcl-kpi-card--2 {
+  border-top: 4px solid var(--info, #0284c7);
+}
+
+.mcl-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+}
+
+.mcl-kpi-titulo {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--dash-ink, #0f172a);
+}
+
+.mcl-kpi-sub {
+  font-size: 0.78rem;
+  color: var(--text3, #64748b);
+}
+
+.mcl-kpi-lista {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.mcl-kpi-item dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text3, #64748b);
+  margin-bottom: 0.15rem;
+}
+
+.mcl-kpi-item dd {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+  margin: 0;
+}
+
+.mcl-tabla-wrap {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.mcl-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.mcl-tabla thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-tint, #f8fafc);
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--border2, #cbd5e1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text2, #475569);
+  z-index: 1;
+}
+
+.mcl-tabla td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+}
+
+.mcl-tabla tbody tr:hover {
+  background: var(--bg-tint, #f8fafc);
+}
+
+.mcl-l1 {
+  color: var(--primary, #059669);
+  font-weight: 600;
+}
+
+.mcl-l2 {
+  color: var(--info, #0284c7);
+  font-weight: 600;
+}
+
+/* Reglas de impresión */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .mcl-imprimible, .mcl-imprimible * {
+    visibility: visible;
+  }
+  .mcl-imprimible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .modal-acciones, .mcl-selectores, .modal-cerrar-btn {
+    display: none !important;
+  }
+  .mcl-tabla-wrap {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

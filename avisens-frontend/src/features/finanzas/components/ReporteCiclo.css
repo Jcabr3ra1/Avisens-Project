@@ -1,0 +1,234 @@
+/* Reporte financiero por ciclo (HU-33) — lenguaje visual `adm-` y `fin-` */
+
+.rc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rc-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  overflow: visible;
+}
+
+.rc-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rc-campo .fin-select {
+  min-width: 12rem;
+  max-width: 100%;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+}
+
+.rc-generar {
+  margin-left: auto;
+}
+
+.rc-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger3);
+  font-size: 0.85rem;
+}
+
+.rc-imprimible {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rc-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rc-eyebrow {
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rc-titulo {
+  margin: 0.2rem 0 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.rc-generado {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.rc-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Doble clase: .adm-aviso reparte el contenido a los extremos y AdminKit
+   puede cargarse después de esta hoja. */
+.adm-aviso.rc-avisos {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.rc-avisos ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.rc-notas {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.rc-lotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 36rem), 1fr));
+  gap: var(--space-4);
+}
+
+/* Los montos del reporte llegan a nueve cifras: con cuatro tarjetas en la
+   rejilla general (158px) el valor se cortaba. Aquí van de a dos por fila,
+   o las cuatro en línea cuando hay espacio. */
+.rc-totales .adm-resumen {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1200px) {
+  .rc-totales .adm-resumen {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .rc-totales .adm-resumen {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rc-totales .adm-stat-valor {
+  overflow-wrap: anywhere;
+}
+
+.rc-generales {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.rc-subtitulo {
+  margin: 0;
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.rc-tabla {
+  min-width: 520px;
+}
+
+.rc-excedido {
+  color: var(--danger3);
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .rc-filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rc-campo .fin-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .rc-generar {
+    margin-left: 0;
+  }
+}
+
+/* ─── Exportar a PDF ───
+   Al imprimir se muestra solo la copia del reporte montada en un portal
+   directo de <body> (.rc-impresion); la app entera (#root) se oculta. Así el
+   reporte no hereda el ancho de la barra lateral ni las transformaciones
+   del panel. */
+
+.rc-impresion {
+  display: none;
+}
+
+@media print {
+  body > :not(.rc-impresion) {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .rc-impresion {
+    display: block;
+    color: #000;
+  }
+
+  /* La hoja mide menos de 760px y la regla móvil de la tarjeta la apilaba
+     en una columna; en papel caben las tres. */
+  .rc-impresion .rfl-bloque {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rc-impresion .rc-no-imprimir {
+    display: none !important;
+  }
+
+  .rc-impresion .adm-panel,
+  .rc-impresion .adm-stat {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .rc-impresion .fin-tabla-scroll {
+    overflow: visible;
+  }
+
+  .rc-impresion .rc-tabla {
+    min-width: 0;
+  }
+
+  .rc-impresion .rc-lotes {
+    grid-template-columns: 1fr;
+  }
+
+  .rc-impresion .rc-totales .adm-resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,28 @@
+meta {
+  name: [Admin · Propietario]  Generar y guardar prediccion del lote
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/predicciones/lote/2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Calcula la prediccion y la DEJA REGISTRADA: una fila por magnitud
+  proyectada (peso_faena, mortalidad, consumo, fcr). Solo se guardan las que
+  se pudieron calcular; si no hay registros de mortalidad, esa fila no existe.
+
+  Cada fila conserva en datos_entrada los pesajes que se usaron, asi que
+  despues se puede auditar por que el modelo dijo lo que dijo.
+
+  La ruta GET /v1/predicciones/:loteId hace el mismo calculo pero NO guarda:
+  escribir en base desde un GET convertiria un prefetch del navegador en
+  filas nuevas.
+}

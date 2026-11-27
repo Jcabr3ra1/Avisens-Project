@@ -1,0 +1,132 @@
+.rg { display: grid; gap: var(--space-4); }
+
+.rg-registro {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.rg-registro-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.rg-ayuda { margin: 0; }
+
+.rg-resultado { display: grid; justify-content: stretch; gap: var(--space-2); }
+
+.rg-canales {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-canales li {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .2rem var(--space-2);
+}
+
+.rg-canal { font-weight: 800; }
+.rg-nombre { min-width: 0; overflow-wrap: anywhere; }
+.rg-motivo { grid-column: 2 / -1; font-size: .76rem; }
+
+.rg-chip {
+  padding: .1rem .55rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rg-chip--creado,
+.rg-chip--asociado { border-color: color-mix(in srgb, var(--primary) 35%, transparent); color: var(--avisens-deep); }
+.rg-chip--conflicto { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger); }
+
+.rg-vacio {
+  padding: var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.rg-vacio p { margin: 0; font-size: .84rem; }
+
+/* Cuadrícula limpia de tarjetas K1-K4 */
+.rg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+}
+
+.rg-card.is-inactivo { opacity: .65; background: var(--surface-tinted); }
+
+.rg-card-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rg-canal-pill {
+  display: inline-grid;
+  min-width: 40px;
+  height: 36px;
+  padding: 0 .55rem;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--avisens-deep);
+  font-size: .86rem;
+}
+
+.rg-canal-pill.is-alerta { background: var(--warning-soft); color: var(--warning-text); }
+.rg-sin-canal { font-size: .72rem; font-weight: 700; white-space: nowrap; }
+
+.rg-actuador { display: grid; min-width: 0; gap: .1rem; }
+.rg-actuador strong { color: var(--text-primary); font-size: .9rem; overflow-wrap: anywhere; }
+.rg-actuador small { color: var(--text-muted); font-size: .74rem; text-transform: capitalize; }
+
+.rg-card-codigos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.rg-card-pie {
+  display: flex;
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  justify-content: flex-end;
+}
+
+@media (max-width: 40rem) {
+  .rg-registro-fila,
+  .rg-grid { grid-template-columns: 1fr; }
+}

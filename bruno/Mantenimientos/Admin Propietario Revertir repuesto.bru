@@ -1,0 +1,19 @@
+meta {
+  name: [Admin · Propietario] Revertir repuesto
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/v1/mantenimientos/1/repuestos/1/revertir
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Devuelve la cantidad al stock de bodega. El repuesto no se borra: queda
+  marcado como revertido, porque fue un movimiento de inventario real.
+}

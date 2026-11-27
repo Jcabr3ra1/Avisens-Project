@@ -9,7 +9,17 @@
 set -e
 
 echo "==> Aplicando migraciones de Prisma..."
-./node_modules/.bin/prisma migrate deploy
+# Si una migracion falla no se arranca la app: el codigo nuevo espera un
+# esquema o unos datos que no estan. Con el healthcheck configurado en Railway
+# (railway.json), esta salida marca el despliegue como fallido y el ANTERIOR
+# sigue sirviendo, asi que fallar aqui ya no deja la API caida.
+if ! ./node_modules/.bin/prisma migrate deploy; then
+  echo "!!> Las migraciones fallaron. No se arranca la aplicacion."
+  echo "!!> El despliegue anterior sigue sirviendo. Revisa el error de arriba:"
+  echo "!!>   - P3009 = quedo una migracion fallida; hay que resolverla."
+  echo "!!>   - un choque de constraint = la migracion asume datos que no son."
+  exit 1
+fi
 
 # Siembra opcional: crea el usuario admin si RUN_SEED=true. El seed es
 # idempotente (no duplica), así que es seguro en cada arranque. Se activa en

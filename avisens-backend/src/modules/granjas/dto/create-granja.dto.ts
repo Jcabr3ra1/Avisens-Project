@@ -4,28 +4,37 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
+import { DIRECCION_CON_TEXTO } from './datos-granja.dto';
+import {
+  AREA_MAXIMA_M2,
+  NombreEntidad,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateGranjaDto {
   @ApiProperty({ example: 'Granja La Esperanza' })
-  @IsString()
+  @NombreEntidad('El nombre de la granja', 120, true)
   nombre: string;
 
   @ApiPropertyOptional({ example: 'Vereda El Progreso km 4' })
-  @IsString()
+  @TextoSeguro('La dirección', 200)
+  @Matches(DIRECCION_CON_TEXTO, {
+    message: 'La dirección debe indicar la vía con texto (calle, carrera, vereda…), no solo números',
+  })
   @IsOptional()
   direccion?: string;
 
   @ApiPropertyOptional({ example: 'Rionegro' })
-  @IsString()
+  @NombreEntidad('El municipio', 100, false)
   @IsOptional()
   municipio?: string;
 
   @ApiPropertyOptional({ example: 'Antioquia' })
-  @IsString()
+  @NombreEntidad('El departamento', 100, false)
   @IsOptional()
   departamento?: string;
 
@@ -52,6 +61,7 @@ export class CreateGranjaDto {
   @ApiPropertyOptional({ example: 5000, description: 'Área total en m²' })
   @IsNumber()
   @IsPositive()
+  @Max(AREA_MAXIMA_M2)
   @IsOptional()
   area_total_m2?: number;
 
@@ -61,6 +71,7 @@ export class CreateGranjaDto {
       'ID del propietario. Solo lo usa el Administrador; el Propietario se asigna a sí mismo.',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   propietario_id?: number;
 }

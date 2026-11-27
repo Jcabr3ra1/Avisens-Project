@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { nombreLegible, tablaQueBloquea } from '../errores/llave-foranea';
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
@@ -37,8 +38,33 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       }
       case 'P2003': {
+        // Una llave foránea se rompe en dos direcciones opuestas, y el mensaje
+        // tiene que decir cuál de las dos fue. Al crear o actualizar, el padre
+        // al que se apunta no existe. Al borrar es al revés: el padre existe y
+        // lo que lo bloquea son los hijos que cuelgan de él. Decir "el registro
+        // relacionado no existe" cuando alguien intenta borrar una granja con
+        // galpones describe justo la situación contraria a la que pasó.
+        if (request.method === 'DELETE') {
+          status = HttpStatus.CONFLICT;
+          // Nombrar lo que bloquea convierte un «no se pudo» en algo que el
+          // usuario puede resolver: sabe qué tiene que quitar antes.
+          const bloquea = nombreLegible(tablaQueBloquea(exception));
+          message = bloquea
+            ? `No se puede eliminar: todavía hay ${bloquea} asociados. Desactívalo en vez de eliminarlo.`
+            : 'No se puede eliminar: todavía hay registros que dependen de este';
+        } else {
+          status = HttpStatus.BAD_REQUEST;
+          message = 'Referencia inválida: el registro relacionado no existe';
+        }
+        break;
+      }
+      case 'P2020': {
+        // Valor fuera del rango de la columna (p. ej. un monto con más
+        // dígitos de los que caben). Es un dato mal digitado, no una falla
+        // del servidor: se responde 400 con un mensaje que se pueda corregir.
         status = HttpStatus.BAD_REQUEST;
-        message = 'Referencia inválida: el registro relacionado no existe';
+        message =
+          'Un valor es demasiado grande para guardarse. Revisa las cifras e ingresa un valor razonable';
         break;
       }
       default:

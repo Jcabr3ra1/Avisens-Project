@@ -1,0 +1,28 @@
+meta {
+  name: [Admin]  Listar tipos de alimento (incluidos los inactivos)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/tipos-alimento?page=1&limit=20&solo_activos=false&marca=italcol
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  solo_activos: false
+  marca: italcol
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Lo que necesita la pantalla de catálogos del administrador: con
+  solo_activos=false salen también los desactivados, para poder reactivarlos.
+  marca es opcional y filtra por marca de alimento.
+}

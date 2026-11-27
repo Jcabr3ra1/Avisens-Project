@@ -1,0 +1,9 @@
+meta {
+  name: [Admin · Propietario] Crear movimiento
+  type: http
+  seq: 1
+}
+post { url: {{baseUrl}}/v1/movimientos-inventario; body: json; auth: bearer }
+headers { Content-Type: application/json }
+auth:bearer { token: {{token}} }
+body:json { {"insumo_id":1,"tipo_movimiento":"entrada","cantidad":100,"motivo":"Compra de alimento"} }

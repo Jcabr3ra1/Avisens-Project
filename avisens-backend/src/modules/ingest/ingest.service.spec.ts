@@ -1,17 +1,30 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IngestService } from './ingest.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
+import { ObservabilityService } from '../../common/observability/observability.service';
+import { AlertasService } from '../alertas/alertas.service';
+import { OrdenesActuadoresService } from '../ordenes-actuadores/ordenes-actuadores.service';
+import { FirmwareService } from '../firmware/firmware.service';
 
 describe('IngestService', () => {
   let service: IngestService;
 
   const prisma = {
     sensor: { findMany: jest.fn() },
-    medicion: { create: jest.fn() },
-    dispositivo: { update: jest.fn() },
+    medicion: { createMany: jest.fn() },
+    ingestaDispositivo: { findUnique: jest.fn(), create: jest.fn() },
+    dispositivo: { update: jest.fn(), updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
+  const observability = { registrarIngesta: jest.fn() };
+  const alertas = { evaluarLectura: jest.fn() };
+  const ordenes = {
+    procesarReporte: jest.fn(),
+    entregarPendientes: jest.fn(),
+  };
+  const firmware = { vigente: jest.fn().mockResolvedValue(null) };
 
   const dispositivo: DispositivoAutenticado = {
     id: 7,
@@ -21,11 +34,284 @@ describe('IngestService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [IngestService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        IngestService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ObservabilityService, useValue: observability },
+        { provide: AlertasService, useValue: alertas },
+        { provide: OrdenesActuadoresService, useValue: ordenes },
+        { provide: FirmwareService, useValue: firmware },
+      ],
     }).compile();
     service = module.get<IngestService>(IngestService);
 
     prisma.$transaction.mockResolvedValue([]);
+    prisma.ingestaDispositivo.findUnique.mockResolvedValue(null);
+    ordenes.procesarReporte.mockResolvedValue('actual');
+    ordenes.entregarPendientes.mockResolvedValue([]);
+  });
+
+  const ARRANQUE = '0b6f8a52-3c1e-4d7a-9f20-6a1d2b3c4e5f';
+
+  describe('relés por canal', () => {
+    const medicionesGuardadas = () =>
+      (
+        prisma.medicion.createMany.mock.calls as Array<
+          [{ data: Array<{ sensor_id: number; valor: number }> }]
+        >
+      )[0][0].data;
+
+    it('resuelve rele:k1..k4 dentro del ESP32 autenticado, sin importar el nombre del relé', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 31, codigo: 'REL-K1-G3-D7', tipo: 'Bombillos de calefacción', canal: 'rele:k1', unidad_medida: 'estado' },
+        { id: 32, codigo: 'X-RENOMBRADO', tipo: 'Ventilador norte', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+
+      const res = await service.registrar(
+        {
+          lecturas: [
+            { tipo: 'rele', canal: 'rele:k1', valor: 1 },
+            { tipo: 'rele', canal: 'rele:k2', valor: 0 },
+            { tipo: 'rele', canal: 'rele:k3', valor: 0 },
+          ],
+        },
+        dispositivo,
+      );
+
+      // La consulta usa el dispositivo del token, nunca uno del cuerpo.
+      const consulta = prisma.sensor.findMany.mock.calls[0] as [
+        { where: Record<string, unknown> },
+      ];
+      expect(consulta[0].where).toMatchObject({ dispositivo_id: 7, galpon_id: 3 });
+      expect(medicionesGuardadas().map((m) => [m.sensor_id, m.valor])).toEqual([
+        [31, 1],
+        [32, 0],
+      ]);
+      // K3 no está registrado en este ESP32: se informa, no se adivina.
+      expect(res.ignoradas).toEqual(['rele:k3']);
+    });
+
+    it('el código del firmware anterior sigue funcionando en un relé ya asociado a canal', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 12, codigo: 'REL-K2-G1-01', tipo: 'Ventiladores (K2)', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+
+      const res = await service.registrar(
+        { lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }] },
+        dispositivo,
+      );
+
+      expect(res.registradas).toBe(1);
+      expect(medicionesGuardadas()[0]).toMatchObject({ sensor_id: 12, valor: 1 });
+    });
+
+    it('un sensor con canal de relé pero sin unidad "estado" no recibe la lectura', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 40, codigo: 'RARO', tipo: 'rele', canal: 'rele:k1', unidad_medida: '°C' },
+      ]);
+      const res = await service.registrar(
+        { lecturas: [{ tipo: 'rele', canal: 'rele:k1', valor: 1 }] },
+        dispositivo,
+      );
+      expect(res.registradas).toBe(0);
+      expect(res.ignoradas).toEqual(['rele:k1']);
+    });
+
+    it('los DHT22 por GPIO siguen resolviéndose por tipo + canal', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 5, codigo: 'T', tipo: 'temperatura', canal: 'gpio:4', unidad_medida: '°C' },
+      ]);
+      const res = await service.registrar(
+        { lecturas: [{ tipo: 'temperatura', canal: 'gpio:4', valor: 24 }] },
+        dispositivo,
+      );
+      expect(res.registradas).toBe(1);
+    });
+  });
+
+  describe('órdenes remotas de actuadores', () => {
+    it('procesa las confirmaciones del ciclo y entrega las pendientes en la respuesta', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'REL-K2-G1-01' },
+      ]);
+      ordenes.entregarPendientes.mockResolvedValue([
+        { id: 42, codigo: 'REL-K2-G1-01', accion: 'encender' },
+      ]);
+      const resultados = [
+        { orden_id: 41, resultado: 'aplicada' as const, estado_rele: true },
+      ];
+
+      const estados = [
+        {
+          codigo: 'REL-K2-G1-01',
+          modo: 'manual_remoto' as const,
+          encendido: true,
+          orden_id: 41,
+        },
+      ];
+
+      const res = await service.registrar(
+        {
+          arranque_id: ARRANQUE,
+          lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
+          resultados_ordenes: resultados,
+          estados_reles: estados,
+        },
+        dispositivo,
+      );
+
+      expect(ordenes.procesarReporte).toHaveBeenCalledWith(
+        7,
+        resultados,
+        estados,
+        ARRANQUE,
+      );
+      expect(ordenes.entregarPendientes).toHaveBeenCalledWith(7, ARRANQUE);
+      expect(res.ordenes).toEqual([
+        { id: 42, codigo: 'REL-K2-G1-01', accion: 'encender' },
+      ]);
+    });
+
+    it('un reintento del mismo id_lote también entrega las órdenes pendientes', async () => {
+      prisma.ingestaDispositivo.findUnique.mockResolvedValue({
+        clave_idempotencia: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+        cantidad_registrada: 1,
+        codigos_ignorados: [],
+      });
+      ordenes.entregarPendientes.mockResolvedValue([
+        { id: 42, codigo: 'REL-K2-G1-01', accion: 'apagar' },
+      ]);
+
+      // El reintento del ciclo normal lleva la sesión, como el envío original.
+      const res = await service.registrar(
+        {
+          id_lote: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+          arranque_id: ARRANQUE,
+          lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
+        },
+        dispositivo,
+      );
+
+      expect(res.duplicada).toBe(true);
+      expect(ordenes.entregarPendientes).toHaveBeenCalledWith(7, ARRANQUE);
+      expect(res.ordenes).toHaveLength(1);
+    });
+
+    // Así llegan los reenvíos del búfer sin red y los envíos al destino
+    // espejo (cuerpoSoloLecturas en el firmware): sin arranque_id y sin leer
+    // la respuesta. Entregarles órdenes las marcaría "enviada" sin que el
+    // ESP32 las reciba, y el ciclo normal ya no las repetiría.
+    const LOTE_GUARDADO = {
+      id_lote: '5f0c2d1e-8a7b-4c3d-9e6f-1a2b3c4d5e6f',
+      fecha_dispositivo: '2026-10-19T14:00:00.000Z',
+      lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }],
+    };
+
+    it('un envío sin arranque_id (búfer o espejo) guarda las lecturas pero no consume órdenes', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockResolvedValue('legado');
+
+      const res = await service.registrar(LOTE_GUARDADO, dispositivo);
+
+      expect(res.registradas).toBe(1);
+      expect(prisma.medicion.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            sensor_id: 1,
+            valor: 24.8,
+            fecha_hora: new Date(LOTE_GUARDADO.fecha_dispositivo),
+          }),
+        ],
+      });
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+    });
+
+    it('un lote guardado que ya había llegado (duplicado sin sesión) tampoco consume órdenes', async () => {
+      prisma.ingestaDispositivo.findUnique.mockResolvedValue({
+        clave_idempotencia: LOTE_GUARDADO.id_lote,
+        cantidad_registrada: 1,
+        codigos_ignorados: [],
+      });
+      ordenes.procesarReporte.mockResolvedValue('legado');
+
+      const res = await service.registrar(LOTE_GUARDADO, dispositivo);
+
+      expect(res.duplicada).toBe(true);
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+    });
+
+    it('las confirmaciones de un envío sin arranque_id se procesan aunque no reciba órdenes', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'REL-K2-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockResolvedValue('legado');
+      const resultados = [
+        { orden_id: 41, resultado: 'aplicada' as const, estado_rele: true },
+      ];
+
+      const res = await service.registrar(
+        {
+          lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
+          resultados_ordenes: resultados,
+        },
+        dispositivo,
+      );
+
+      expect(ordenes.procesarReporte).toHaveBeenCalledWith(
+        7,
+        resultados,
+        undefined,
+        undefined,
+      );
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+    });
+
+    it('un envío retrasado de la sesión anterior al reinicio no recibe órdenes', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'REL-K2-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockResolvedValue('anterior');
+
+      const res = await service.registrar(
+        {
+          arranque_id: ARRANQUE,
+          lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
+        },
+        dispositivo,
+      );
+
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+      // Las mediciones del envío se guardan igual: solo se le niegan órdenes.
+      expect(res.registradas).toBe(1);
+    });
+
+    it('si las órdenes fallan, la ingesta igual responde con las mediciones guardadas', async () => {
+      const errorLog = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockRejectedValue(new Error('bd caída'));
+
+      const res = await service.registrar(
+        { lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }] },
+        dispositivo,
+      );
+
+      expect(res.registradas).toBe(1);
+      expect(res.ordenes).toEqual([]);
+      expect(errorLog).toHaveBeenCalledWith(
+        expect.stringContaining('iot.ordenes.fallida'),
+      );
+      errorLog.mockRestore();
+    });
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -48,7 +334,36 @@ describe('IngestService', () => {
 
     expect(res.registradas).toBe(2);
     expect(res.ignoradas).toEqual([]);
-    expect(prisma.medicion.create).toHaveBeenCalledTimes(2);
+    const calls = prisma.medicion.createMany.mock.calls as Array<
+      [{ data: unknown[] }]
+    >;
+    const data = calls[0][0].data;
+    expect(data).toHaveLength(2);
+  });
+
+  it('guarda la calidad que envía el ESP32: el peso sin calibrar llega "sospechosa"', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { id: 3, codigo: 'GAS-G1-01' },
+      { id: 4, codigo: 'PESO-G1-01' },
+    ]);
+
+    const res = await service.registrar(
+      {
+        lecturas: [
+          { codigo: 'GAS-G1-01', valor: 912 },
+          { codigo: 'PESO-G1-01', valor: 812.5, calidad: 'sospechosa' },
+        ],
+      },
+      dispositivo,
+    );
+
+    expect(res.registradas).toBe(2);
+    const calls = prisma.medicion.createMany.mock.calls as Array<
+      [{ data: Array<{ sensor_id: number; calidad?: string }> }]
+    >;
+    const data = calls[0][0].data;
+    expect(data.find((m) => m.sensor_id === 3)?.calidad).toBeUndefined();
+    expect(data.find((m) => m.sensor_id === 4)?.calidad).toBe('sospechosa');
   });
 
   it('solo busca sensores del propio dispositivo (alcance)', async () => {
@@ -80,7 +395,11 @@ describe('IngestService', () => {
 
     expect(res.registradas).toBe(1);
     expect(res.ignoradas).toEqual(['AJENO-99']);
-    expect(prisma.medicion.create).toHaveBeenCalledTimes(1);
+    const calls = prisma.medicion.createMany.mock.calls as Array<
+      [{ data: unknown[] }]
+    >;
+    const data = calls[0][0].data;
+    expect(data).toHaveLength(1);
   });
 
   it('marca el dispositivo online (heartbeat) con la IP recibida', async () => {
@@ -100,5 +419,209 @@ describe('IngestService', () => {
     expect(calls[0][0].where.id).toBe(7);
     expect(calls[0][0].data.estado).toBe('online');
     expect(calls[0][0].data.ip_local).toBe('192.168.1.5');
+  });
+
+  it('resuelve tipo y GPIO al serial asignado sin que el firmware lo conozca', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      {
+        id: 35,
+        codigo: 'SERIAL-AUTOMATICO',
+        tipo: 'temperatura',
+        canal: 'gpio:18',
+      },
+      { id: 36, codigo: 'OTRO-SERIAL', tipo: 'temperatura', canal: 'gpio:4' },
+    ]);
+    const res = await service.registrar(
+      {
+        lecturas: [
+          { tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 },
+          { tipo: 'humedad', canal: 'gpio:18', valor: 60 },
+        ],
+      },
+      dispositivo,
+    );
+    expect(res.registradas).toBe(1);
+    expect(res.ignoradas).toEqual(['humedad:gpio:18']);
+    expect(prisma.sensor.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { dispositivo_id: 7, galpon_id: 3, estado: 'activo' },
+      }),
+    );
+    expect(prisma.medicion.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ sensor_id: 35, valor: 24.8 })],
+    });
+  });
+
+  it('no asigna por tipo una conexión distinta o todavía sin vincular', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { id: 35, codigo: 'SIN-VINCULAR', tipo: 'temperatura', canal: null },
+      { id: 36, codigo: 'OTRO-GPIO', tipo: 'temperatura', canal: 'gpio:4' },
+    ]);
+    const res = await service.registrar(
+      { lecturas: [{ tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 }] },
+      dispositivo,
+    );
+    expect(res.registradas).toBe(0);
+  });
+
+  it('rechaza un mismo sensor enviado por serial y conexión en el mismo lote', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { id: 35, codigo: 'SERIAL', tipo: 'temperatura', canal: 'gpio:18' },
+    ]);
+    await expect(
+      service.registrar(
+        {
+          lecturas: [
+            { codigo: 'SERIAL', valor: 24.8 },
+            { tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 },
+          ],
+        },
+        dispositivo,
+      ),
+    ).rejects.toThrow('Un sensor no puede aparecer dos veces');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('publica conexiones DHT22 sin secretos, sin inventar sensores y sin duplicar GPIO', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { tipo: 'temperatura', canal: 'gpio:18', modelo: 'DHT22' },
+      { tipo: 'humedad', canal: 'gpio:18', modelo: 'DHT22' },
+      { tipo: 'co2', canal: 'gpio:4', modelo: 'MQ135' },
+      { tipo: 'temperatura', canal: 'gpio:34', modelo: 'DHT22' },
+    ]);
+    expect(await service.configuracion(dispositivo)).toEqual({
+      version: 1,
+      controlador: 'galpon1',
+      conexiones: [{ canal: 'gpio:18', modelo: 'DHT22', gpio: 18 }],
+      firmware: null,
+    });
+    expect(prisma.sensor.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          dispositivo_id: 7,
+          galpon_id: 3,
+          estado: 'activo',
+          canal: { not: null },
+        },
+      }),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('ofrece el firmware publicado y registra la versión que reporta el controlador', async () => {
+    prisma.sensor.findMany.mockResolvedValue([]);
+    firmware.vigente.mockResolvedValueOnce({
+      version: '1.2.0',
+      sha256: 'abc',
+      tamano: 900000,
+    });
+
+    const r = await service.configuracion(dispositivo, '1.1.0');
+
+    expect(r.firmware).toEqual({
+      version: '1.2.0',
+      sha256: 'abc',
+      tamano: 900000,
+    });
+    expect(prisma.dispositivo.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 7,
+        OR: [
+          { version_firmware: null },
+          { version_firmware: { not: '1.1.0' } },
+        ],
+      },
+      data: { version_firmware: '1.1.0' },
+    });
+  });
+
+  it('ignora una versión de firmware con caracteres raros', async () => {
+    prisma.sensor.findMany.mockResolvedValue([]);
+
+    await service.configuracion(dispositivo, 'x; drop table');
+
+    expect(prisma.dispositivo.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('no duplica mediciones cuando se reintenta el mismo id_lote', async () => {
+    prisma.ingestaDispositivo.findUnique.mockResolvedValue({
+      clave_idempotencia: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+      cantidad_registrada: 2,
+      codigos_ignorados: [],
+    });
+
+    const res = await service.registrar(
+      {
+        id_lote: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+        lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }],
+      },
+      dispositivo,
+    );
+
+    expect(res.duplicada).toBe(true);
+    expect(prisma.sensor.findMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  describe('fallo aislado de evaluarLectura', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('un fallo de alertas no rompe la ingesta, y queda registrado aparte', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+        { id: 2, codigo: 'HUM-G1-01' },
+      ]);
+      alertas.evaluarLectura
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('fallo simulado'));
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      const res = await service.registrar(
+        {
+          lecturas: [
+            { codigo: 'TEMP-G1-01', valor: 24.8 },
+            { codigo: 'HUM-G1-01', valor: 69 },
+          ],
+        },
+        dispositivo,
+      );
+
+      expect(res.registradas).toBe(2);
+      expect(Object.keys(res)).toEqual([
+        'id_lote',
+        'duplicada',
+        'registradas',
+        'ignoradas',
+        'ordenes',
+      ]);
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const [linea] = errorSpy.mock.calls[0] as [string];
+      const registro = JSON.parse(linea) as Record<string, unknown>;
+      expect(registro.evento).toBe('iot.alerta.fallida');
+      expect(registro.mediciones_guardadas).toBe(2);
+      expect(registro.alertas_fallidas).toBe(1);
+      expect(registro.sensores).toEqual([2]);
+      expect(registro.clasificacion).toEqual({ desconocida: 1 });
+    });
+
+    it('sin fallos, no emite la línea de alerta fallida', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+      ]);
+      alertas.evaluarLectura.mockResolvedValue(undefined);
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      await service.registrar(
+        { lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }] },
+        dispositivo,
+      );
+
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
   });
 });

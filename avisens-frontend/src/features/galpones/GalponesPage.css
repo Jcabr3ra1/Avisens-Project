@@ -1,0 +1,8 @@
+/* La cabecera, el resumen, la barra y la tabla viven ahora en
+   shared/ui/admin/AdminKit.css y shared/ui/TablaGestion/.
+   Aquí solo queda lo propio del formulario de galpón. */
+.galpones-form-ancho { display: flex; flex-direction: column; gap: 0.3rem; }
+.galpones-form-ancho > span { color: var(--text); font-size: 0.8rem; font-weight: 600; }
+.galpones-form-ancho em { color: var(--text3); font-style: normal; font-weight: 400; }
+.galpones-form-ancho input { width: 100%; min-height: 44px; padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); }
+.galpones-form-ancho input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }

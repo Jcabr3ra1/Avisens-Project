@@ -9,8 +9,11 @@ import { CreateUmbralDto } from './dto/create-umbral.dto';
 import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroGalpones,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
 
 const UMBRAL_SELECT = {
   id: true,
@@ -43,14 +46,22 @@ export class UmbralesService {
       select: { id: true, granja: { select: { propietario_id: true } } },
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      galponId,
       solicitante,
-      galpon.granja.propietario_id,
       'Solo puedes gestionar umbrales de tus propios galpones',
+      galpon.granja.propietario_id,
     );
   }
 
   async crear(dto: CreateUmbralDto, solicitante: Solicitante) {
+    if (dto.valor_minimo >= dto.valor_maximo) {
+      throw new BadRequestException(
+        'El valor mínimo debe ser menor que el valor máximo.',
+      );
+    }
+
     await this.validarGalpon(dto.galpon_id, solicitante);
 
     const existente = await this.prisma.umbralAmbiental.findFirst({
@@ -68,6 +79,17 @@ export class UmbralesService {
       );
     }
 
+    const ultimo = await this.prisma.umbralAmbiental.findFirst({
+      where: {
+        galpon_id: dto.galpon_id,
+        variable: dto.variable,
+        semana_vida: dto.semana_vida,
+      },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    const version = ultimo ? ultimo.version + 1 : 1;
+
     return this.prisma.umbralAmbiental.create({
       data: {
         galpon_id: dto.galpon_id,
@@ -77,6 +99,7 @@ export class UmbralesService {
         valor_maximo: dto.valor_maximo,
         unidad: dto.unidad,
         criticidad: dto.criticidad,
+        version,
       },
       select: UMBRAL_SELECT,
     });
@@ -88,10 +111,12 @@ export class UmbralesService {
       select: UMBRAL_SELECT,
     });
     if (!umbral) throw new NotFoundException('Umbral no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      umbral.galpon_id,
       solicitante,
-      umbral.galpon.granja.propietario_id,
       'Solo puedes gestionar umbrales de tus propios galpones',
+      umbral.galpon.granja.propietario_id,
     );
     return umbral;
   }
@@ -101,6 +126,14 @@ export class UmbralesService {
     if (!actual.vigente) {
       throw new BadRequestException(
         'Solo puedes revisar el umbral vigente (este ya fue reemplazado o jubilado).',
+      );
+    }
+
+    const nuevoMin = Number(dto.valor_minimo ?? actual.valor_minimo);
+    const nuevoMax = Number(dto.valor_maximo ?? actual.valor_maximo);
+    if (nuevoMin >= nuevoMax) {
+      throw new BadRequestException(
+        'El valor mínimo debe ser menor que el valor máximo.',
       );
     }
 
@@ -134,9 +167,7 @@ export class UmbralesService {
       variable,
 
       vigente: incluir_historico ? undefined : true,
-      galpon: esPropietario(solicitante)
-        ? { granja: { propietario_id: solicitante.id } }
-        : undefined,
+      galpon: filtroGalpones(solicitante),
     };
 
     const [data, total] = await this.prisma.$transaction([

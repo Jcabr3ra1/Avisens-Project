@@ -1,0 +1,703 @@
+/* Guía de crecimiento: el ciclo del lote como protagonista, la gráfica de una
+   métrica a la vez y la lectura del día elegido al lado. */
+
+.gdc {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+/* ── Miga / volver píldora ────────────────────────────────── */
+.gdc-miga {
+  display: flex;
+  align-items: center;
+}
+
+.gdc-volver-pill {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0 0.5rem;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+
+.gdc-volver-pill:hover {
+  background: var(--surface-subtle);
+  color: var(--primary);
+}
+
+.gdc-volver-pill:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.gdc-volver-icono {
+  transform: rotate(180deg);
+}
+
+/* ── Cabecera ejecutiva ───────────────────────────────────── */
+.gdc-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.gdc-cabecera-texto { display: grid; gap: 0.3rem; min-width: 0; }
+
+.gdc-titulo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gdc-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.9rem);
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.gdc-codigo-pill {
+  padding: 0.16rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tinted);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.gdc-contexto {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.gdc-cabecera-acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* ── Tira de 4 indicadores alineados a la izquierda ───────── */
+.gdc-indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  list-style: none;
+}
+
+.gdc-indicadores li {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.22rem;
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+}
+
+.gdc-indicadores li + li {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.gdc-indicadores span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gdc-indicadores strong {
+  color: var(--text-primary);
+  font-size: 1.55rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.gdc-indicadores small {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+/* ── Pestañas flotantes (estilo Ficha de Cliente / Galpón) ── */
+.gdc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc-tab {
+  display: inline-flex;
+  flex: 1 1 auto;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.95rem;
+  white-space: nowrap;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.gdc-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.gdc-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.gdc-tab.is-activa {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ── Ciclo ────────────────────────────────────────────────── */
+.gdc-ciclo {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.1rem, 2.2vw, 1.5rem);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc-ciclo-cabecera { display: grid; gap: 0.35rem; }
+
+.gdc-ciclo-cabecera h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.gdc-ciclo-cabecera h2 span {
+  color: var(--text-muted);
+  font-size: 0.6em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.gdc-ciclo-frase {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* ── Alertas bajo la regla ───────────────────────────────── */
+.gdc-alertas { display: grid; gap: 0.6rem; }
+
+.gdc-alertas-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.gdc-alertas-pie {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 0.15rem;
+}
+
+.gdc-alertas-btn-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  background: var(--surface-base);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.gdc-alertas-btn-accion:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.gdc-alertas-estado,
+.gdc-alertas-resumen {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.gdc-alertas-estado--limpio { color: var(--success); font-weight: 600; }
+.gdc-alertas-resumen--alta { color: var(--danger); font-weight: 650; }
+.gdc-alertas-resumen--media { color: var(--warning); font-weight: 650; }
+
+.gdc-alertas-lista { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+
+.gdc-alerta {
+  display: grid;
+  grid-template-columns: 5.5rem 4rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.gdc-alerta[aria-pressed='true'] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, var(--surface-base)); }
+.gdc-alerta:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.gdc-alerta-etiqueta { font-size: 0.8125rem; font-weight: 800; }
+.gdc-alerta--alta .gdc-alerta-etiqueta { color: var(--danger); }
+.gdc-alerta--media .gdc-alerta-etiqueta { color: var(--warning); }
+.gdc-alerta--baja .gdc-alerta-etiqueta { color: var(--text-muted); }
+.gdc-alerta-dia { color: var(--text-muted); font-size: 0.8125rem; }
+.gdc-alerta-mensaje { line-height: 1.45; overflow-wrap: anywhere; }
+
+@media (hover: hover) and (pointer: fine) {
+  .gdc-alerta:hover { border-color: var(--border-strong); }
+}
+
+@media (max-width: 560px) {
+  .gdc-alerta { grid-template-columns: auto 1fr; }
+  .gdc-alerta-mensaje { grid-column: 1 / -1; }
+}
+
+/* ── Gráfica + lectura ────────────────────────────────────── */
+.gdc-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(17.5rem, 1fr);
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.gdc .gcr {
+  margin: 0;
+  padding: 0.75rem clamp(1rem, 2vw, 1.5rem) 1.25rem;
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gcr-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.gcr-barra .gcr-pestanas { width: auto; flex: 1 1 auto; border-bottom: 0; }
+.gcr-barra .gcr-comparar-controles { padding: 0 0 0.35rem; border-bottom: 0; }
+.gcr-comparar-ayuda { margin: 0.5rem 0 0; }
+
+.gdc-lectura {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc-lectura-cabecera { display: flex; align-items: center; gap: 0.6rem; }
+.gdc-lectura-cabecera h3 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+
+.gdc-lectura-sello {
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--surface-base);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.gdc-lectura-sello--tenue {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* ── Etapa de cría y recomendación de alimento ───────────── */
+.gdc-lectura-etapa {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  border-left: 4px solid var(--border-default);
+}
+
+.gdc-lectura-etapa--preinicio {
+  border-left-color: #10b981;
+  background: color-mix(in srgb, #10b981 9%, var(--surface-base));
+}
+
+.gdc-lectura-etapa--inicio {
+  border-left-color: #3b82f6;
+  background: color-mix(in srgb, #3b82f6 9%, var(--surface-base));
+}
+
+.gdc-lectura-etapa--engorde {
+  border-left-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 9%, var(--surface-base));
+}
+
+.gdc-lectura-etapa--finalizacion {
+  border-left-color: #8b5cf6;
+  background: color-mix(in srgb, #8b5cf6 9%, var(--surface-base));
+}
+
+.gdc-lectura-etapa-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+}
+
+.gdc-lectura-etapa-nombre {
+  color: var(--text-primary);
+  font-weight: 750;
+}
+
+.gdc-lectura-etapa-dias {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.gdc-lectura-alimento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.gdc-lectura-alimento-etiqueta {
+  color: var(--text-secondary);
+}
+
+.gdc-lectura-alimento-valor {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.gdc-lectura-etapa-cambio {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.gdc-lectura-lista { display: grid; gap: 0.85rem; margin: 0; }
+.gdc-lectura-lista > div { display: grid; gap: 0.15rem; }
+.gdc-lectura-lista dt { color: var(--text-secondary); font-size: 0.875rem; }
+
+.gdc-lectura-lista dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gdc-lectura-lista small,
+.gdc-lectura-final small {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.gdc-lectura-vacio { margin: 0; color: var(--text-muted); font-size: 0.9375rem; font-weight: 400; letter-spacing: 0; }
+
+.gdc-lectura-alertas {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger-strong, var(--danger));
+  font-size: 0.875rem;
+  line-height: 1.45;
+  list-style: none;
+}
+
+.gdc-lectura-cierre {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.gdc-lectura-cierre h4 { margin: 0; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 650; }
+
+.gdc-lectura-final {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.6rem;
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.gdc-lectura-llegada { margin: 0; color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.45; }
+.gdc-lectura-llegada strong { color: var(--text-primary); }
+.gdc-lectura-llegada--tenue strong { color: var(--text-muted); }
+
+.gdc-confianza {
+  justify-self: start;
+  margin: 0.15rem 0 0;
+  padding: 0.15rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.gdc-confianza--alta { border-color: var(--success); color: var(--success); }
+.gdc-confianza--media { border-color: var(--warning); color: var(--warning); }
+.gdc-confianza--baja { border-color: var(--danger); color: var(--danger); }
+
+.gdc-lectura-motivos {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ── Entrada de la guía (sin lote elegido) ─────────────────── */
+.gdc .guia-entrada-riesgos,
+.gdc .guia-comparacion,
+.gdc .guia-selector {
+  padding: clamp(1.1rem, 2.4vw, 1.5rem);
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc .guia-entrada-cabecera h2 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+.gdc .guia-entrada-cabecera > span { color: var(--text-secondary); font-size: 0.875rem; }
+.gdc .guia-riesgo-posicion { width: 2.25rem; height: 2.25rem; }
+.gdc .guia-riesgo-copia strong { font-size: 1rem; }
+.gdc .guia-riesgo-copia span, .gdc .guia-riesgo-copia small { font-size: 0.9375rem; }
+.gdc .guia-riesgo-abrir { font-size: 0.9375rem; }
+.gdc .guia-tabla-lotes { font-size: 0.9375rem; }
+.gdc .guia-tabla-lotes thead th { font-size: 0.8125rem; }
+.gdc .guia-tabla-nota, .gdc .guia-umbrales-nota { font-size: 0.875rem; }
+
+/* ── Cierre del lote ──────────────────────────────────────── */
+.gdc-cierre { display: grid; gap: 1rem; }
+.gdc-cierre > h2 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+
+.gdc-cierre-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.35fr);
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.gdc-cierre-col-plan {
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+}
+
+.gdc-cierre-col-alimento {
+  display: grid;
+  align-content: start;
+}
+
+.gdc-cierre-columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.gdc-meta,
+.gdc-sim {
+  display: grid;
+  gap: 0.75rem;
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc-sim.is-bloqueado {
+  background: var(--surface-tinted);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.gdc-sim-cabecera {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.gdc-sim-eyebrow {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gdc-reportes-wrap {
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.gdc-meta h3,
+.gdc-sim h3 { margin: 0; font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; }
+
+.gdc-meta-valor { display: grid; gap: 0.1rem; margin: 0; }
+.gdc-meta-valor strong { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.gdc-meta-valor span { color: var(--text-secondary); font-size: 0.9375rem; }
+
+.gdc-meta-estado {
+  justify-self: start;
+  margin: 0;
+  padding: 0.1rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.gdc-meta-estado--aviso { border-color: var(--warning); color: var(--warning); }
+.gdc-meta-nota, .gdc-meta-vacio, .gdc-sim-ayuda { margin: 0; color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.5; }
+.gdc-meta-acciones { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.gdc-meta-formulario { display: grid; gap: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); }
+
+.gdc-meta-cancelar {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.gdc-sim-datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.gdc-sim-datos > div { display: grid; gap: 0.1rem; align-content: start; }
+.gdc-sim-datos dt { color: var(--text-secondary); font-size: 0.875rem; }
+.gdc-sim-datos dd { margin: 0; font-size: 1.35rem; font-weight: 750; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+.gdc-reportes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-top: 0.25rem;
+}
+
+.gdc-reportes-nota { flex: 1 1 22rem; max-width: 62ch; margin: 0; color: var(--text-muted); font-size: 0.875rem; line-height: 1.5; }
+.gdc-reportes-acciones { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+/* ── Pantallas chicas ─────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .gdc-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gdc-indicadores li:nth-child(3) { border-left: 0; }
+  .gdc-indicadores li:nth-child(n + 3) { border-top: 1px solid var(--border-subtle); }
+  .gdc-cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .gdc-lectura { position: static; }
+  .gdc-cierre-columnas { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .gdc-cabecera-acciones { width: 100%; }
+  .gdc-cabecera-acciones .adm-btn { flex: 1 1 auto; justify-content: center; }
+  .gdc-sim-datos { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gdc-alerta { transition: none; }
+}
+.gdc .guia-tabla-lotes thead th:first-child { text-align: left; }

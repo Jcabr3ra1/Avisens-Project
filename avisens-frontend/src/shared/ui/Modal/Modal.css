@@ -1,0 +1,493 @@
+/* Diálogo compartido para acciones breves y formularios de baja complejidad. */
+
+.modal-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: var(--overlay);
+}
+
+
+.modal-tarjeta {
+  display: flex;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-tarjeta--ancha { max-width: 760px; }
+
+.modal-cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-shrink: 0;
+  padding: 1.25rem 1.4rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  background: var(--surface-base);
+}
+
+.modal-ident { min-width: 0; flex: 1; }
+
+.modal-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.16rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.modal-sub {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.modal-cerrar {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  background: var(--surface-tinted);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.modal-cerrar:hover { color: var(--primary); background: var(--primary-soft); }
+.modal-cerrar:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.modal-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.3rem 1.4rem;
+}
+
+.modal-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-tinted);
+}
+
+/* ── Campos ─────────────────────────────────────────────────────────────── */
+
+.modal-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  margin-bottom: 0.9rem;
+}
+
+fieldset.modal-campo {
+  min-width: 0;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  border: 0;
+}
+
+.modal-campo > span,
+.modal-campo > legend,
+.modal-campo > .modal-campo-etiqueta {
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.modal-campo > span em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.modal-campo input,
+.modal-campo select,
+.modal-campo textarea {
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-base);
+  font: inherit;
+  font-size: 0.92rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.modal-campo textarea {
+  resize: none;
+}
+
+.modal-campo input:focus-visible,
+.modal-campo select:focus-visible,
+.modal-campo textarea:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid color-mix(in srgb, var(--focus-ring) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.modal-campo input:disabled,
+.modal-campo select:disabled { background: var(--surface-subtle); opacity: 0.8; }
+
+/* Pares de campos lado a lado: Cédula + Teléfono, Granja + Municipio. Estaba
+   fijada a `1fr`, así que NUNCA llegaba a dos columnas en ninguna anchura, y
+   con `gap: 0` los campos quedaban pegados. Catorce formularios la usan.
+
+   `auto-fit` en vez de `1fr 1fr` porque hay filas de tres (umbrales, galpones,
+   lotes, curvas): con 150px de mínimo entran las tres en los 560px del modal,
+   y las de dos siguen repartiéndose a la mitad.
+
+   El hueco es solo entre columnas. Las filas ya las separa el `margin-bottom`
+   de `.modal-campo`; poner también `row-gap` daría doble espacio. */
+.modal-fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0 var(--space-3);
+  align-items: start;
+}
+
+.modal-seccion {
+  min-width: 0;
+  margin: 0 0 1.2rem;
+  padding: 0;
+  border: 0;
+}
+
+.modal-seccion:last-of-type { margin-bottom: 0.2rem; }
+
+.modal-seccion > legend {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.45rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.modal-desplegar {
+  width: 100%;
+  margin: 0.2rem 0 0.9rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--primary) 28%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--avisens-deep);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 700;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.modal-desplegar:hover {
+  border-color: var(--avisens-green);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+}
+
+.modal-adicional {
+  padding-top: 0.2rem;
+  animation: modal-adicional-entra 0.2s ease;
+}
+
+@keyframes modal-adicional-entra {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-error {
+  margin: 0 0 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  background: var(--danger-soft);
+  font-size: 0.83rem;
+}
+
+.modal-error--campo { display: block; }
+
+/* ── Botones del pie ── */
+
+.modal-btn {
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-base);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
+}
+
+.modal-btn:hover:not(:disabled) { background: var(--surface-subtle); }
+.modal-btn:active:not(:disabled) { transform: scale(0.985); }
+
+.modal-btn--primary {
+  border-color: transparent;
+  color: var(--on-primary);
+  background: var(--avisens-deep);
+  font-weight: 700;
+}
+
+.modal-btn--primary:hover:not(:disabled) { background: var(--primary-hover); }
+.modal-btn--danger {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border-default));
+  color: var(--danger3);
+  background: var(--surface-base);
+}
+.modal-btn--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border-default));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-base));
+}
+.modal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.modal-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .modal-velo { padding: 0; align-items: flex-end; }
+  .modal-tarjeta {
+    max-width: none;
+    max-height: 94dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  /* En el móvil el modal es una hoja a pantalla completa y el operario lo usa
+     con una mano dentro del galpón: una columna, campos anchos. Antes esta
+     regla repetía el valor que ya tenía la base y no cambiaba nada. */
+  .modal-fila { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-adicional { animation: none; }
+  .modal-btn,
+  .modal-cerrar,
+  .modal-campo input,
+  .modal-campo select { transition: none; }
+  .modal-btn:active:not(:disabled) { transform: none; }
+}
+
+/* Aclaración bajo un campo cuando su desplegable llega vacío o necesita
+   contexto. No es un error: no lleva rol de alerta. */
+.modal-ayuda {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+/* Un campo de casilla se lee en horizontal: la casilla delante y su texto al
+   lado. Sin esto hereda la columna de .modal-campo y la casilla queda encima
+   de su propia etiqueta, separada de ella. */
+.modal-campo--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.modal-campo--check input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.modal-campo--check > span {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+/* Confirmaciones breves: la identidad del registro y la decisión se leen juntas. */
+.modal-tarjeta--compacta { max-width: 440px; }
+.modal-tarjeta--compacta .modal-cabecera { align-items: center; gap: var(--space-3); padding: var(--space-5) var(--space-5) var(--space-3); border-bottom: 0; }
+.modal-tarjeta--compacta .modal-titulo { font-size: 1.25rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.modal-tarjeta--compacta .modal-cuerpo { padding: 0 var(--space-5) var(--space-5); }
+.modal-tarjeta--compacta .modal-pie { padding: var(--space-4) var(--space-5); flex-wrap: wrap; }
+.modal-tarjeta--compacta .modal-pie .modal-btn { min-width: 100px; min-height: 44px; height: auto; padding: 0.65rem 1rem; font-size: 0.875rem; white-space: normal; overflow-wrap: anywhere; }
+.modal-cerrar:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 620px) {
+  .modal-velo:has(.modal-tarjeta--compacta) { padding: var(--space-4); align-items: center; }
+  .modal-tarjeta--compacta { max-width: 440px; max-height: calc(100dvh - 32px); border-radius: var(--radius-xl); }
+  .modal-tarjeta--compacta .modal-cabecera { padding: var(--space-4) var(--space-4) var(--space-3); }
+  .modal-tarjeta--compacta .modal-cuerpo { padding: 0 var(--space-4) var(--space-4); }
+  .modal-tarjeta--compacta .modal-pie { padding: var(--space-3) var(--space-4); }
+  .modal-tarjeta--compacta .modal-pie .modal-btn { flex: 1 1 110px; }
+}
+
+/* Campo que no pasó la validación: recuadro rojo junto a su mensaje. */
+.modal-campo input[aria-invalid='true'],
+.modal-campo select[aria-invalid='true'],
+.modal-campo textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+/* ── Variante panel emergente lateral derecho (no desplaza la página) ── */
+.modal-velo--lateral {
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.modal-tarjeta--lateral {
+  position: relative;
+  width: min(500px, calc(100vw - 24px));
+  max-width: none;
+  height: calc(100dvh - 24px);
+  max-height: calc(100dvh - 24px);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border-subtle));
+  border-radius: 20px;
+  background: var(--surface-base);
+  box-shadow: -16px 24px 64px -24px rgb(15 39 32 / 0.34), var(--shadow-lg);
+}
+
+.modal-tarjeta--lateral.modal-tarjeta--ancha {
+  width: min(620px, calc(100vw - 24px));
+}
+
+.modal-tarjeta--lateral .modal-cabecera {
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.25rem 1.4rem;
+  background: linear-gradient(180deg, var(--surface-tinted) 0%, var(--surface-base) 100%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.modal-icono-caja {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-base));
+  color: var(--primary);
+}
+
+.modal-tarjeta--lateral .modal-titulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.modal-tarjeta--lateral .modal-sub {
+  margin-top: 2px;
+  font-size: 0.81rem;
+  color: var(--text-secondary);
+}
+
+.modal-tarjeta--lateral .modal-cerrar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.modal-tarjeta--lateral .modal-cuerpo {
+  padding: 1.35rem 1.45rem;
+}
+
+.modal-tarjeta--lateral .modal-campo {
+  gap: 0.36rem;
+  margin-bottom: 1rem;
+}
+
+.modal-tarjeta--lateral .modal-campo > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.modal-tarjeta--lateral .modal-campo input,
+.modal-tarjeta--lateral .modal-campo select,
+.modal-tarjeta--lateral .modal-campo textarea {
+  min-height: 42px;
+  border-color: var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-page) 55%, var(--surface-base));
+}
+
+.modal-tarjeta--lateral .modal-campo input:hover,
+.modal-tarjeta--lateral .modal-campo select:hover,
+.modal-tarjeta--lateral .modal-campo textarea:hover {
+  border-color: var(--border-default);
+}
+
+.modal-tarjeta--lateral .modal-campo input:focus-visible,
+.modal-tarjeta--lateral .modal-campo select:focus-visible,
+.modal-tarjeta--lateral .modal-campo textarea:focus-visible {
+  background: var(--surface-base);
+}
+
+.modal-tarjeta--lateral .modal-desplegar {
+  padding: 0.7rem 0.85rem;
+  background: color-mix(in srgb, var(--surface-tinted) 70%, transparent);
+}
+
+.modal-tarjeta--lateral .modal-pie {
+  padding: 1rem 1.45rem;
+  background: var(--surface-tinted);
+}
+
+.modal-tarjeta--lateral .modal-pie .modal-btn--primary {
+  min-width: 148px;
+}
+
+@media (max-width: 620px) {
+  .modal-velo--lateral {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-tarjeta--lateral,
+  .modal-tarjeta--lateral.modal-tarjeta--ancha {
+    width: 100%;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-tarjeta--lateral .modal-pie {
+    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+  }
+
+  .modal-tarjeta--lateral .modal-pie .modal-btn--primary {
+    min-width: 0;
+    flex: 1 1 160px;
+  }
+}

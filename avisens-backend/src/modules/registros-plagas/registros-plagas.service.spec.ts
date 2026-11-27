@@ -16,7 +16,7 @@ describe('RegistrosPlagasService', () => {
       delete: jest.fn(),
     },
     lote: { findUnique: jest.fn() },
-    inventarioInsumo: { findUnique: jest.fn() },
+    inventarioInsumo: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -52,9 +52,9 @@ describe('RegistrosPlagasService', () => {
     prisma.$transaction.mockResolvedValue([[], 0]);
     prisma.lote.findUnique.mockResolvedValue({
       id: 3,
-      galpon: { granja: { propietario_id: 5 } },
+      galpon: { granja: { id: 7, propietario_id: 5 } },
     });
-    prisma.inventarioInsumo.findUnique.mockResolvedValue({ id: 3 });
+    prisma.inventarioInsumo.findFirst.mockResolvedValue({ id: 3 });
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -72,7 +72,7 @@ describe('RegistrosPlagasService', () => {
     });
 
     it('valida el insumo cuando viene insumo_id (404 si no existe)', async () => {
-      prisma.inventarioInsumo.findUnique.mockResolvedValue(null);
+      prisma.inventarioInsumo.findFirst.mockResolvedValue(null);
 
       await expect(
         service.crear({ ...dtoCrear, insumo_id: 99 }, propietario),
@@ -85,13 +85,13 @@ describe('RegistrosPlagasService', () => {
 
       await service.crear(dtoCrear, propietario);
 
-      expect(prisma.inventarioInsumo.findUnique).not.toHaveBeenCalled();
+      expect(prisma.inventarioInsumo.findFirst).not.toHaveBeenCalled();
     });
 
     it('un Propietario no puede registrar en un lote ajeno (403)', async () => {
       prisma.lote.findUnique.mockResolvedValue({
         id: 3,
-        galpon: { granja: { propietario_id: 999 } },
+        galpon: { granja: { id: 7, propietario_id: 999 } },
       });
 
       await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(

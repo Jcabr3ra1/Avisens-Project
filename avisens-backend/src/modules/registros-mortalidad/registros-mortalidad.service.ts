@@ -4,11 +4,12 @@ import { CreateRegistroMortalidadDto } from './dto/create-registro-mortalidad.dt
 import { UpdateRegistroMortalidadDto } from './dto/update-registro-mortalidad.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { Solicitante } from '../../common/auth/acceso';
 import {
-  esPropietario,
-  verificarDueno,
-  Solicitante,
-} from '../../common/acceso';
+  filtroRegistrosDeLote,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 
 const MORTALIDAD_SELECT = {
   id: true,
@@ -21,6 +22,7 @@ const MORTALIDAD_SELECT = {
   usuario_id: true,
   metodo_registro: true,
   observaciones: true,
+  foto_mime_type: true,
   fecha_registro: true,
   lote: {
     select: {
@@ -45,10 +47,12 @@ export class RegistrosMortalidadService {
     });
 
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes registrar mortalidad de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 
@@ -71,9 +75,7 @@ export class RegistrosMortalidadService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
-      : undefined;
+    const where = filtroRegistrosDeLote(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.registroMortalidad.findMany({
@@ -97,10 +99,12 @@ export class RegistrosMortalidadService {
 
     if (!registro)
       throw new NotFoundException('Registro de mortalidad no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      registro.lote_id,
       solicitante,
-      registro.lote.galpon.granja.propietario_id,
       'Solo puedes ver mortalidad de tus propios lotes',
+      registro.lote.galpon.granja.propietario_id,
     );
     return registro;
   }
@@ -136,5 +140,41 @@ export class RegistrosMortalidadService {
 
     await this.prisma.registroMortalidad.delete({ where: { id } });
     return { id, eliminado: true };
+  }
+
+  async subirFoto(id: number, cuerpo: unknown, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+    await this.prisma.registroMortalidad.update({
+      where: { id },
+      data: { foto: buffer, foto_mime_type: mimeType },
+    });
+    return { id, tiene_foto: true, mime_type: mimeType, tamano_bytes: tamano };
+  }
+
+  async obtenerFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const registro = await this.prisma.registroMortalidad.findUnique({
+      where: { id },
+      select: { foto: true, foto_mime_type: true },
+    });
+    if (!registro?.foto || !registro.foto_mime_type) {
+      throw new NotFoundException(
+        'Este registro de mortalidad no tiene foto almacenada',
+      );
+    }
+    return {
+      buffer: Buffer.from(registro.foto),
+      mimeType: registro.foto_mime_type,
+    };
+  }
+
+  async eliminarFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    await this.prisma.registroMortalidad.update({
+      where: { id },
+      data: { foto: null, foto_mime_type: null },
+    });
+    return { id, tiene_foto: false };
   }
 }

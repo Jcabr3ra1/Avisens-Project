@@ -1,0 +1,15 @@
+meta {
+  name: [Todos] Alertas tempranas del lote
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v1/predicciones/lote/1/anomalias
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

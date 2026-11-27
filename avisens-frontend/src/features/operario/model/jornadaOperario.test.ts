@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest'
+import type { GalponOperario, LoteOperario } from '../api/operario'
+import { crearJornadasOperario } from './jornadaOperario'
+
+const galpon = (id: number, activo = true): GalponOperario => ({
+  id,
+  codigo: `GAL-${id}`,
+  nombre: `Galpón ${id}`,
+  activo,
+  granja: { id: 1, nombre: 'Granja 1' },
+})
+
+const lote = (id: number, galponId: number, estado: LoteOperario['estado'] = 'activo', aves = 100): LoteOperario => ({
+  id,
+  codigo: `LOT-${id}`,
+  fecha_ingreso: '2026-11-01',
+  cantidad_inicial: aves,
+  estado,
+  galpon: { id: galponId, nombre: `Galpón ${galponId}` },
+})
+
+describe('crearJornadasOperario', () => {
+  it('descarta galpones inactivos y toma solo el lote activo de cada galpón', () => {
+    const jornadas = crearJornadasOperario(
+      [galpon(1), galpon(2), galpon(3, false)],
+      [lote(10, 1, 'finalizado'), lote(11, 1), lote(12, 3)],
+    )
+    expect(jornadas.map((jornada) => jornada.galpon.id)).toEqual([1, 2])
+    expect(jornadas[0].lote?.id).toBe(11)
+    expect(jornadas[0].lotesActivos.map((item) => item.id)).toEqual([11])
+    expect(jornadas[1].lote).toBeNull()
+  })
+
+  it('conserva todos los lotes activos de un galpón ordenados por ingreso más reciente', () => {
+    const antiguo: LoteOperario = { ...lote(1, 1), fecha_ingreso: '2026-10-10' }
+    const reciente: LoteOperario = { ...lote(2, 1), fecha_ingreso: '2026-11-15' }
+    const jornadas = crearJornadasOperario([galpon(1)], [antiguo, reciente])
+    expect(jornadas[0].lote?.id).toBe(2)
+    expect(jornadas[0].lotesActivos.map((item) => item.id)).toEqual([2, 1])
+  })
+})

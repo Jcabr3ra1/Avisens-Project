@@ -7,34 +7,37 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { GalponesService } from './galpones.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('galpones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('galpones')
 export class GalponesController {
   constructor(private galponesService: GalponesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Crear un galpón en una granja' })
   crear(@Body() dto: CreateGalponDto, @Req() req: AuthRequest) {
     return this.galponesService.crear(dto, req.user);
@@ -49,6 +52,38 @@ export class GalponesController {
     return this.galponesService.listar(req.user, paginacion);
   }
 
+  @Get(':id/foto')
+  @ApiOperation({ summary: 'Obtener la fotografía almacenada del galpón' })
+  async foto(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } = await this.galponesService.obtenerFoto(
+      id,
+      req.user,
+    );
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
+  }
+
+  @Put(':id/foto')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary: 'Subir o actualizar la fotografía del galpón (JPG/PNG/WebP, máx. 3 MB)',
+  })
+  subirFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.galponesService.subirFoto(id, req.body, req.user);
+  }
+
+  @Delete(':id/foto')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Eliminar la fotografía almacenada del galpón' })
+  eliminarFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.galponesService.eliminarFoto(id, req.user);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un galpón por ID' })
   obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
@@ -56,6 +91,7 @@ export class GalponesController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un galpón' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -66,18 +102,21 @@ export class GalponesController {
   }
 
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un galpón' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.galponesService.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar un galpón (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.galponesService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un galpón de forma permanente (casos legales)',
   })

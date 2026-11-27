@@ -1,0 +1,21 @@
+meta {
+  name: Cámara del galpón (último análisis e historial)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/analisis-vision/galpon/1/camara
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Último análisis de la ESP32-CAM del galpón (pollos con caja, estado normal /
+  quieto / posible_muerto y minutos quieto) y el conteo de las últimas 60 fotos.
+  "ultimo" es null si el galpón no tiene cámara. 403 sin acceso al galpón.
+}

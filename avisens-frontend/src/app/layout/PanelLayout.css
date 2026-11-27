@@ -1,61 +1,151 @@
-/* ═══════════════════════════════════════════════════════ */
-/* ════════ PanelLayout — shell de la app interna ═══════ */
-/* ═══════════════════════════════════════════════════════ */
 .dash-page {
-  --dash-bg: #f5f9f7;
-  --dash-surface: rgba(255, 255, 255, 0.9);
-  --dash-surface-strong: #ffffff;
-  --dash-ink: #0a1a14;
-  --dash-muted: #4a6b58;
-  --dash-line: rgba(10, 26, 20, 0.08);
-  --dash-shadow: 0 18px 48px rgba(10, 40, 28, 0.08);
-  min-height: 100vh;
+  --dash-ink: var(--text-primary);
+  width: 100%;
+  height: 100dvh;
+  overflow: clip;
+  color: var(--text-primary);
+  background: var(--surface-page);
+}
+
+.dash-shell {
   display: flex;
-  background:
-    linear-gradient(150deg, rgba(16, 185, 129, 0.06), transparent 40%),
-    linear-gradient(320deg, rgba(16, 185, 129, 0.04), transparent 36%),
-    var(--dash-bg);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  position: relative;
-  isolation: isolate;
-}
-
-.dash-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(10, 26, 20, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 26, 20, 0.02) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-}
-
-.mono {
-  font-family: 'DM Mono', monospace;
-  font-feature-settings: 'tnum';
-}
-
-/* ─── Main column ─── */
-.dash-main {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
 }
 
-/* Contenedor base para páginas internas aún sin maquetar (placeholders) */
+.dash-content {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--space-3);
+}
+
+.dash-acciones-superiores {
+  --header-control-size: 52px;
+  --header-control-radius: 14px;
+  position: relative;
+  z-index: 30;
+  display: flex;
+  width: 100%;
+  min-height: var(--header-control-size);
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-1) calc(clamp(var(--space-4), 2.4vw, var(--space-6)) + 10px) 0 0;
+}
+
+.dash-header-perfil {
+  --perfil-avatar-size: 40px;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 300px;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--header-control-size);
+  padding: 5px 16px 5px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--header-control-radius);
+  background: var(--surface-base);
+  color: inherit;
+  text-decoration: none;
+  user-select: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.dash-header-perfil:hover { border-color: var(--border-strong); background: var(--surface-subtle); }
+.dash-header-perfil:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.dash-header-perfil-foto {
+  display: grid;
+  width: var(--perfil-avatar-size);
+  height: var(--perfil-avatar-size);
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+}
+
+.dash-header-perfil-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-header-perfil-copy strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-header-perfil-copy small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-main .page-container { padding-top: var(--space-3); }
+
+.dash-main {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-radius: var(--radius-xl);
+  background: var(--surface-page);
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.dash-main::-webkit-scrollbar { width: 10px; }
+.dash-main::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+.dash-view {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  animation: dash-view-in var(--motion-base) var(--ease-standard) both;
+}
+
+@keyframes dash-view-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .page-container {
-  padding: 28px 30px;
+  flex: 1;
   color: var(--dash-ink);
 }
 
-/* ─── Shared status pulse (Sidebar + ContextHeader) ─── */
+.dash-mobile-header,
+.dash-sidebar-backdrop {
+  display: none;
+}
+
 .dash-status-pulse {
   position: relative;
   display: inline-flex;
@@ -66,43 +156,278 @@
 .dash-status-pulse .dot {
   width: 7px;
   height: 7px;
-  border-radius: 4px;
-  background: var(--green);
+  border-radius: var(--radius-full);
+  background: var(--success);
 }
 
 .dash-status-pulse .ring {
   position: absolute;
   inset: -3px;
-  border-radius: 10px;
-  border: 1.5px solid var(--green);
+  border: 1.5px solid var(--success);
+  border-radius: var(--radius-full);
   opacity: 0.5;
-  animation: dash-pulseRing 1.8s ease-out infinite;
+  animation: dash-pulse-ring 1.8s ease-out infinite;
 }
 
-@keyframes dash-pulseRing {
-  0%   { transform: scale(0.9); opacity: 0.6; }
-  100% { transform: scale(2.2); opacity: 0; }
+@keyframes dash-pulse-ring {
+  from { opacity: 0.55; transform: scale(0.9); }
+  to { opacity: 0; transform: scale(2.2); }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 900px) {
   .dash-page {
-    display: block;
+    height: 100dvh;
+    background: var(--surface-page);
   }
-  /* El sidebar se vuelve una barra fija de 68px al fondo — sin este espacio,
-     tapa el final del contenido de cada página en el celular. */
-  .dash-main {
-    padding-bottom: 78px;
+
+  .dash-content { padding: 0; }
+
+  .dash-acciones-superiores { --header-control-size: 44px; --header-control-radius: 13px; position: absolute; top: 8px; right: var(--space-4); width: auto; min-height: 0; padding: 0; }
+  .dash-main .page-container { padding-top: var(--space-4); }
+  .dash-content > .dash-mobile-header { padding-right: calc(var(--space-4) + 110px); }
+  .dash-header-perfil { --perfil-avatar-size: 36px; padding: 3px; }
+  .dash-header-perfil-copy { display: none; }
+  .dash-acciones-superiores .dash-topbar-titulo,
+  .dash-acciones-superiores .dash-topbar-buscar { display: none; }
+
+  .dash-mobile-header {
+    position: relative;
+    z-index: 25;
+    display: flex;
+    min-height: 60px;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 0 var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--surface-base);
+  }
+
+  .dash-mobile-menu,
+  .dash-mobile-search {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--primary);
+    background: var(--surface-base);
+  }
+
+  .dash-mobile-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .dash-mobile-brand img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+
+  .dash-mobile-location {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dash-main { border-radius: 0; }
+
+  .dash-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: block;
+    border: 0;
+    background: color-mix(in srgb, var(--avisens-ink) 54%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-base) var(--ease-standard);
+  }
+
+  .dash-sidebar-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dash-status-pulse .ring {
-    animation: none;
+  .dash-view,
+  .dash-status-pulse .ring { animation: none; }
+}
+
+body[data-tab-hidden="true"] .dash-status-pulse .ring {
+  animation-play-state: paused !important;
+}
+
+@media (max-width: 30rem) {
+  .dash-mobile-brand { display: none; }
+  .dash-mobile-location { font-size: 0.95rem; font-weight: 750; }
+}
+
+/* ─── Marco único: riel, navegación y barra superior en una sola superficie ─── */
+@media (min-width: 901px) {
+  .dash-page {
+    background: var(--shell-bg);
+  }
+
+  .dash-shell {
+    overflow: hidden;
+    background: var(--shell-bg);
+  }
+
+  .dash-sidebar { --sidebar-rail: var(--shell-bg); }
+
+
+
+  /* Barra superior sobre el mismo verde del menú: se leen como una sola pieza. */
+  .dash-acciones-superiores .dash-topbar-titulo { color: var(--on-primary-muted); }
+  .dash-acciones-superiores .dash-topbar-titulo strong { color: var(--on-primary); }
+
+  .dash-topbar-buscar {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+    color: var(--on-primary-muted) !important;
+  }
+
+  .dash-topbar-buscar:hover { border-color: color-mix(in srgb, var(--avisens-cream) 28%, transparent) !important; }
+
+  .dash-topbar-buscar kbd {
+    border-color: color-mix(in srgb, var(--avisens-cream) 25%, transparent) !important;
+    background: transparent !important;
+    color: var(--on-primary-muted) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-boton {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+    color: var(--avisens-cream) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-boton:hover,
+  .dash-acciones-superiores .dash-campana-boton.abierta {
+    background: color-mix(in srgb, var(--avisens-cream) 20%, transparent) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-punto { border-color: var(--shell-bg); }
+  .dash-acciones-superiores .dash-campana-boton svg { color: var(--avisens-cream); }
+
+  .dash-acciones-superiores .dash-header-perfil {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+  }
+
+  .dash-acciones-superiores .dash-header-perfil:hover { background: color-mix(in srgb, var(--avisens-cream) 20%, transparent) !important; }
+  .dash-acciones-superiores .dash-header-perfil-copy strong { color: var(--on-primary); }
+  .dash-acciones-superiores .dash-header-perfil-copy small { color: var(--on-primary-muted); }
+
+  .dash-acciones-superiores :is(button, a):focus-visible { outline-color: var(--avisens-maize); }
+
+  .dash-content {
+    padding: 0 12px 12px 6px;
+  }
+
+  .dash-acciones-superiores {
+    --header-control-size: 42px;
+    --header-control-radius: 999px;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    min-height: 68px;
+    padding: 10px 6px 10px 14px;
+  }
+
+  .dash-topbar-titulo {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .dash-topbar-titulo strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dash-topbar-titulo svg { flex: 0 0 auto; opacity: 0.6; }
+
+  .dash-topbar-buscar {
+    display: inline-flex;
+    width: clamp(220px, 24vw, 320px);
+    height: var(--header-control-size);
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 0.6rem 0 1rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--surface-tinted);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.84rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+  }
+
+  .dash-topbar-buscar span { flex: 1; }
+
+  .dash-topbar-buscar kbd {
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    background: var(--surface-base);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .dash-topbar-buscar:hover { border-color: var(--border-default); background: var(--surface-subtle); }
+  .dash-topbar-buscar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  .dash-acciones-superiores .dash-campana-boton {
+    border-color: transparent;
+    background: var(--surface-tinted);
+  }
+
+  .dash-header-perfil {
+    --perfil-avatar-size: 34px;
+    padding: 4px 14px 4px 4px;
+    border-color: transparent;
+    background: var(--surface-tinted);
+  }
+
+  .dash-header-perfil-foto { border-radius: 50%; }
+
+  .dash-main {
+    border: 0;
+    border-radius: 22px;
+    background: var(--surface-page);
+  }
+
+  .dash-main .page-container {
+    padding: var(--space-5) clamp(var(--space-4), 2vw, var(--space-6)) var(--space-7);
   }
 }
 
-/* ─── Pausa animaciones del shell cuando la pestaña no es visible ─── */
-body[data-tab-hidden="true"] .dash-status-pulse .ring,
-body[data-tab-hidden="true"] .dash-side-status::before {
-  animation-play-state: paused !important;
+/* ─── Escala común de títulos: todas las vistas con el mismo tamaño ─── */
+.dash-main .page-container h1 {
+  font-size: clamp(1.5rem, 1.15rem + 0.9vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
 }

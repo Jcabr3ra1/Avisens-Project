@@ -1,0 +1,119 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
+import type { SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { iconoSensor } from '@shared/ui/sensorIcon'
+import { useSerieSensor } from '../hooks/useSerieSensor'
+import { etiquetaEstado, rangoUmbral } from '../model/metricas'
+
+const GraficoSerie = lazy(() => import('@shared/ui/graficos/GraficoSerie'))
+
+function DetalleSensor({ sensor }: { sensor: SensorVista }) {
+  const { serie, resumen, cargando } = useSerieSensor(sensor.id)
+
+  return (
+    <div className="dash-metrica-detalle">
+      <div className="dash-metrica-cabecera">
+        <div>
+          <h3 className="dash-metrica-titulo">{sensor.tipo}</h3>
+          <p className="dash-metrica-umbral">
+            {rangoUmbral(sensor.minUmbral, sensor.maxUmbral, sensor.unidad)}
+          </p>
+          {sensor.sinCalibrar && sensor.valor !== null && (
+            <span
+              className="dash-metrica-badge dash-metrica-badge--advertencia"
+              title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada."
+            >
+              Sin calibrar
+            </span>
+          )}
+        </div>
+        <span className={`dash-metrica-badge dash-metrica-badge--${sensor.estado}`}>
+          {etiquetaEstado(sensor.estado)}
+        </span>
+      </div>
+
+      <div className="dash-metrica-cifras">
+        <span className="dash-metrica-actual mono">
+          {sensor.valor ?? '—'}
+          <span className="dash-metrica-unidad">{sensor.unidad}</span>
+        </span>
+        <dl className="dash-metrica-extremos">
+          <div><dt>Mín</dt><dd className="mono">{resumen.minimo ?? '—'}</dd></div>
+          <div><dt>Prom</dt><dd className="mono">{resumen.promedio ?? '—'}</dd></div>
+          <div><dt>Máx</dt><dd className="mono">{resumen.maximo ?? '—'}</dd></div>
+        </dl>
+      </div>
+
+      {cargando ? (
+        <p className="dash-metrica-vacio" role="status">Cargando lecturas…</p>
+      ) : serie.length === 0 ? (
+        <p className="dash-metrica-vacio">
+          Este sensor no ha reportado en las últimas 24 horas.
+        </p>
+      ) : (
+        <Suspense fallback={<p className="dash-metrica-vacio" role="status">Cargando gráfico…</p>}>
+          <GraficoSerie
+            puntos={serie.map((punto) => ({ etiqueta: punto.hora, valor: punto.valor }))}
+            unidad={sensor.unidad}
+            minimo={sensor.minUmbral}
+            maximo={sensor.maxUmbral}
+            descripcion={`Lecturas de ${sensor.tipo} en las últimas 24 horas, entre ${resumen.minimo ?? '—'} y ${resumen.maximo ?? '—'} ${sensor.unidad}`}
+          />
+        </Suspense>
+      )}
+    </div>
+  )
+}
+
+function PanelMetricas({ sensores }: { sensores: SensorVista[] }) {
+  const [sensorId, setSensorId] = useState<number | null>(sensores[0]?.id ?? null)
+
+  // Al cambiar de galpón los sensores son otros: si no se reinicia, la
+  // pestaña activa apunta a un sensor que ya no está en la lista.
+  useEffect(() => {
+    setSensorId((actual) =>
+      actual !== null && sensores.some((s) => s.id === actual) ? actual : sensores[0]?.id ?? null,
+    )
+  }, [sensores])
+
+  if (sensores.length === 0) {
+    return (
+      <section className="dash-metricas dash-metricas--vacio">
+        <p>Este galpón no tiene sensores registrados.</p>
+      </section>
+    )
+  }
+
+  const activo = sensores.find((sensor) => sensor.id === sensorId) ?? sensores[0]
+
+  return (
+    <section className="dash-metricas" aria-label="Lecturas de los sensores del galpón">
+      <div className="dash-metricas-tabs" role="tablist" aria-label="Sensores">
+        {sensores.map((sensor) => (
+          <button
+            key={sensor.id}
+            type="button"
+            role="tab"
+            aria-selected={sensor.id === activo.id}
+            className={`dash-metrica-tab${sensor.id === activo.id ? ' es-activo' : ''}`}
+            onClick={() => setSensorId(sensor.id)}
+          >
+            <span className="dash-metrica-tab-icono">{iconoSensor(sensor.tipo, 15)}</span>
+            <span className="dash-metrica-tab-texto">
+              <span className="dash-metrica-tab-tipo">{sensor.tipo}</span>
+              <span className="dash-metrica-tab-valor mono">
+                {sensor.valor ?? '—'}
+                <span className="dash-metrica-tab-unidad">{sensor.unidad}</span>
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="dash-metricas-cuerpo" role="tabpanel">
+        <DetalleSensor key={activo.id} sensor={activo} />
+      </div>
+    </section>
+  )
+}
+
+export default PanelMetricas

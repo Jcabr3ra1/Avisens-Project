@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Activar un dispositivo
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/v1/dispositivos/1/activar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

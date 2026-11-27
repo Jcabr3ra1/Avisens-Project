@@ -16,16 +16,18 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { LotesService } from './lotes.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
+import { DatosLoteDto } from './dto/datos-lote.dto';
+import { CerrarLoteDto } from './dto/cerrar-lote.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }
@@ -33,12 +35,13 @@ interface AuthRequest extends Request {
 @ApiTags('lotes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('lotes')
 export class LotesController {
   constructor(private lotesService: LotesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Registrar un lote en un galpon' })
   crear(@Body() dto: CreateLoteDto, @Req() req: AuthRequest) {
     return this.lotesService.crear(dto, req.user);
@@ -60,6 +63,7 @@ export class LotesController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un lote' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -69,19 +73,50 @@ export class LotesController {
     return this.lotesService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/datos')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Completar los datos descriptivos de un lote (línea genética, sexo, marca de alimento)',
+  })
+  actualizarDatos(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DatosLoteDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.lotesService.actualizar(id, dto, req.user);
+  }
+
+  @Patch(':id/cerrar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Cerrar un lote activo con liquidación de venta, validando días faltantes y registrando ingreso financiero',
+  })
+  cerrar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CerrarLoteDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.lotesService.cerrar(id, dto, req.user);
+  }
+
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un lote' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.lotesService.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar un lote (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.lotesService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un lote de forma permanente (casos legales)',
   })

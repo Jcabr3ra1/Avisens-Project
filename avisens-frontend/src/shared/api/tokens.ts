@@ -6,6 +6,7 @@ import type { UsuarioSesion } from './types'
 const ACCESS_KEY = 'avisens_access_token'
 const REFRESH_KEY = 'avisens_refresh_token'
 const USER_KEY = 'avisens_usuario'
+const CAMBIO_PASSWORD_KEY = 'avisens_cambio_password_token'
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY)
@@ -18,6 +19,18 @@ export function getRefreshToken(): string | null {
 export function setTokens(accessToken: string, refreshToken: string): void {
   localStorage.setItem(ACCESS_KEY, accessToken)
   localStorage.setItem(REFRESH_KEY, refreshToken)
+}
+
+export function setCambioPasswordToken(token: string): void {
+  sessionStorage.setItem(CAMBIO_PASSWORD_KEY, token)
+}
+
+export function getCambioPasswordToken(): string | null {
+  return sessionStorage.getItem(CAMBIO_PASSWORD_KEY)
+}
+
+export function clearCambioPasswordToken(): void {
+  sessionStorage.removeItem(CAMBIO_PASSWORD_KEY)
 }
 
 // --- Sesión: el usuario logueado (incluye su rol) ---
@@ -46,4 +59,5 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(USER_KEY)
+  clearCambioPasswordToken()
 }

@@ -1,0 +1,27 @@
+meta {
+  name: [Admin · Propietario]  Reporte financiero por ciclo
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/movimientos-financieros/reporte?lote_id=1
+  body: none
+  auth: bearer
+}
+
+params:query {
+  lote_id: 1
+  ~fecha_desde: 2026-09-01
+  ~fecha_hasta: 2026-11-30
+  ~granja_id: 1
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  HU-33. Por lote (ciclo completo) con lote_id, o por periodo con
+  fecha_desde y fecha_hasta (opcional granja_id). No se combinan.
+}

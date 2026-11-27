@@ -1,0 +1,11 @@
+-- El estado del galpon, la energia y el internet dejan de restar puntaje
+-- comercial y pasan a ser un semaforo aparte.
+--
+-- Mezclarlos con la intencion de compra enfriaba a prospectos que si querian
+-- comprar: un ganadero con 20.000 aves y mortalidad recurrente puntuaba bajo
+-- solo porque su galpon estaba viejo. Eso no es un prospecto frio, es uno
+-- caliente con una obra previa, y el asesor necesita saber las dos cosas por
+-- separado.
+--
+-- instalable | requiere_adecuacion | no_viable
+ALTER TABLE "prospectos" ADD COLUMN "viabilidad_tecnica" TEXT;

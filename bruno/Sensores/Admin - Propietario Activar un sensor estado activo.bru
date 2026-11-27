@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Activar un sensor (estado → activo)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/sensores/1/activar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

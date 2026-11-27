@@ -1,0 +1,26 @@
+meta {
+  name: [Admin · Propietario]  Actualizar un pesaje
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/pesajes/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "peso_promedio_g": 1880,
+    "observaciones": "Corrección de peso"
+  }
+}

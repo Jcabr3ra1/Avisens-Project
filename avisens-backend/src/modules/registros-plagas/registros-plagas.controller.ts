@@ -16,7 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { RegistrosPlagasService } from './registros-plagas.service';
 import { CreateRegistroPlagaDto } from './dto/create-registro-plaga.dto';
 import { UpdateRegistroPlagaDto } from './dto/update-registro-plaga.dto';
@@ -25,7 +25,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }
@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('registros-plagas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('registros-plagas')
 export class RegistrosPlagasController {
   constructor(private registrosPlagasService: RegistrosPlagasService) {}
@@ -69,7 +69,12 @@ export class RegistrosPlagasController {
     return this.registrosPlagasService.actualizar(id, dto, req.user);
   }
 
+  // Borrar no es registrar. El operario carga y corrige lo del día con POST y
+  // PATCH, pero un registro borrado desaparece del histórico que alimenta los
+  // indicadores y las alertas de desvío, y el alcance por galpón le dejaba
+  // borrar también lo que cargó un compañero días atrás.
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar un registro de plaga' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.registrosPlagasService.eliminar(id, req.user);

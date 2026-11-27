@@ -20,6 +20,7 @@
 *.woff2 binary
 *.ttf   binary
 *.jar   binary
+*.onnx  binary
 
 # Lockfiles y generados: no cuentan para las estadísticas de lenguaje de GitHub
 # y se muestran colapsados en los diffs.

@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Estadísticas de alertas
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/alertas/estadisticas/resumen
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

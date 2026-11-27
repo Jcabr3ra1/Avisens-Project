@@ -1,0 +1,40 @@
+meta {
+  name: [Admin]  Asignar un asesor al prospecto
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/prospectos/1/asignar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "asesor_id": 1
+  }
+}
+
+docs {
+  LA REVISION HUMANA. El chatbot califica pero NO asigna: `finalizar` deja
+  `asesor_asignado_id` en null a proposito. Que un lead entre a la cola de un
+  vendedor lo decide una persona, no el resultado de un cuestionario.
+
+  Guardas:
+    400  el prospecto no esta en estado 'calificado' (abandono el cuestionario)
+    404  el prospecto no existe
+    404  el asesor no existe o esta INACTIVO (evita asignar leads a alguien que
+         ya no trabaja ahi: no revienta nunca y cuesta ventas)
+
+  Al asignar, el prospecto pasa a `estado: asignado` y desaparece del filtro
+  `sin_asignar=true`.
+}

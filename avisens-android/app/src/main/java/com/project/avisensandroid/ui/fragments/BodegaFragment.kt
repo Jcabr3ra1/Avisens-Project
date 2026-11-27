@@ -98,6 +98,8 @@ class BodegaFragment : BaseBottomNavFragment() {
         binding.btnNuevoInsumo.setOnClickListener {
             activity.mostrarDialogNuevoInsumo()
         }
+
+        // onResume realiza la carga inicial y las recargas al volver de un diálogo.
     }
 
     override fun onResume() {

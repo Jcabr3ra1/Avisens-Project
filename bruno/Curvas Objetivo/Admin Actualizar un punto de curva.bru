@@ -1,0 +1,26 @@
+meta {
+  name: [Admin]  Actualizar un punto de curva
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/curvas-objetivo/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "peso_esperado_g": 1040,
+    "fcr_objetivo": 1.19
+  }
+}

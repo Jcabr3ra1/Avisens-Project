@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Regenerar y revelar el token de ingesta del dispositivo
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/v1/dispositivos/1/token
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

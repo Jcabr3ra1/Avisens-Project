@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Generar alerta de desvio del lote ahora
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/v1/indicadores/1/alerta-desvio
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

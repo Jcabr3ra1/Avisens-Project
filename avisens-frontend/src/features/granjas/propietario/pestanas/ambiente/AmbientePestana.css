@@ -1,0 +1,851 @@
+.amb > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.amb {
+  --calor-confort: var(--success);
+  --calor-atencion: var(--accent);
+  --calor-alerta: color-mix(in srgb, var(--accent) 40%, var(--danger));
+  --calor-peligro: var(--danger);
+  --calor-emergencia: var(--danger3);
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.amb-rotulo {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.amb-rotulo--suave {
+  display: block;
+  margin-bottom: 0.12rem;
+  color: var(--text-muted);
+}
+
+.amb-tarjeta {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.amb-seccion-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amb-seccion-cabecera h3 {
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.amb-seccion-cabecera p {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.amb-conteo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-conteo-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent);
+}
+
+.amb-conteo.is-alerta .amb-conteo-punto {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 22%, transparent);
+}
+
+/* Ahora en el galpón */
+
+.amb-ahora {
+  --acento: var(--success);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  overflow: hidden;
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+}
+
+.amb-ahora::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--acento);
+}
+
+.amb-ahora--atencion { --acento: var(--warning); }
+.amb-ahora--alerta,
+.amb-ahora--peligro,
+.amb-ahora--emergencia { --acento: var(--danger); }
+.amb-ahora--aviso,
+.amb-ahora--cargando { --acento: var(--border-strong); }
+
+.amb-ahora .amb-rotulo {
+  color: var(--text-muted);
+}
+
+.amb-ahora--cargando,
+.amb-ahora--aviso {
+  min-height: 200px;
+}
+
+.amb-ahora--cargando {
+  place-items: center;
+  grid-template-columns: 1fr;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.amb-ahora--cargando span {
+  animation: amb-latido 1.4s ease-in-out infinite;
+}
+
+@keyframes amb-latido {
+  50% { opacity: 0.45; }
+}
+
+.amb-ahora-principal {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.amb-ahora-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amb-ahora-top .amb-rotulo--suave {
+  margin-bottom: 0;
+}
+
+.amb-ahora-titular {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.18rem;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.amb-ahora-titular::first-letter {
+  text-transform: uppercase;
+}
+
+.amb-ahora-medidas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.amb-medida {
+  display: grid;
+  align-content: start;
+  gap: 0.18rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.amb-medida-temp {
+  color: var(--text-primary);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-medida-temp small {
+  margin-left: 0.18rem;
+  color: var(--text-muted);
+  font-size: 0.48em;
+  font-weight: 700;
+  vertical-align: super;
+}
+
+.amb-medida-hum {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.amb-medida-nota {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.amb-ahora-aviso {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.amb-ahora-aviso h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.12rem;
+  font-weight: 750;
+}
+
+.amb-ahora-aviso p {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.amb-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+  padding: 0.55rem 1rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.amb-boton:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.amb-boton:active { transform: translateY(0); }
+.amb-boton:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Termómetro de THI */
+
+.amb-termo {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  padding-top: 1.55rem;
+}
+
+.amb-termo-barra {
+  position: relative;
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+}
+
+.amb-termo-tramo { height: 100%; }
+.amb-termo-tramo:first-child { border-radius: 999px 0 0 999px; }
+.amb-termo-tramo:last-of-type { border-radius: 0 999px 999px 0; }
+.amb-termo-tramo--confort { background: linear-gradient(90deg, color-mix(in srgb, var(--success) 35%, var(--surface-subtle)), var(--success)); }
+.amb-termo-tramo--atencion { background: var(--avisens-maize); }
+.amb-termo-tramo--alerta { background: #e0904a; }
+.amb-termo-tramo--peligro { background: #d4553f; }
+.amb-termo-tramo--emergencia { background: #a8322a; }
+
+.amb-termo-ahora,
+.amb-termo-pico {
+  position: absolute;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 50%;
+}
+
+.amb-termo-ahora {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--surface-base);
+  background: var(--primary);
+  box-shadow: 0 0 0 1.5px var(--primary), var(--shadow-sm);
+}
+
+.amb-termo-pico {
+  width: 10px;
+  height: 10px;
+  border: 2px dashed var(--text-secondary);
+  background: var(--surface-base);
+}
+
+.amb-termo-ahora > span,
+.amb-termo-pico > span {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-termo-pico > span {
+  bottom: auto;
+  top: calc(100% + 8px);
+  color: var(--text-muted);
+  font-weight: 650;
+}
+
+.amb-termo-escala {
+  position: relative;
+  height: 1rem;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-termo-escala span {
+  position: absolute;
+  translate: -50% 0;
+}
+
+.amb-termo-ahora.is-inicio > span,
+.amb-termo-pico.is-inicio > span { left: -4px; translate: 0 0; }
+.amb-termo-ahora.is-final > span,
+.amb-termo-pico.is-final > span { left: auto; right: -4px; translate: 0 0; }
+
+.amb-ahora-consejos {
+  display: grid;
+  align-content: start;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.amb-ahora-consejos ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.amb-ahora-consejos li {
+  position: relative;
+  padding-left: 1.05rem;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.amb-ahora-consejos li::before {
+  content: '';
+  position: absolute;
+  top: 0.52em;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--primary);
+  rotate: 45deg;
+}
+
+.amb-ahora-datos {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+}
+
+.amb-ahora-datos div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amb-ahora-datos dt { color: var(--text-muted); }
+.amb-ahora-datos dd { margin: 0; color: var(--text-primary); font-weight: 700; text-align: right; }
+
+/* Pronóstico por día */
+
+.amb-dias {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.amb-dia {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.95rem 1.05rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.amb-dia:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.amb-dia-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amb-dia-cabecera h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.amb-nivel {
+  padding: 0.14rem 0.6rem;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.amb-nivel--atencion { background: var(--accent-soft); color: var(--warning); }
+.amb-nivel--alerta,
+.amb-nivel--peligro,
+.amb-nivel--emergencia { background: var(--danger-soft); color: var(--danger3); }
+
+.amb-dia-cifra {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.amb-dia-thi {
+  color: var(--text-primary);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-dia--alerta .amb-dia-thi,
+.amb-dia--peligro .amb-dia-thi,
+.amb-dia--emergencia .amb-dia-thi { color: var(--danger3); }
+
+.amb-dia-thi-rotulo {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.amb-dia-temps {
+  display: flex;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.amb-dia-temps b {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-cinta {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  align-items: end;
+  gap: 2px;
+  height: 34px;
+  margin-top: 0.2rem;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.amb-cinta-hora {
+  position: relative;
+  border-radius: 2px 2px 1px 1px;
+  background: var(--calor-confort);
+  transform-origin: bottom;
+  animation: amb-crece 420ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.amb-cinta-hora.is-vacia {
+  height: 3px;
+  background: var(--surface-subtle);
+  animation: none;
+}
+
+.amb-cinta-hora--atencion { background: var(--calor-atencion); }
+.amb-cinta-hora--alerta { background: var(--calor-alerta); }
+.amb-cinta-hora--peligro { background: var(--calor-peligro); }
+.amb-cinta-hora--emergencia { background: var(--calor-emergencia); }
+
+.amb-cinta-hora.is-pico::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  translate: -50% 0;
+}
+
+@keyframes amb-crece {
+  from { transform: scaleY(0.2); opacity: 0; }
+}
+
+.amb-cinta-marcas {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.64rem;
+}
+
+/* Gráfico */
+
+.amb-grafico .grc {
+  --calor-atencion-borde: color-mix(in srgb, var(--accent) 70%, var(--warning));
+}
+
+.amb-fuente {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+/* Sensores */
+
+.amb-sensores {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.amb-sensores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-3);
+}
+
+.amb-sensor {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  width: 100%;
+  overflow: hidden;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.amb-sensor:hover {
+  border-color: var(--border-default);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.amb-sensor:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.amb-sensor.is-activo {
+  border-color: var(--primary);
+  background: var(--surface-base);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 14%, transparent), var(--shadow-sm);
+}
+
+.amb-sensor::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--success);
+}
+
+.amb-sensor--advertencia::before { background: var(--warning); }
+.amb-sensor--critico::before { background: var(--danger); }
+.amb-sensor--sin_umbral::before { background: var(--border-strong); }
+.amb-sensor--offline::before,
+.amb-sensor--lectura_no_disponible::before { background: var(--text-muted); }
+
+.amb-sensor-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.amb-sensor-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-base);
+  color: var(--primary);
+}
+
+.amb-sensor.is-activo .amb-sensor-icono {
+  border-color: color-mix(in srgb, var(--primary) 26%, transparent);
+  background: var(--primary-soft);
+}
+
+.amb-sensor-tipo {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.amb-sensor-estado {
+  flex-shrink: 0;
+  padding: 0.14rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.amb-sensor-estado--optimo { background: var(--success-soft); color: var(--success); }
+.amb-sensor-estado--advertencia { background: var(--accent-soft); color: var(--warning); }
+.amb-sensor-estado--critico { background: var(--danger-soft); color: var(--danger3); }
+
+.amb-sensor-valor-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.amb-sensor-valor {
+  color: var(--text-primary);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-sensor-valor small {
+  margin-left: 0.2rem;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.45em;
+  font-weight: 700;
+}
+
+.amb-sensor-rango {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.amb-sensor-pista {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--warning-soft) 0 25%, color-mix(in srgb, var(--success) 30%, transparent) 25% 75%, var(--warning-soft) 75%);
+}
+
+.amb-sensor-pista span {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface-base);
+  border-radius: 50%;
+  background: var(--primary);
+  translate: -50% -50%;
+  box-shadow: var(--shadow-sm);
+}
+
+.amb-sensor-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.amb-sensor-nota {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.amb-sensor-foco {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+/* Histórico 24 h del sensor seleccionado */
+
+.amb-historia-cabecera {
+  align-items: center;
+}
+
+.amb-historia-titulo {
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.amb-historia-extremos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--border-subtle);
+}
+
+.amb-historia-extremos > div {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.75rem;
+  background: var(--surface-tinted);
+}
+
+.amb-historia-extremos dt {
+  color: var(--text-muted);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.amb-historia-extremos dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-historia-extremos dd small {
+  color: var(--text-muted);
+  font-size: 0.72em;
+  font-weight: 600;
+}
+
+.amb-historia-vacio {
+  margin: 0;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.amb-sin-sensores {
+  justify-items: center;
+  padding: 1.6rem;
+  background: var(--surface-tinted);
+  text-align: center;
+}
+
+.amb-sin-sensores p {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+@media (max-width: 860px) {
+  .amb-ahora {
+    grid-template-columns: 1fr;
+    padding: 1.2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .amb-termo-escala span:not(:first-child) {
+    display: none;
+  }
+
+  .amb-ahora-medidas {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .amb-medida-temp {
+    font-size: 1.75rem;
+  }
+
+  .amb-historia-extremos {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amb-cinta-hora,
+  .amb-ahora--cargando span { animation: none; }
+  .amb-dia,
+  .amb-sensor,
+  .amb-boton { transition: none; }
+}

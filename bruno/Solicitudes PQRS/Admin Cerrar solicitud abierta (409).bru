@@ -1,0 +1,30 @@
+meta {
+  name: [Admin] Cerrar solicitud abierta (409)
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/v1/solicitudes-pqrs/1/responder
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "estado": "cerrada"
+  }
+}
+
+docs {
+  Flujo válido: abierta → en_proceso → resuelta → cerrada.
+  Cerrar sin resolver responde 409; resolver sin respuesta responde 400.
+}

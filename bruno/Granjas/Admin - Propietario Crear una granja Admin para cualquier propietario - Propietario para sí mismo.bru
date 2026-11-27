@@ -1,0 +1,32 @@
+meta {
+  name: [Admin · Propietario]  Crear una granja (Admin: para cualquier propietario · Propietario: para sí mismo)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/granjas
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "nombre": "Granja La Esperanza",
+    "direccion": "Vereda El Progreso km 4",
+    "municipio": "Rionegro",
+    "departamento": "Antioquia",
+    "latitud": 6.1553,
+    "longitud": -75.3739,
+    "area_total_m2": 5000,
+    "propietario_id": 3
+  }
+}

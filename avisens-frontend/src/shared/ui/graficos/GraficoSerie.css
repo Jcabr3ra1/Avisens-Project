@@ -1,0 +1,43 @@
+.gs {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+}
+
+.gs-detalle {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-detalle strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.gs-leyenda {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.gs-clave {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.gs-clave--rango::before {
+  content: '';
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+}

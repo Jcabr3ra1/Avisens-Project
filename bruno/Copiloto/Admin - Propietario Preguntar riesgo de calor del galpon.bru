@@ -1,0 +1,50 @@
+meta {
+  name: [Admin · Propietario]  Preguntar riesgo de calor del galpon
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/copiloto/preguntar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "pregunta": "¿Va a hacer calor en mi galpon hoy? ¿Que debo hacer?"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201 || res.getStatus() === 200) {
+    bru.setEnvVar("conversacion_id", res.getBody().conversacion_id);
+  }
+}
+
+docs {
+  Herramienta `riesgo_calor_galpon` del copiloto.
+
+  Claude cruza el pronostico del clima de la granja con la temperatura y la
+  humedad de los sensores del galpon, calcula el indice THI y responde con el
+  nivel maximo esperado, la hora del pico y que hacer.
+
+  Que revisar en la respuesta:
+  - herramientas_usadas: debe ser 1 o mas (si es 0 y da cifras, las invento).
+    Con un propietario de varios galpones suele ser 2: primero listar_lotes
+    para saber el id del galpon y luego riesgo_calor_galpon.
+  - respuesta: nivel (confort, atencion, alerta, peligro o emergencia), hora
+    del pico en hora de Colombia y recomendaciones de manejo.
+  - visualizaciones: llega vacia, el riesgo se cuenta solo en texto.
+
+  Si el galpon no tiene sensores reportando en la ultima hora, Claude debe
+  decir que el calculo usa solo el clima exterior.
+}

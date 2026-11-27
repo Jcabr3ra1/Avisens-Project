@@ -1,33 +1,54 @@
-// navConfig.tsx — Configuración de la navegación del sidebar.
-// Define las secciones y los ítems del menú lateral del panel interno.
-// Los nombres usan lenguaje campesino: "Día a día", "Plata y cuentas", "Bodega".
-//
-// Visibilidad por rol:
-//   - Sin campo `roles` → visible para TODOS los roles.
-//   - Con `roles`       → visible solo para los roles listados.
-//   - La función `puedeAcceder` también usa esta config como guardia de ruta.
 import type { ReactNode } from 'react'
 import {
-  IcGrid, IcEye, IcDoc, IcAlert, IcCoin, IcBox,
-  IcUsers, IcServer, IcLeaf, IcUserCircle,
+  IcAlert,
+  IcBox,
+  IcChip,
+  IcChat,
+  IcClock,
+  IcCoin,
+  IcDoc,
+  IcEye,
+  IcFan,
+  IcGrid,
+  IcHome,
+  IcLeaf,
+  IcNote,
+  IcRefresh,
+  IcSearch,
+  IcServer,
+  IcThermo,
+  IcUserCircle,
+  IcUsers,
 } from '@shared/ui/icons/icons'
 
-// Roles del sistema (coinciden exactamente con la tabla `roles` del backend).
-export const ROL_ADMIN       = 'Administrador'
+export const ROL_ADMIN = 'Administrador'
 export const ROL_PROPIETARIO = 'Propietario'
-export const ROL_OPERARIO    = 'Operario'
+export const ROL_OPERARIO = 'Operario'
 
-export type NavItem = {
-  path: string
+type NavBase = {
   label: string
   icon: ReactNode
-  badge?: number
-  // Roles que pueden ver este ítem. Si está ausente, lo ven todos los roles.
-  roles?: string[]
+  rolesVisibles?: string[]
 }
+
+export type NavLinkItem = NavBase & {
+  path: string
+  badge?: number
+  nuevaPestana?: boolean
+}
+
+export type NavGroupItem = NavBase & {
+  path: string
+  children: NavLinkItem[]
+}
+
+export type NavItem = NavLinkItem | NavGroupItem
 
 export type NavSection = {
   label: string
+  // El inicio de cada rol no lleva encabezado: es un solo ítem, y poner
+  // «INICIO» encima de «Panel Admin» repite lo que el propio botón ya dice.
+  sinEncabezado?: boolean
   items: NavItem[]
 }
 
@@ -36,91 +57,257 @@ export type NavSection = {
 // mueve cada rol entre los módulos del sistema.
 // ─── Navegación por rol ───────────────────────────────────────────────────────
 //
-// ADMINISTRADOR (admin@avisens.com) — administra el sistema Avisens (la empresa):
-//   Ve: Panel Admin, CRM de prospectos, Equipos/Infraestructura, Granjas, Personas.
-//   NO ve: módulos operativos de granja (sensores, bitácora, alertas, finanzas, bodega).
+// Cada rol inicia en una experiencia distinta: Administrador en el control
+// global, Propietario en la operación de su granja y Operario en su jornada.
+// El criterio para clasificar un módulo nuevo: ¿opera la plataforma o la
+// granja? Lo primero va en 'Plataforma'; lo segundo, debajo.
 //
-// PROPIETARIO (dueño@avisens.com) — dueño de la granja:
-//   Ve: Mi galpón, Sensores, Bitácora, Alertas, Finanzas, Bodega, Equipos, Granjas, Personas.
-//   NO ve: Panel Admin ni CRM (no es su pipeline comercial).
-//
-// OPERARIO (operario@avisens.com) — personal de campo en el galpón:
-//   Ve: Mi galpón, Sensores, Bitácora, Alertas.
-//   Solo accede a lo que necesita en su jornada diaria.
-//
+// Permiso de acceso por ruta. Es la ÚNICA fuente de verdad: el sidebar
+// dibuja lo que esta tabla permite, y la guardia de rutas la consulta.
+// Antes el permiso salía de que la ruta tuviera ítem en el menú, así que
+// sacar un ítem del sidebar la dejaba abierta para todos los roles.
+const PERMISOS_RUTA: Record<string, string[]> = {
+  '/admin':                   [ROL_ADMIN],
+  '/dashboard':               [ROL_PROPIETARIO],
+  '/mi-jornada':              [ROL_OPERARIO],
+  '/granjas':                 [ROL_ADMIN, ROL_PROPIETARIO],
+  '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/guia-crecimiento':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  // Secciones de Monitoreo. /monitoreo lleva a Sensores. El administrador
+  // tiene ruta (lo redirige a Organizaciones) pero no ítem en el menú.
+  '/monitoreo/sensores':      [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/monitoreo/actuadores':    [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/perfil':                  [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  // El operario entra a la bodega a registrar entradas, salidas y ajustes de
+  // stock (POST /insumos/:id/movimientos lo permite a los tres roles).
+  '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  // Solo el propietario. El estado de resultados de una granja es información
+  // financiera de su dueño y no tiene ninguna finalidad en la operación de la
+  // plataforma: darle acceso permanente al administrador contradice el
+  // principio de acceso restringido de la Ley 1581. El backend ya acota por
+  // propietario en `movimientos-financieros.service.ts`; esto cierra la puerta
+  // de la interfaz, que era la que estaba abierta.
+  '/finanzas':                [ROL_PROPIETARIO],
+  '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/recuperaciones-password': [ROL_ADMIN],
+  '/auditoria':               [ROL_ADMIN],
+  '/catalogos':               [ROL_ADMIN],
+  '/dispositivos':            [ROL_ADMIN],
+  '/organizaciones':          [ROL_ADMIN],
+  '/crm':                     [ROL_ADMIN],
+  '/solicitudes-pqrs':        [ROL_ADMIN],
+}
+
 export const NAV_SECTIONS: NavSection[] = [
+  // El inicio del rol va primero: es a donde lleva el logo y a donde vuelve
+  // uno al perderse. Antes estaba debajo de los seis módulos de plataforma,
+  // así que para el administrador el botón de inicio era el séptimo de la
+  // lista.
   {
-    // ── Sección operativa del día a día ───────────────────────────────────────
-    label: 'Día a día',
+    label: 'Inicio',
+    sinEncabezado: true,
     items: [
-      // Panel Admin → solo el Administrador del sistema Avisens (EP-03)
-      { path: '/admin',     label: 'Panel Admin', icon: <IcServer size={16} />, roles: [ROL_ADMIN] },
-
-      // Dashboard operativo del galpón → Propietario y Operario (EP-04)
-      { path: '/dashboard', label: 'Mi galpón',   icon: <IcGrid  size={16} />, roles: [ROL_PROPIETARIO, ROL_OPERARIO] },
-
-      // Sensores ambientales → Propietario y Operario (EP-04 "Como Usuario/Operario")
-      { path: '/monitoreo', label: 'Sensores',    icon: <IcEye   size={16} />, roles: [ROL_PROPIETARIO, ROL_OPERARIO] },
-
-      // Bitácora del lote → Propietario y Operario (EP-06 "Como Usuario/Operario")
-      { path: '/bitacora',  label: 'Bitácora',    icon: <IcDoc   size={16} />, roles: [ROL_PROPIETARIO, ROL_OPERARIO] },
-
-      // Alertas ambientales → Propietario y Operario (EP-05 "Como Operario")
-      // El badge no se fija aquí — Sidebar.tsx lo reemplaza por la cuenta de
-      // alertas activas en vivo (ver PanelLayout.tsx, totalAlertas).
-      { path: '/alertas',   label: 'Alertas',     icon: <IcAlert size={16} />, roles: [ROL_PROPIETARIO, ROL_OPERARIO] },
+      {
+        path: '/admin',
+        label: 'Panel Admin',
+        icon: <IcHome size={16} />,
+      },
+      {
+        path: '/dashboard',
+        label: 'Resumen',
+        icon: <IcGrid size={16} />,
+      },
+      {
+        path: '/mi-jornada',
+        label: 'Mi jornada',
+        icon: <IcClock size={16} />,
+      },
     ],
   },
+  // La ficha reúne los flujos de cada organización. El menú lleva al listado
+  // y conserva una sola entrada, sin duplicar sus secciones como subenlaces.
   {
-    // ── Sección financiera ────────────────────────────────────────────────────
-    // EP-07 asigna Finanzas e Inventario al "Usuario" = Propietario.
-    // El CRM es del Administrador (pipeline comercial de Avisens — EP-01 HU-08).
-    label: 'Plata y cuentas',
+    label: 'Organizaciones',
+    sinEncabezado: true,
     items: [
-      // EP-07 HU-30/HU-33: Ingresos, egresos y reporte por ciclo → solo Propietario
-      { path: '/finanzas',   label: 'Finanzas', icon: <IcCoin  size={16} />, roles: [ROL_PROPIETARIO] },
-
-      // EP-07 HU-31/HU-32: Stock de insumos y proveedores → solo Propietario
-      { path: '/inventario', label: 'Bodega',   icon: <IcBox   size={16} />, roles: [ROL_PROPIETARIO] },
-
-      // EP-01 HU-08: Leads y pipeline del chatbot de cotizaciones → solo Admin
-      { path: '/crm',        label: 'Clientes', icon: <IcUsers size={16} />, roles: [ROL_ADMIN] },
+      {
+        path: '/organizaciones',
+        label: 'Organizaciones',
+        icon: <IcServer size={16} />,
+      },
     ],
   },
+  // Herramientas transversales de la plataforma, fuera del contexto de una
+  // organización concreta.
   {
-    // ── Sección de configuración ──────────────────────────────────────────────
-    // EP-08: Infraestructura y Granjas son del Propietario (gestiona su granja)
-    // y del Admin (visión general del sistema). El Operario no configura nada.
-    label: 'Configuración',
+    label: 'Plataforma',
     items: [
-      // EP-08 HU-34-37: Galpones, sensores, actuadores y mantenimiento → Admin y Propietario
-      { path: '/infraestructura', label: 'Equipos',     icon: <IcServer     size={16} />, roles: [ROL_ADMIN, ROL_PROPIETARIO] },
-
-      // EP-08: página de prueba del CRUD real de sensores contra la API.
-      { path: '/sensores',        label: 'Sensores API', icon: <IcEye       size={16} />, roles: [ROL_ADMIN, ROL_PROPIETARIO] },
-
-      // EP-08: Granjas es del Propietario (gestiona sus propias granjas).
-      // El Admin no tiene granjas propias — su módulo de EP-08 es Equipos/Infraestructura.
-      { path: '/granjas',         label: 'Mis granjas', icon: <IcLeaf       size={16} />, roles: [ROL_PROPIETARIO] },
-
-      // EP-03 HU-15: Admin gestiona todos; Propietario gestiona solo sus operarios
-      { path: '/usuarios',        label: 'Personas',    icon: <IcUserCircle size={16} />, roles: [ROL_ADMIN, ROL_PROPIETARIO] },
+      {
+        path: '/crm',
+        label: 'Prospectos',
+        icon: <IcUsers size={16} />,
+      },
+      {
+        path: '/solicitudes-pqrs',
+        label: 'Solicitudes PQRS',
+        icon: <IcChat size={16} />,
+      },
+      {
+        path: '/usuarios',
+        label: 'Personas',
+        icon: <IcUserCircle size={16} />,
+        rolesVisibles: [ROL_ADMIN],
+      },
+      {
+        path: '/recuperaciones-password',
+        label: 'Recuperar acceso',
+        icon: <IcRefresh size={16} />,
+      },
+      {
+        path: '/catalogos',
+        label: 'Catálogos',
+        icon: <IcNote size={16} />,
+      },
+    ],
+  },
+  // Producción y Monitoreo eran dos secciones de dos ítems cada una: más
+  // encabezado que contenido, y para el operario tres títulos sobre cuatro
+  // botones. Es todo lo mismo —lo que pasa en la granja— y va junto.
+  // El administrador no lleva granjas: las ve dentro de la ficha de cada
+  // organización. Por eso estos ítems no se le muestran, aunque la ruta
+  // siga abierta para él (el Centro de control enlaza a /alertas).
+  {
+    label: 'Granja',
+    items: [
+      {
+        path: '/granjas',
+        label: 'Granjas',
+        icon: <IcLeaf size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
+      },
+      {
+        path: '/bitacora',
+        label: 'Bitácora',
+        icon: <IcDoc size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
+      },
+      // Sensores (mediciones) y Actuadores (relés K1-K4 y sus órdenes) son
+      // secciones hermanas: una no es prefijo de la otra, así el menú marca
+      // como activa solo la que está abierta.
+      {
+        path: '/monitoreo',
+        label: 'Monitoreo',
+        icon: <IcEye size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
+        children: [
+          {
+            path: '/monitoreo/sensores',
+            label: 'Sensores',
+            icon: <IcThermo size={16} />,
+            rolesVisibles: [ROL_OPERARIO],
+          },
+          {
+            path: '/monitoreo/actuadores',
+            label: 'Actuadores',
+            icon: <IcFan size={16} />,
+            rolesVisibles: [ROL_OPERARIO],
+          },
+        ],
+      },
+      {
+        path: '/alertas',
+        label: 'Alertas',
+        icon: <IcAlert size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
+      },
+    ],
+  },
+  // Gestión de recursos, finanzas y operarios de la granja.
+  {
+    label: 'Gestión',
+    items: [
+      {
+        path: '/inventario',
+        label: 'Bodega',
+        icon: <IcBox size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
+      },
+      {
+        path: '/finanzas',
+        label: 'Finanzas',
+        icon: <IcCoin size={16} />,
+      },
+      {
+        path: '/usuarios',
+        label: 'Operarios',
+        icon: <IcUserCircle size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
+      },
+    ],
+  },
+  // La bodega del operario: consulta lo que hay en ella (stock y mínimo).
+  // El propietario conserva su ítem «Bodega» en Gestión.
+  {
+    label: 'Bodega',
+    items: [
+      {
+        path: '/inventario',
+        label: 'Bodega',
+        icon: <IcBox size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
+      },
+    ],
+  },
+  // Accesos directos en el riel verde: pantallas de consulta que no
+  // pertenecen a ningún espacio y se abren a pantalla completa.
+  {
+    label: 'Riel',
+    sinEncabezado: true,
+    items: [
+      {
+        path: '/dispositivos',
+        label: 'Dispositivos',
+        icon: <IcChip size={16} />,
+      },
+      {
+        path: '/auditoria',
+        label: 'Auditoría',
+        icon: <IcSearch size={16} />,
+      },
     ],
   },
 ]
 
-// ¿Este item es visible para el rol dado? (sin `roles` = visible para todos)
-export function itemVisible(item: NavItem, rol: string | null): boolean {
-  if (!item.roles) return true
-  return rol !== null && item.roles.includes(rol)
+export function esGrupo(item: NavItem): item is NavGroupItem {
+  return 'children' in item
 }
 
-// ¿El rol puede acceder a esta ruta? Las rutas que no están en el menú
-// se permiten por defecto.
+const RUTAS_DETALLE: Array<{ patron: RegExp; padre: string }> = [
+  { patron: /^\/organizaciones\/\d+$/, padre: '/organizaciones' },
+  { patron: /^\/granjas\/galpones\/\d+$/, padre: '/granjas' },
+  { patron: /^\/dispositivos\/\d+$/, padre: '/dispositivos' },
+]
+
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  for (const sec of NAV_SECTIONS) {
-    const item = sec.items.find((i) => i.path === path)
-    if (item) return itemVisible(item, rol)
-  }
-  return true
+  const rutaPadre = RUTAS_DETALLE.find(({ patron }) => patron.test(path))?.padre
+  const permitidos = PERMISOS_RUTA[path] ?? (rutaPadre ? PERMISOS_RUTA[rutaPadre] : undefined)
+  if (!permitidos) return false
+  return rol !== null && permitidos.includes(rol)
+}
+
+export function rutaInicioPorRol(rol: string | null): string {
+  if (rol === ROL_ADMIN) return '/admin'
+  if (rol === ROL_OPERARIO) return '/mi-jornada'
+  return '/dashboard'
+}
+
+export function itemVisible(item: NavItem, rol: string | null): boolean {
+  return puedeAcceder(item.path, rol) && (!item.rolesVisibles || (rol !== null && item.rolesVisibles.includes(rol)))
 }

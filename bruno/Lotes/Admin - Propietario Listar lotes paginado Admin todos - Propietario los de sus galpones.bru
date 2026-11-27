@@ -1,0 +1,20 @@
+meta {
+  name: [Admin · Propietario]  Listar lotes paginado (Admin: todos - Propietario: los de sus galpones)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/lotes?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}

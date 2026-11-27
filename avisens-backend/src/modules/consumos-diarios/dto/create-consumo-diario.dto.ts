@@ -5,12 +5,19 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
+  Max,
+  Min,
 } from 'class-validator';
+import {
+  AGUA_MAXIMA_L_DIA,
+  ALIMENTO_MAXIMO_KG_DIA,
+} from '../../../common/avicultura/vocabulario';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class CreateConsumoDiarioDto {
   @ApiProperty({ example: 1, description: 'ID del lote' })
   @IsInt()
+  @Min(1)
   lote_id: number;
 
   @ApiProperty({ example: '2026-08-09', description: 'Fecha del consumo' })
@@ -22,23 +29,32 @@ export class CreateConsumoDiarioDto {
     description: 'ID del tipo de alimento consumido (catalogo tipos_alimento)',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   tipo_alimento_id?: number;
 
   @ApiPropertyOptional({ example: 45.5, description: 'Kg de alimento del dia' })
   @IsNumber()
   @IsPositive()
+  @Max(ALIMENTO_MAXIMO_KG_DIA, {
+    message:
+      'El alimento del día no puede superar 100.000 kg; revisa si escribiste gramos o un cero de más',
+  })
   @IsOptional()
   alimento_kg?: number;
 
   @ApiPropertyOptional({ example: 90, description: 'Litros de agua del dia' })
   @IsNumber()
   @IsPositive()
+  @Max(AGUA_MAXIMA_L_DIA, {
+    message:
+      'El agua del día no puede superar 300.000 litros; revisa si escribiste mililitros o un cero de más',
+  })
   @IsOptional()
   agua_litros?: number;
 
   @ApiPropertyOptional({ example: 'manual', description: 'Como se registro' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El método de registro', 40)
   metodo_registro?: string;
 }

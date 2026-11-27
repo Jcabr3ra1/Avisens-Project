@@ -39,10 +39,65 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN: string;
+
+  @IsString()
+  @IsOptional()
+  REDIS_URL: string;
+
+  @IsString()
+  @IsOptional()
+  REDIS_HOST: string;
+
+  @IsNumberString()
+  @IsOptional()
+  REDIS_PORT: string;
+
+  @IsIn(['true', 'false'])
+  @IsOptional()
+  JOBS_ENABLED: string;
+
+  @IsNumberString()
+  @IsOptional()
+  JOB_HISTORY_DAYS: string;
+
+  @IsNumberString()
+  @IsOptional()
+  IOT_IDEMPOTENCY_DAYS: string;
+
+  @IsString()
+  @IsOptional()
+  ML_URL: string;
+
+  @IsNumberString()
+  @IsOptional()
+  ML_TIMEOUT_MS: string;
+
+  // Antiguedad maxima aceptable del pesaje (en dias) para que
+  // generarAlertaDesvio() confie en el. Tolerancia operativa de la
+  // alerta (decision de negocio, 2026-09-27: 2 dias) -- no confundir con
+  // el calendario de pesaje real, que es mas espaciado. Sigue opcional y
+  // sin valor por defecto en codigo: sin ella, la alerta se detiene con
+  // motivo='umbral_no_configurado', nunca inventa un umbral.
+  @IsNumberString()
+  @IsOptional()
+  UMBRAL_PESAJE_DIAS: string;
+
+  @IsString()
+  @MinLength(32)
+  @IsOptional()
+  ML_INTERNAL_TOKEN: string;
+
+  @IsString()
+  @MinLength(32)
+  @IsOptional()
+  METRICS_TOKEN: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
-  const validated = plainToInstance(EnvironmentVariables, config, {
+  const definidas = Object.fromEntries(
+    Object.entries(config).filter(([, valor]) => valor !== ''),
+  );
+  const validated = plainToInstance(EnvironmentVariables, definidas, {
     enableImplicitConversion: true,
   });
 
@@ -55,6 +110,28 @@ export function validateEnv(config: Record<string, unknown>) {
   if (validated.NODE_ENV === 'production' && !validated.CORS_ORIGIN) {
     throw new Error(
       'CORS_ORIGIN es obligatoria en producción (dominio del frontend)',
+    );
+  }
+
+  if (
+    validated.NODE_ENV === 'production' &&
+    !validated.REDIS_URL &&
+    !validated.REDIS_HOST
+  ) {
+    throw new Error(
+      'REDIS_URL o REDIS_HOST es obligatoria en producción (colas y jobs)',
+    );
+  }
+
+  if (validated.NODE_ENV === 'production' && !validated.ML_INTERNAL_TOKEN) {
+    throw new Error(
+      'ML_INTERNAL_TOKEN es obligatoria en producción (comunicación Backend-ML)',
+    );
+  }
+
+  if (validated.NODE_ENV === 'production' && !validated.METRICS_TOKEN) {
+    throw new Error(
+      'METRICS_TOKEN es obligatoria en producción (/metrics quedaría público)',
     );
   }
 

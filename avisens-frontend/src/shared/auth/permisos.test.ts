@@ -1,0 +1,163 @@
+import { describe, expect, it } from 'vitest'
+import {
+  gestionaAlgo,
+  permisosDeGestion,
+  permisosDeInsumo,
+  permisosDePlan,
+  permisosDeRegistro,
+  permisosOperativosDeGalpon,
+  puedeCompletarDatos,
+  ROL_ADMIN,
+  ROL_OPERARIO,
+  ROL_PROPIETARIO,
+} from './permisos'
+
+describe('permisosDeGestion', () => {
+  it('el administrador puede crear, editar, alternar y eliminar', () => {
+    expect(permisosDeGestion(ROL_ADMIN)).toEqual({
+      crear: true,
+      editar: true,
+      alternarActivo: true,
+      eliminar: true,
+    })
+  })
+
+  it('el propietario es de solo lectura sobre la estructura', () => {
+    expect(permisosDeGestion(ROL_PROPIETARIO)).toEqual({
+      crear: false,
+      editar: false,
+      alternarActivo: false,
+      eliminar: false,
+    })
+  })
+
+  it('el operario tampoco gestiona nada', () => {
+    expect(gestionaAlgo(permisosDeGestion(ROL_OPERARIO))).toBe(false)
+  })
+
+  it('sin sesión no se ofrece ninguna acción', () => {
+    expect(gestionaAlgo(permisosDeGestion(null))).toBe(false)
+  })
+
+  it('un rol desconocido no hereda permisos por accidente', () => {
+    expect(gestionaAlgo(permisosDeGestion('Auditor'))).toBe(false)
+  })
+
+  it('gestionaAlgo solo es cierto para quien administra', () => {
+    expect(gestionaAlgo(permisosDeGestion(ROL_ADMIN))).toBe(true)
+    expect(gestionaAlgo(permisosDeGestion(ROL_PROPIETARIO))).toBe(false)
+  })
+})
+
+describe('permisosDeInsumo', () => {
+  it('el administrador administra todo el catálogo de insumos', () => {
+    const admin = permisosDeInsumo(ROL_ADMIN)
+    expect(admin.crear && admin.editar && admin.alternarActivo && admin.eliminar).toBe(true)
+  })
+
+  it('el propietario crea, edita y desactiva insumos, pero no los borra (HU-58)', () => {
+    const propietario = permisosDeInsumo(ROL_PROPIETARIO)
+    expect(propietario.crear && propietario.editar && propietario.alternarActivo).toBe(true)
+    expect(propietario.eliminar).toBe(false)
+  })
+
+  it('el operario no administra el catálogo', () => {
+    const operario = permisosDeInsumo(ROL_OPERARIO)
+    expect(operario.crear || operario.editar || operario.alternarActivo || operario.eliminar).toBe(false)
+  })
+
+  it('el administrador y el propietario registran movimientos de stock; el operario solo consulta', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
+      expect(permisosDeInsumo(rol).registrarMovimiento).toBe(true)
+    }
+    expect(permisosDeInsumo(ROL_OPERARIO).registrarMovimiento).toBe(false)
+  })
+
+  it('sin sesión no se puede ni mover stock', () => {
+    expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+    expect(permisosDeInsumo(null).tiposMovimiento).toEqual([])
+  })
+
+  it('el operario no registra ningún tipo de movimiento; admin y propietario, los tres', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).tiposMovimiento).toEqual([])
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
+      expect(permisosDeInsumo(rol).tiposMovimiento).toEqual(['entrada', 'salida', 'ajuste'])
+    }
+  })
+
+  it('el operario no ve precios ni el valor de la bodega', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).verCostos).toBe(false)
+    expect(permisosDeInsumo(ROL_ADMIN).verCostos).toBe(true)
+    expect(permisosDeInsumo(ROL_PROPIETARIO).verCostos).toBe(true)
+  })
+})
+
+describe('permisosDeRegistro', () => {
+  it('los tres roles crean y editan registros productivos', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      expect(permisosDeRegistro(rol).editar).toBe(true)
+    }
+  })
+
+  it('solo el administrador y el propietario eliminan; el operario no (el backend le da 403)', () => {
+    expect(permisosDeRegistro(ROL_ADMIN).eliminar).toBe(true)
+    expect(permisosDeRegistro(ROL_PROPIETARIO).eliminar).toBe(true)
+    expect(permisosDeRegistro(ROL_OPERARIO).eliminar).toBe(false)
+  })
+
+  it('sin sesión o con un rol desconocido no se opera', () => {
+    for (const rol of [null, 'Auditor']) {
+      expect(permisosDeRegistro(rol)).toEqual({ editar: false, eliminar: false })
+    }
+  })
+})
+
+describe('permisosOperativosDeGalpon', () => {
+  it('el propietario configura la operación de sus galpones', () => {
+    expect(permisosOperativosDeGalpon(ROL_PROPIETARIO).configurar).toBe(true)
+  })
+
+  it('el administrador consulta la operación en solo lectura', () => {
+    expect(permisosOperativosDeGalpon(ROL_ADMIN).configurar).toBe(false)
+  })
+
+  it('el operario, sin sesión o con un rol desconocido no configuran', () => {
+    for (const rol of [ROL_OPERARIO, null, 'Auditor']) {
+      expect(permisosOperativosDeGalpon(rol).configurar).toBe(false)
+    }
+  })
+
+  it('nadie borra definitivamente desde la vista operativa', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO, null]) {
+      expect(permisosOperativosDeGalpon(rol).eliminarDefinitivo).toBe(false)
+    }
+  })
+})
+
+describe('permisosDePlan', () => {
+  it('administrador y propietario pueden calcular o recalcular', () => {
+    expect(permisosDePlan(ROL_ADMIN).registrar).toBe(true)
+    expect(permisosDePlan(ROL_PROPIETARIO).registrar).toBe(true)
+  })
+
+  it('el operario solo consulta', () => {
+    expect(permisosDePlan(ROL_OPERARIO).registrar).toBe(false)
+  })
+
+  it('sin sesión no se puede registrar', () => {
+    expect(permisosDePlan(null).registrar).toBe(false)
+  })
+
+  it('un rol desconocido no hereda permisos por accidente', () => {
+    expect(permisosDePlan('Auditor').registrar).toBe(false)
+  })
+})
+
+describe('puedeCompletarDatos', () => {
+  it('el propietario y el administrador completan los datos descriptivos; el operario no', () => {
+    expect(puedeCompletarDatos(ROL_ADMIN)).toBe(true)
+    expect(puedeCompletarDatos(ROL_PROPIETARIO)).toBe(true)
+    expect(puedeCompletarDatos(ROL_OPERARIO)).toBe(false)
+    expect(puedeCompletarDatos(null)).toBe(false)
+  })
+})

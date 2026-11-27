@@ -1,0 +1,27 @@
+meta {
+  name: [Admin] Registrar un controlador ESP32 en galpon
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/dispositivos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "galpon_id": 1,
+    "version_firmware": "1.0.3",
+    "ip_local": "192.168.1.42"
+  }
+}

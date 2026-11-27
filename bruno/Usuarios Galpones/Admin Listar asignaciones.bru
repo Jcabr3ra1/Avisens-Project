@@ -1,0 +1,7 @@
+meta {
+  name: [Admin] Listar asignaciones
+  type: http
+  seq: 2
+}
+get { url: {{baseUrl}}/v1/usuarios-galpones; auth: bearer }
+auth:bearer { token: {{token}} }

@@ -1,0 +1,28 @@
+meta {
+  name: [Admin · Propietario]  Registrar una medición de un sensor
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/mediciones
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sensor_id": 1,
+    "valor": 27.5,
+    "fecha_hora": "2026-07-25T14:30:00Z",
+    "calidad": "ok"
+  }
+}

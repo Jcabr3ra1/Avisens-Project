@@ -1,0 +1,31 @@
+.elim { display: grid; gap: var(--space-4); }
+
+.elim-aviso { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); border-radius: var(--radius-md); background: color-mix(in srgb, var(--danger) 6%, var(--surface-base)); color: var(--danger3); }
+.elim-aviso svg { flex: 0 0 auto; margin-top: .1rem; }
+.elim-aviso p { margin: 0; color: var(--text-primary); font-size: .88rem; line-height: 1.5; }
+
+.elim-subtitulo { margin: 0 0 var(--space-2); color: var(--text-secondary); font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+.elim-conteos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.elim-conteos li { display: grid; gap: .05rem; padding: .6rem .75rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-tinted); color: var(--text-muted); }
+.elim-conteos li strong { color: var(--text-muted); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.elim-conteos li span { font-size: .76rem; }
+.elim-conteos li.is-con-datos { border-color: color-mix(in srgb, var(--danger) 22%, transparent); background: var(--surface-base); }
+.elim-conteos li.is-con-datos strong { color: var(--danger3); }
+.elim-conteo-esqueleto { height: 58px; border-radius: var(--radius-md); }
+
+.elim-confirmar { display: grid; gap: .45rem; }
+.elim-confirmar span { color: var(--text-secondary); font-size: .86rem; }
+.elim-confirmar span strong { color: var(--text-primary); }
+.elim-confirmar input { height: 44px; padding: 0 .85rem; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-primary); font-size: .92rem; }
+.elim-confirmar input:focus-visible { border-color: var(--danger); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 14%, transparent); }
+
+.elim-error { margin: 0; color: var(--danger3); font-size: .84rem; font-weight: 600; }
+
+.modal-btn.elim-boton { border-color: var(--danger3); background: var(--danger3); color: var(--surface-base); }
+.modal-btn.elim-boton:hover:not(:disabled) { background: color-mix(in srgb, var(--danger3) 88%, black); }
+.modal-btn.elim-boton:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (max-width: 40rem) {
+  .elim-conteos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

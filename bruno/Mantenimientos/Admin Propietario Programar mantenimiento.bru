@@ -1,0 +1,29 @@
+meta {
+  name: [Admin · Propietario] Programar mantenimiento
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/mantenimientos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "equipo_id": 1,
+    "fecha_programada": "2026-09-15T08:00:00.000Z",
+    "tipo": "preventivo",
+    "tecnico_responsable": "Juan Pérez",
+    "descripcion": "Cambio de rodamientos y limpieza de aspas"
+  }
+}

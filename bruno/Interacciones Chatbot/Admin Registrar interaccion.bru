@@ -1,0 +1,29 @@
+meta {
+  name: [Admin] Registrar interaccion
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/interacciones-chatbot
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "prospecto_id": 1,
+    "tipo": "mensaje_entrante",
+    "mensaje": "hola",
+    "intent_detectado": "saludo",
+    "confianza_nlu": 0.95
+  }
+}

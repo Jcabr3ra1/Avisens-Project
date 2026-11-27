@@ -1,16 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'crypto';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroDispositivos,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
+import {
+  generarDeviceToken,
+  hashDeviceToken,
+} from '../../common/security/device-token';
+import {
+  estadoConexion,
+  VENTANA_CONECTIVIDAD_MINUTOS,
+} from '../../common/conectividad/conectividad';
+import { SENSOR_VIGENTE } from '../sensores/sensor-vigente';
 
 const DISPOSITIVO_SELECT = {
   id: true,
-  mac_address: true,
   codigo_topic: true,
   nombre: true,
   version_firmware: true,
@@ -19,6 +36,7 @@ const DISPOSITIVO_SELECT = {
   ultima_conexion: true,
   activo: true,
   fecha_creacion: true,
+  retirado_en: true,
 
   galpon: {
     select: {
@@ -43,6 +61,7 @@ export class DispositivosService {
       where: { id: galponId },
       select: {
         id: true,
+        codigo: true,
         granja: {
           select: {
             propietario_id: true,
@@ -58,47 +77,120 @@ export class DispositivosService {
       galpon.granja.propietario_id,
       'Solo puedes gestionar dispositivos de tus propios galpones',
     );
+    return galpon;
   }
 
-  private generarToken(): string {
-    return randomBytes(24).toString('hex');
+  private async siguienteCodigo(
+    galponId: number,
+    codigoGalpon: string,
+    minimo: number,
+  ) {
+    const prefijo = `${codigoGalpon}-ESP32-`;
+    const existentes = await this.prisma.dispositivo.findMany({
+      where: { codigo_topic: { startsWith: prefijo } },
+      select: { codigo_topic: true, galpon_id: true },
+    });
+    const ocupados = new Set<number>();
+    let ultimoEnGalpon = 0;
+    for (const dispositivo of existentes) {
+      const sufijo = dispositivo.codigo_topic.slice(prefijo.length);
+      if (!/^\d+$/.test(sufijo)) continue;
+      const numero = Number(sufijo);
+      if (!Number.isSafeInteger(numero) || numero < 1) continue;
+      ocupados.add(numero);
+      if (dispositivo.galpon_id === galponId) {
+        ultimoEnGalpon = Math.max(ultimoEnGalpon, numero);
+      }
+    }
+    let consecutivo = Math.max(ultimoEnGalpon + 1, minimo);
+    // El código histórico del galpón puede repetirse en otra granja. Se saltan
+    // los códigos ya ocupados para respetar el UNIQUE global del nodo.
+    while (ocupados.has(consecutivo)) consecutivo += 1;
+    if (!Number.isSafeInteger(consecutivo)) {
+      throw new ConflictException(
+        'No se pudo reservar el consecutivo del controlador',
+      );
+    }
+    return {
+      codigo: `${prefijo}${String(consecutivo).padStart(3, '0')}`,
+      consecutivo,
+    };
   }
 
   async crear(dto: CreateDispositivoDto, solicitante: Solicitante) {
-    await this.validarGalpon(dto.galpon_id, solicitante);
+    const galpon = await this.validarGalpon(dto.galpon_id, solicitante);
 
-    const token = this.generarToken();
+    const token = generarDeviceToken();
+    const tokenHash = hashDeviceToken(token);
+    const codigoManual = dto.codigo_topic?.trim();
+    let siguiente = 1;
 
-    const dispositivo = await this.prisma.dispositivo.create({
-      data: {
-        galpon_id: dto.galpon_id,
-        mac_address: dto.mac_address,
-        codigo_topic: dto.codigo_topic,
-        nombre: dto.nombre,
-        version_firmware: dto.version_firmware,
-        ip_local: dto.ip_local,
-        token_ingesta: token,
-      },
-      select: DISPOSITIVO_SELECT,
-    });
+    // El consecutivo se consulta en el servidor, y PostgreSQL reserva el código
+    // mediante UNIQUE. Una colisión concurrente avanza al siguiente número;
+    // los demás errores se propagan sin reintentar el alta.
+    for (let intento = 0; intento < 5; intento += 1) {
+      const identidad = codigoManual
+        ? { codigo: codigoManual, consecutivo: null }
+        : await this.siguienteCodigo(galpon.id, galpon.codigo, siguiente);
+      const codigo = identidad.codigo;
+      try {
+        const dispositivo = await this.prisma.dispositivo.create({
+          data: {
+            galpon_id: galpon.id,
+            codigo_topic: codigo,
+            nombre: dto.nombre?.trim() || codigo,
+            version_firmware: dto.version_firmware,
+            ip_local: dto.ip_local,
+            token_ingesta_hash: tokenHash,
+          },
+          select: DISPOSITIVO_SELECT,
+        });
+        return { ...dispositivo, token_ingesta: token };
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          const target = error.meta?.target;
+          const columnas = Array.isArray(target)
+            ? target.filter(
+                (columna): columna is string => typeof columna === 'string',
+              )
+            : typeof target === 'string'
+              ? [target]
+              : [];
+          if (
+            identidad.consecutivo !== null &&
+            columnas.some((columna) => columna.includes('codigo_topic'))
+          ) {
+            siguiente = identidad.consecutivo + 1;
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
 
-    return { ...dispositivo, token_ingesta: token };
+    throw new ConflictException(
+      'No se pudo reservar un código único para el controlador; intenta de nuevo',
+    );
   }
 
   async regenerarToken(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
-    const token = this.generarToken();
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
+    const token = generarDeviceToken();
     await this.prisma.dispositivo.update({
       where: { id },
-      data: { token_ingesta: token },
+      data: {
+        token_ingesta: null,
+        token_ingesta_hash: hashDeviceToken(token),
+      },
     });
     return { id, token_ingesta: token };
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = { ...filtroDispositivos(solicitante), retirado_en: null };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.dispositivo.findMany({
@@ -114,16 +206,62 @@ export class DispositivosService {
     return paginate(data, total, page, limit);
   }
 
+  async conectividad(ahora: Date = new Date()) {
+    const dispositivos = await this.prisma.dispositivo.findMany({
+      where: { activo: true },
+      select: {
+        id: true,
+        nombre: true,
+        codigo_topic: true,
+        ultima_conexion: true,
+        galpon: {
+          select: {
+            id: true,
+            nombre: true,
+            granja: {
+              select: {
+                id: true,
+                nombre: true,
+                organizacion: { select: { id: true, nombre: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { ultima_conexion: { sort: 'asc', nulls: 'first' } },
+    });
+
+    const conEstado = dispositivos.map((dispositivo) => ({
+      ...dispositivo,
+      estado: estadoConexion(dispositivo.ultima_conexion, ahora),
+    }));
+    const contar = (estado: string) =>
+      conEstado.filter((dispositivo) => dispositivo.estado === estado).length;
+
+    return {
+      ventana_minutos: VENTANA_CONECTIVIDAD_MINUTOS,
+      total: conEstado.length,
+      conectados: contar('conectado'),
+      sin_reportar: contar('sin_reportar'),
+      nunca: contar('nunca'),
+      problemas: conEstado.filter(
+        (dispositivo) => dispositivo.estado !== 'conectado',
+      ),
+    };
+  }
+
   async obtener(id: number, solicitante: Solicitante) {
     const dispositivo = await this.prisma.dispositivo.findUnique({
       where: { id },
       select: DISPOSITIVO_SELECT,
     });
     if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      dispositivo.galpon.id,
       solicitante,
-      dispositivo.galpon.granja.propietario_id,
       'Solo puedes gestionar dispositivos de tus propios galpones',
+      dispositivo.galpon.granja.propietario_id,
     );
     return dispositivo;
   }
@@ -133,17 +271,19 @@ export class DispositivosService {
     dto: UpdateDispositivoDto,
     solicitante: Solicitante,
   ) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(actual);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un dispositivo a otro galpón mientras conserva sensores asociados',
+      );
     }
 
     return this.prisma.dispositivo.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
-        mac_address: dto.mac_address,
+        galpon_id: undefined,
         codigo_topic: dto.codigo_topic,
         nombre: dto.nombre,
         version_firmware: dto.version_firmware,
@@ -155,7 +295,7 @@ export class DispositivosService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
 
     await this.prisma.dispositivo.update({
       where: { id },
@@ -165,7 +305,7 @@ export class DispositivosService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
     await this.prisma.dispositivo.update({
       where: { id },
       data: { activo: true },
@@ -174,9 +314,52 @@ export class DispositivosService {
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
 
-    await this.prisma.dispositivo.delete({ where: { id } });
-    return { id, eliminado: true };
+    return this.prisma.$transaction(async (tx) => {
+      await tx.sensor.deleteMany({
+        where: {
+          dispositivo_id: id,
+          ...SENSOR_VIGENTE,
+          mediciones: { none: {} },
+          alertas: { none: {} },
+        },
+      });
+      await tx.sensor.updateMany({
+        where: { dispositivo_id: id, ...SENSOR_VIGENTE },
+        data: { estado: 'retirado', canal: null },
+      });
+
+      const conHistorial = await tx.dispositivo.findFirst({
+        where: {
+          id,
+          OR: [{ sensores: { some: {} } }, { ingestas: { some: {} } }],
+        },
+        select: { id: true },
+      });
+      if (!conHistorial) {
+        await tx.dispositivo.delete({ where: { id } });
+        return { id, eliminado: true, retirado: false };
+      }
+
+      await tx.dispositivo.update({
+        where: { id },
+        data: {
+          retirado_en: new Date(),
+          activo: false,
+          token_ingesta: null,
+          token_ingesta_hash: null,
+        },
+      });
+      return { id, eliminado: false, retirado: true };
+    });
+  }
+
+  private rechazarSiRetirado(dispositivo: { retirado_en: Date | null }) {
+    if (dispositivo.retirado_en) {
+      throw new ConflictException(
+        'Este controlador fue eliminado y ya no se puede modificar; registra uno nuevo',
+      );
+    }
   }
 }

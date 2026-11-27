@@ -1,6 +1,7 @@
 import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { IsDateString, IsEnum, IsOptional } from 'class-validator';
 import { CreateLoteDto } from './create-lote.dto';
-import { IsDateString, IsIn, IsOptional } from 'class-validator';
+import { EstadoLote } from '@prisma/client';
 
 export class UpdateLoteDto extends PartialType(CreateLoteDto) {
   @ApiPropertyOptional({
@@ -12,10 +13,11 @@ export class UpdateLoteDto extends PartialType(CreateLoteDto) {
   fecha_salida_real?: string;
 
   @ApiPropertyOptional({
-    example: 'finalizado',
-    description: 'Estado del lote (activo, finalizado, inactivo)',
+    example: EstadoLote.finalizado,
+    enum: EstadoLote,
+    description: 'Estado del lote',
   })
-  @IsIn(['activo', 'finalizado', 'inactivo'])
+  @IsEnum(EstadoLote)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoLote;
 }

@@ -1,0 +1,61 @@
+meta {
+  name: [Público]  Mensaje entrante (POST)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/whatsapp/webhook
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "object": "whatsapp_business_account",
+    "entry": [{
+      "id": "123",
+      "changes": [{
+        "field": "messages",
+        "value": {
+          "messaging_product": "whatsapp",
+          "metadata": { "display_phone_number": "15550000000", "phone_number_id": "999" },
+          "messages": [{
+            "from": "573205554433",
+            "id": "wamid.CAMBIAME001",
+            "timestamp": "1755730000",
+            "type": "text",
+            "text": { "body": "hola quiero informacion" }
+          }]
+        }
+      }]
+    }]
+  }
+}
+
+docs {
+  Simula lo que manda Meta cuando alguien escribe al numero de WhatsApp.
+
+  Responde {"received":true} con HTTP 200 DE INMEDIATO y encola el mensaje: no se
+  procesa nada dentro de la peticion. Meta exige respuesta rapida y reintenta si
+  tardas, lo que provocaria mensajes duplicados.
+
+  IMPORTANTE - IDEMPOTENCIA: el `id` (wamid) se usa como jobId de BullMQ. Si
+  mandas dos veces el MISMO wamid, el segundo se descarta en silencio. Para
+  simular un mensaje nuevo hay que CAMBIAR el wamid en cada envio.
+
+  Con WHATSAPP_PROVIDER=simulado la respuesta del bot no sale por WhatsApp: se
+  registra en el log del backend. Verlo con:
+    docker compose logs backend --tail=20 | grep SIMULADO
+
+  El flujo: si el telefono no tiene conversacion abierta se crea un prospecto con
+  el numero YA relleno (por eso A4 se omite en este canal, ver omitir_si_canal en
+  preguntas_chatbot). Si la tiene, se le pasa la respuesta al motor del chatbot.
+
+  Solo se procesan mensajes `type: "text"`. Los recibos de entrega, los vistos,
+  las imagenes y los audios se ignoran.
+}

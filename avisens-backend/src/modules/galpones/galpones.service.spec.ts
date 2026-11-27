@@ -1,5 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import {
+  clienteDePrueba,
+  secuenciaDeLlamadas,
+} from '../../common/bloqueos/cliente-de-prueba.testing';
 import { GalponesService } from './galpones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -9,20 +18,36 @@ describe('GalponesService', () => {
   const prisma = {
     galpon: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
     },
     granja: { findUnique: jest.fn() },
+    usuarioGalpon: { updateMany: jest.fn(), deleteMany: jest.fn() },
     $transaction: jest.fn(),
+    $configurar: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
+  const operario = { id: 8, rol: 'Operario', organizacion_id: 10 };
 
-  const dtoCrear = { granja_id: 3, codigo: 'galpon1', nombre: 'Galpón Norte' };
+  const dtoCrear = { granja_id: 3, nombre: 'Galpón Norte' };
+  type TransaccionPrueba = (cliente: typeof prisma) => Promise<unknown>;
+
+  const esTransaccionPrueba = (
+    operacion: unknown,
+  ): operacion is TransaccionPrueba => typeof operacion === 'function';
+
+  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
+    return calls[0][0].data;
+  };
 
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<
@@ -32,6 +57,7 @@ describe('GalponesService', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GalponesService,
@@ -40,20 +66,32 @@ describe('GalponesService', () => {
     }).compile();
     service = module.get<GalponesService>(GalponesService);
 
-    prisma.$transaction.mockResolvedValue([[], 0]);
-    // Por defecto la granja 3 es del propietario 5.
+    prisma.$transaction.mockImplementation((operacion: unknown) => {
+      if (esTransaccionPrueba(operacion))
+        return operacion(clienteDePrueba(prisma));
+      return Promise.resolve([[], 0]);
+    });
     prisma.granja.findUnique.mockResolvedValue({ id: 3, propietario_id: 5 });
+    prisma.$configurar.mockResolvedValue([{}]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 40 }, { id: 41 }]);
   });
 
   afterEach(() => jest.clearAllMocks());
 
   describe('crear', () => {
     it('crea el galpón cuando la granja es del solicitante', async () => {
-      prisma.galpon.create.mockResolvedValue({ id: 1 });
+      prisma.galpon.create.mockResolvedValue({ id: 12 });
+      prisma.galpon.update.mockResolvedValue({
+        id: 12,
+        codigo: 'GAL-000012',
+      });
 
-      await service.crear(dtoCrear, propietario);
+      const resultado = await service.crear(dtoCrear, propietario);
 
       expect(prisma.galpon.create).toHaveBeenCalled();
+      expect(dataDe(prisma.galpon.create).codigo).toMatch(/^TEMP-/);
+      expect(dataDe(prisma.galpon.update).codigo).toBe('GAL-000012');
+      expect(resultado.codigo).toBe('GAL-000012');
     });
 
     it('un Propietario no puede crear en una granja ajena (403)', async () => {
@@ -92,6 +130,22 @@ describe('GalponesService', () => {
 
       expect(whereDe(prisma.galpon.findMany)).toBeUndefined();
     });
+
+    it('un Operario solo ve galpones con asignación activa', async () => {
+      await service.listar(operario, { page: 1, limit: 10 });
+
+      expect(whereDe(prisma.galpon.findMany)).toEqual({
+        activo: true,
+        granja: {
+          activa: true,
+          organizacion_id: 10,
+          organizacion: { activa: true },
+        },
+        usuarios_galpones: {
+          some: { usuario_id: 8, activa: true },
+        },
+      });
+    });
   });
 
   describe('obtener', () => {
@@ -119,7 +173,7 @@ describe('GalponesService', () => {
     it('actualiza cuando el galpón es del solicitante', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
+        granja: { id: 3, propietario_id: 5 },
       });
       prisma.galpon.update.mockResolvedValue({ id: 1 });
 
@@ -128,19 +182,87 @@ describe('GalponesService', () => {
       expect(prisma.galpon.update).toHaveBeenCalled();
     });
 
-    it('al mover a otra granja, re-valida que la nueva sea suya (403)', async () => {
+    describe('activo y asignaciones', () => {
+      beforeEach(() => {
+        prisma.galpon.findUnique.mockResolvedValue({
+          id: 1,
+          granja: { id: 3, propietario_id: 5 },
+        });
+        prisma.galpon.update.mockResolvedValue({ id: 1 });
+        prisma.galpon.findUniqueOrThrow.mockResolvedValue({
+          id: 1,
+          activo: false,
+          nombre: 'Nuevo',
+        });
+        prisma.usuarioGalpon.updateMany.mockResolvedValue({ count: 2 });
+      });
+
+      it('activo:false revoca las asignaciones y actualiza el galpón en una sola transacción', async () => {
+        const res = await service.actualizar(
+          1,
+          { activo: false, nombre: 'Nuevo' },
+          admin,
+        );
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+          isolationLevel: 'ReadCommitted',
+          timeout: 10000,
+        });
+        expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+          where: { id: { in: [40, 41] } },
+          data: { activa: false },
+        });
+        expect(dataDe(prisma.galpon.update)).toMatchObject({
+          activo: false,
+          nombre: 'Nuevo',
+        });
+        expect(prisma.galpon.update).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: 1 }, select: { id: true } }),
+        );
+        expect(prisma.galpon.findUniqueOrThrow).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: 1 } }),
+        );
+        expect(res).toEqual({ id: 1, activo: false, nombre: 'Nuevo' });
+      });
+
+      it('si falla la actualización del galpón la promesa se rechaza y no se revocan asignaciones', async () => {
+        prisma.galpon.update.mockRejectedValue(new Error('falla update'));
+
+        await expect(
+          service.actualizar(1, { activo: false }, admin),
+        ).rejects.toThrow('falla update');
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('un PATCH sin activo no toca las asignaciones', async () => {
+        prisma.galpon.update.mockResolvedValue({ id: 1 });
+
+        await service.actualizar(1, { nombre: 'Otro' }, admin);
+
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('activo:true no toca las asignaciones', async () => {
+        prisma.galpon.update.mockResolvedValue({ id: 1, activo: true });
+
+        await service.actualizar(1, { activo: true }, admin);
+
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+    });
+
+    it('impide trasladar un galpón a otra granja para no romper su historial', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
-      });
-      prisma.granja.findUnique.mockResolvedValue({
-        id: 9,
-        propietario_id: 999,
+        granja: { id: 3, propietario_id: 5 },
       });
 
       await expect(
         service.actualizar(1, { granja_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.galpon.update).not.toHaveBeenCalled();
     });
   });
@@ -159,6 +281,10 @@ describe('GalponesService', () => {
       const res = await service.desactivar(1, propietario);
 
       expect(res).toEqual({ id: 1, activo: false });
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [40, 41] } },
+        data: { activa: false },
+      });
     });
 
     it('elimina permanentemente cuando es dueño', async () => {
@@ -167,6 +293,192 @@ describe('GalponesService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [40, 41] } },
+      });
+    });
+
+    it('con lotes o sensores dentro avisa que hay que borrarlos primero', async () => {
+      prisma.$transaction.mockRejectedValue(
+        Object.assign(new Error('FK'), { code: 'P2003' }),
+      );
+
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        /lotes, sensores, equipos/,
+      );
+    });
+
+    it('un error que no sea de llave foránea se propaga tal cual', async () => {
+      prisma.$transaction.mockRejectedValue(new Error('se cayó la conexión'));
+
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        'se cayó la conexión',
+      );
+    });
+  });
+  describe('orden de bloqueos y esperas máximas', () => {
+    const timeoutDeBloqueo = () => {
+      const e = new Error('canceling statement due to lock timeout');
+      e.name = 'DriverAdapterError';
+      (e as Error & { cause: unknown }).cause = { originalCode: '55P03' };
+      return e;
+    };
+    const deadlock = () => {
+      const e = new Error('deadlock detected');
+      e.name = 'DriverAdapterError';
+      (e as Error & { cause: unknown }).cause = { originalCode: '40P01' };
+      return e;
+    };
+
+    const sql = (llamada: number) =>
+      (prisma.$queryRaw.mock.calls[llamada] as [TemplateStringsArray])[0].join(
+        '?',
+      );
+
+    beforeEach(() => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        granja: { id: 3, propietario_id: 5 },
+      });
+      prisma.galpon.update.mockResolvedValue({ id: 1 });
+      prisma.galpon.delete.mockResolvedValue({ id: 1 });
+      prisma.usuarioGalpon.updateMany.mockResolvedValue({ count: 2 });
+      prisma.usuarioGalpon.deleteMany.mockResolvedValue({ count: 2 });
+    });
+
+    it('DELETE desactiva con el galpón primero, las asignaciones después, espera máxima y READ COMMITTED', async () => {
+      const res = await service.desactivar(1, admin);
+
+      expect(res).toEqual({ id: 1, activo: false });
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'ReadCommitted',
+        timeout: 10000,
+      });
+      expect(prisma.$configurar).toHaveBeenCalledTimes(3);
+      const [, esperaMs] = prisma.$configurar.mock.calls[0] as [
+        TemplateStringsArray,
+        string,
+        string,
+      ];
+      expect(esperaMs).toBe('5000ms');
+      expect(sql(0)).toContain('ORDER BY "id" FOR UPDATE');
+      expect(
+        secuenciaDeLlamadas(
+          ['configurar', prisma.$configurar],
+          ['actualizar', prisma.galpon.update],
+          ['bloquear', prisma.$queryRaw],
+          ['revocar', prisma.usuarioGalpon.updateMany],
+        ),
+      ).toEqual([
+        'configurar',
+        'actualizar',
+        'configurar',
+        'bloquear',
+        'configurar',
+        'revocar',
+      ]);
+    });
+
+    it('modifica únicamente los ids que bloqueó y no escribe si no había ninguno', async () => {
+      await service.desactivar(1, admin);
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [40, 41] } },
+        data: { activa: false },
+      });
+
+      prisma.usuarioGalpon.updateMany.mockClear();
+      prisma.$queryRaw.mockResolvedValue([]);
+      await service.desactivar(1, admin);
+      expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('la eliminación permanente bloquea el galpón, luego las asignaciones por id, y borra solo esos ids', async () => {
+      const res = await service.eliminarPermanente(1, admin);
+
+      expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'ReadCommitted',
+        timeout: 10000,
+      });
+      const consulta = prisma.$queryRaw.mock.calls[0] as [
+        TemplateStringsArray,
+        number,
+      ];
+      expect(consulta[0].join('?')).toContain('FOR UPDATE');
+      expect(consulta[1]).toBe(1);
+      expect(sql(1)).toContain('"usuarios_galpones"');
+      expect(sql(1)).toContain('ORDER BY "id" FOR UPDATE');
+      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: [40, 41] } },
+      });
+      expect(
+        secuenciaDeLlamadas(
+          ['configurar', prisma.$configurar],
+          ['consulta', prisma.$queryRaw],
+          ['borrar asignaciones', prisma.usuarioGalpon.deleteMany],
+          ['borrar galpón', prisma.galpon.delete],
+        ),
+      ).toEqual([
+        'configurar',
+        'consulta',
+        'configurar',
+        'consulta',
+        'configurar',
+        'borrar asignaciones',
+        'configurar',
+        'borrar galpón',
+      ]);
+    });
+
+    it.each([
+      [
+        'PATCH activo:false',
+        () => service.actualizar(1, { activo: false }, admin),
+      ],
+      ['DELETE', () => service.desactivar(1, admin)],
+      ['DELETE permanente', () => service.eliminarPermanente(1, admin)],
+    ])('%s traduce 55P03 a 409', async (_nombre, accion) => {
+      prisma.$transaction.mockRejectedValue(timeoutDeBloqueo());
+
+      const intento = accion();
+
+      await expect(intento).rejects.toBeInstanceOf(ConflictException);
+      await expect(accion()).rejects.toThrow(/siendo modificado/);
+    });
+
+    it.each([
+      [
+        'PATCH activo:false',
+        () => service.actualizar(1, { activo: false }, admin),
+      ],
+      ['DELETE', () => service.desactivar(1, admin)],
+      ['DELETE permanente', () => service.eliminarPermanente(1, admin)],
+    ])(
+      '%s NO traduce un deadlock ni otros errores',
+      async (_nombre, accion) => {
+        prisma.$transaction.mockRejectedValueOnce(deadlock());
+        await expect(accion()).rejects.toMatchObject({
+          name: 'DriverAdapterError',
+        });
+
+        prisma.$transaction.mockRejectedValueOnce(
+          Object.assign(new Error('Transaction API error'), { code: 'P2028' }),
+        );
+        await expect(accion()).rejects.toMatchObject({ code: 'P2028' });
+      },
+    );
+
+    it('PATCH sin activo o con activo:true no abre transacción ni fija esperas', async () => {
+      prisma.galpon.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { nombre: 'x' }, admin);
+      await service.actualizar(1, { activo: true }, admin);
+
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.$configurar).not.toHaveBeenCalled();
     });
   });
 });

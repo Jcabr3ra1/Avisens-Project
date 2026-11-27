@@ -1,0 +1,144 @@
+import { describe, expect, it } from 'vitest'
+import type { CategoriaFinanciera, MovimientoFinanciero } from '../api/movimientos-financieros'
+import {
+  categoriasParaTipo,
+  errorDeFormulario,
+  fechaCorta,
+  filtrarMovimientos,
+  formularioDesde,
+  formularioVacio,
+  payloadDesdeFormulario,
+} from './movimiento'
+
+function formulario(cambios: Partial<ReturnType<typeof formularioVacio>> = {}) {
+  return {
+    ...formularioVacio('2026-09-10'),
+    categoria_id: '3',
+    granja_id: '1',
+    valor_cop: '150000',
+    ...cambios,
+  }
+}
+
+describe('payloadDesdeFormulario', () => {
+  it('omite los opcionales vacíos en lugar de mandarlos en blanco', () => {
+    // El backend los valida como número o cadena con formato: un '' se
+    // rechaza con un 400 que desde la pantalla no se entiende.
+    const payload = payloadDesdeFormulario(formulario())
+    expect(payload).toEqual({
+      categoria_id: 3,
+      tipo: 'egreso',
+      valor_cop: 150000,
+      fecha: '2026-09-10',
+      granja_id: 1,
+    })
+    expect('lote_id' in payload).toBe(false)
+    expect('descripcion' in payload).toBe(false)
+  })
+
+  it('incluye los opcionales cuando sí traen valor', () => {
+    const payload = payloadDesdeFormulario(formulario({
+      lote_id: '7',
+      descripcion: '  Compra de bulto  ',
+      metodo_pago: 'efectivo',
+    }))
+    expect(payload.lote_id).toBe(7)
+    expect(payload.descripcion).toBe('Compra de bulto')
+    expect(payload.metodo_pago).toBe('efectivo')
+  })
+
+  it('convierte los números, que en el formulario viajan como texto', () => {
+    const payload = payloadDesdeFormulario(formulario({ valor_cop: '99000' }))
+    expect(payload.valor_cop).toBe(99000)
+    expect(typeof payload.categoria_id).toBe('number')
+  })
+})
+
+describe('errorDeFormulario', () => {
+  it('un formulario completo no tiene problemas', () => {
+    expect(errorDeFormulario(formulario())).toBe('')
+  })
+
+  it('rechaza un monto de cero o negativo', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '0' }))).toMatch(/mayor que cero/)
+    expect(errorDeFormulario(formulario({ valor_cop: '-500' }))).toMatch(/mayor que cero/)
+  })
+
+  it('exige categoría y granja', () => {
+    expect(errorDeFormulario(formulario({ categoria_id: '' }))).toMatch(/categoría/)
+    expect(errorDeFormulario(formulario({ granja_id: '' }))).toMatch(/granja/)
+  })
+})
+
+describe('categoriasParaTipo', () => {
+  const categorias: CategoriaFinanciera[] = [
+    { id: 1, nombre: 'Venta de aves', tipo: 'ingreso' },
+    { id: 2, nombre: 'Compra de alimento', tipo: 'egreso' },
+    { id: 3, nombre: 'Sin clasificar', tipo: null },
+  ]
+
+  it('al registrar un egreso no ofrece las categorías de ingreso', () => {
+    const visibles = categoriasParaTipo(categorias, 'egreso')
+    expect(visibles.map((categoria) => categoria.id)).toEqual([2, 3])
+  })
+
+  it('las categorías sin tipo sirven para ambos', () => {
+    expect(categoriasParaTipo(categorias, 'ingreso').map((c) => c.id)).toEqual([1, 3])
+  })
+})
+
+describe('QA-03: la fecha del listado coincide con la del formulario de edición', () => {
+  it('muestra el mismo día de calendario que se edita, sin correrlo por la zona horaria', () => {
+    const iso = '2026-10-16T00:00:00.000Z'
+    expect(fechaCorta(iso)).toMatch(/16/)
+    expect(fechaCorta(iso)).not.toMatch(/15/)
+    expect(formularioDesde({ tipo: 'ingreso', categoria_id: 1, valor_cop: 1, fecha: iso, granja_id: 1, lote_id: null } as unknown as Parameters<typeof formularioDesde>[0]).fecha).toBe('2026-10-16')
+  })
+
+  it('una fecha ilegible no se muestra como fecha', () => {
+    expect(fechaCorta('no-es-fecha')).toBe('—')
+  })
+})
+
+describe('Finanzas: monto desproporcionado', () => {
+  it('avisa "Ingrese un monto razonable" antes de enviar los 33 dígitos de QA o superar el tope', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '10000000001' })))
+      .toMatch(/Ingrese un monto razonable/)
+    expect(errorDeFormulario(formulario({ valor_cop: '133333335131313213213213213213' })))
+      .toMatch(/Ingrese un monto razonable/)
+  })
+
+  it('deja pasar los $100.000.000 reales de la prueba', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '100000000' }))).toBe('')
+  })
+})
+
+describe('filtrarMovimientos', () => {
+  const lista = [
+    {
+      id: 1,
+      tipo: 'egreso',
+      descripcion: 'Compra de concentración inicial',
+      numero_factura: 'FAC-2026-001',
+      categoria: { id: 2, nombre: 'Alimento', tipo: 'egreso' },
+      granja: { id: 1, nombre: 'El Jaller' },
+      lote: { id: 9, codigo: 'LOT-2026-000009' },
+    },
+    {
+      id: 2,
+      tipo: 'ingreso',
+      descripcion: 'Venta lote completo',
+      numero_factura: null,
+      categoria: { id: 1, nombre: 'Venta de aves', tipo: 'ingreso' },
+      granja: { id: 1, nombre: 'El Jaller' },
+      lote: { id: 10, codigo: 'LOT-2026-000010' },
+    },
+  ] as unknown as MovimientoFinanciero[]
+
+  it('filtra por tipo, lote y búsqueda sin sensibilidad a tildes (incluye factura)', () => {
+    expect(filtrarMovimientos(lista, { tipo: 'ingreso', loteId: 'todos', busqueda: '' }).map((m) => m.id)).toEqual([2])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: '9', busqueda: '' }).map((m) => m.id)).toEqual([1])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: 'todos', busqueda: 'concentracion' }).map((m) => m.id)).toEqual([1])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: 'todos', busqueda: 'fac-2026-001' }).map((m) => m.id)).toEqual([1])
+  })
+})

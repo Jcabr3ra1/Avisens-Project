@@ -1,0 +1,22 @@
+meta {
+  name: [Admin]  Publicar versión
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/firmware/1/publicar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Deja esta versión como la única publicada. Cada controlador la ve en su
+  próxima consulta de configuración (cada 30 s), la descarga, verifica su
+  SHA-256 y se reinicia. PATCH /v1/firmware/:id/retirar pausa el despliegue y
+  DELETE /v1/firmware/:id elimina una versión no publicada.
+}

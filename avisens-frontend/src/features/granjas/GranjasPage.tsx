@@ -1,124 +1,638 @@
-// GranjasPage.tsx — Módulo de Granjas (EP-08 HU-34).
-// Muestra las granjas del propietario con sus galpones y estado de cada lote.
-
-import { useState } from 'react'
-import { GRANJAS_DETALLE, type GalponDetalle, type EstadoGalpon } from './data'
-import { IcPin } from '@shared/ui/icons/icons'
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
+import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getRol } from '@shared/api'
+import { permisosDeGestion, ROL_ADMIN } from '@shared/auth/permisos'
+import {
+  IcAlert,
+  IcEgg,
+  IcGrid,
+  IcLeaf,
+  IcPin,
+  IcPlus,
+  IcSearch,
+} from '@shared/ui/icons/icons'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import '@shared/ui/admin/AdminKit.css'
+import {
+  activarGalpon,
+  actualizarGalpon,
+  crearGalpon,
+  desactivarGalpon,
+  eliminarGalponPermanente,
+} from '@features/galpones/api/galpones'
+import FormularioGalpon from '@features/galpones/components/FormularioGalpon'
+import { useFormularioGalpon } from '@features/galpones/hooks/useFormularioGalpon'
+import {
+  activarLote,
+  actualizarLote,
+  crearLote,
+  desactivarLote,
+  eliminarLotePermanente,
+  type CrearLotePayload,
+  type Lote,
+} from '@features/lotes/api/lotes'
+import FormularioLote from '@features/lotes/components/FormularioLote'
+import { useFormularioLote } from '@features/lotes/hooks/useFormularioLote'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
+import type { Granja } from './api/granjas'
+import AcordeonGalpon from './components/AcordeonGalpon'
+import Badge from './components/Badge'
+import EsqueletoGranjas from './components/EsqueletoGranjas'
+import FormularioGranja from './components/FormularioGranja'
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
+import SelectorGranjas from './components/SelectorGranjas'
+import TableroImplementacionGranjas from './components/TableroImplementacionGranjas'
+import TablaControlGranjas from './components/TablaControlGranjas'
+import { useEstructuraGranjas, type GalponConLotes } from './hooks/useEstructuraGranjas'
+import { useFormularioGranja } from './hooks/useFormularioGranja'
+import { useGranjas } from './hooks/useGranjas'
+import { useIndicadoresDeLotes } from './hooks/useIndicadoresDeLotes'
+import { usePropietariosGranja } from './hooks/usePropietariosGranja'
+import { calcularEtapasImplementacionGranjas } from './model/implementacion'
+import GranjasPropietario from './propietario/GranjasPropietario'
 import './GranjasPage.css'
 
-// ─── Componente principal ─────────────────────────────────────────────────────
-function GranjasPage() {
-  // Granja expandida para ver sus galpones
-  const [granjaExpandida, setGranjaExpandida] = useState<number | null>(1)
+function GranjasAdministracion() {
+  const [searchParams] = useSearchParams()
+  const granjaSolicitada = Number(searchParams.get('granjaId'))
+  const rol = getRol()
+  const esAdministrador = rol === ROL_ADMIN
+  const permisos = permisosDeGestion(rol)
+  const navigate = useNavigate()
 
-  // Totales globales del propietario para el encabezado
-  const totalGalpones = GRANJAS_DETALLE.reduce((s, g) => s + g.galpones.length, 0)
-  const totalAves     = GRANJAS_DETALLE.flatMap(g => g.galpones).reduce((s, g) => s + g.avesActuales, 0)
-  const galponesActivos = GRANJAS_DETALLE.flatMap(g => g.galpones).filter(g => g.estado === 'activo').length
+  const {
+    estructura,
+    lineasGeneticas,
+    lineasGeneticasError,
+    consumoPorLote,
+    cargando,
+    error,
+    recargar,
+  } = useEstructuraGranjas()
+  const gestionGranjas = useGranjas()
+  const catalogoPropietarios = usePropietariosGranja(esAdministrador)
+
+  // Granja elegida y galpones desplegados: el único estado de la página.
+  // Aquí navegar es revelar, no cambiar de ruta.
+  const [granjaId, setGranjaId] = useState<number | null>(() =>
+    Number.isSafeInteger(granjaSolicitada) && granjaSolicitada > 0 ? granjaSolicitada : null,
+  )
+  const [vistaAdministrativa, setVistaAdministrativa] = useState<'proceso' | 'tabla'>('proceso')
+  const [busquedaAdministrativa, setBusquedaAdministrativa] = useState('')
+  // Lo desplegado se guarda por granja: volver a una ya visitada la
+  // reencuentra como se dejó, en vez de reiniciarse.
+  const [desplegadosPorGranja, setDesplegadosPorGranja] = useState<Map<number, Set<number>>>(
+    new Map(),
+  )
+
+  const seleccionada = useMemo(
+    () => {
+      if (esAdministrador) {
+        return granjaId === null
+          ? null
+          : estructura.find((item) => item.granja.id === granjaId) ?? null
+      }
+
+      return estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
+    },
+    [esAdministrador, estructura, granjaId],
+  )
+  const idSeleccionada = seleccionada?.granja.id ?? null
+
+  // Sin decisión previa del usuario, se abren los galpones con lote en
+  // curso: es lo que viene a mirar. Los vacíos quedan plegados.
+  const desplegados = useMemo(() => {
+    if (seleccionada === null) return new Set<number>()
+    const guardado = desplegadosPorGranja.get(seleccionada.granja.id)
+    if (guardado) return guardado
+    return new Set(
+      seleccionada.galpones
+        .filter((galpon) => galpon.loteEnCurso !== null)
+        .map((galpon) => galpon.id),
+    )
+  }, [seleccionada, desplegadosPorGranja])
+
+  function alternarDespliegue(galponId: number) {
+    if (idSeleccionada === null) return
+    const siguiente = new Set(desplegados)
+    if (siguiente.has(galponId)) siguiente.delete(galponId)
+    else siguiente.add(galponId)
+    setDesplegadosPorGranja((previo) => new Map(previo).set(idSeleccionada, siguiente))
+  }
+
+  // Solo se piden indicadores de los lotes activos que están a la vista.
+  const lotesVisibles = useMemo(() => {
+    if (seleccionada === null) return []
+    return seleccionada.galpones
+      .filter((galpon) => desplegados.has(galpon.id))
+      .flatMap((galpon) => galpon.lotes.filter((lote) => lote.estado === 'activo'))
+      .map((lote) => lote.id)
+  }, [seleccionada, desplegados])
+  const { porLote } = useIndicadoresDeLotes(lotesVisibles)
+
+  async function recargarTodo() {
+    await Promise.all([recargar(), gestionGranjas.recargar()])
+  }
+
+  const formularioGranja = useFormularioGranja(async (datos, editandoId) => {
+    await gestionGranjas.guardar(datos, editandoId)
+    await recargarTodo()
+  })
+
+  const formularioGalpon = useFormularioGalpon(async (datos, editandoId) => {
+    if (editandoId === null) await crearGalpon(datos)
+    else await actualizarGalpon(editandoId, datos)
+    await recargarTodo()
+  })
+
+
+  const formularioLote = useFormularioLote(async (datos, editandoId) => {
+    if (editandoId === null) await crearLote(datos as CrearLotePayload)
+    else await actualizarLote(editandoId, datos)
+    await recargarTodo()
+  })
+
+  // Todas las acciones de esta página pasan por aquí. Antes cada una hacía
+  // `await` a secas y se invocaba con `void`, así que un fallo del servidor
+  // terminaba como «Uncaught (in promise)» en la consola y en pantalla no
+  // ocurría nada: la fila seguía ahí y el usuario no sabía si había pulsado mal.
+  async function ejecutar(accion: () => Promise<unknown>, respaldo: string) {
+    try {
+      await accion()
+      await recargarTodo()
+      return true
+    } catch (problema) {
+      toast.error(mensajeDeError(problema, respaldo))
+      return false
+    }
+  }
+
+  function alternarGalpon(galpon: GalponConLotes) {
+    void ejecutar(
+      () => (galpon.activo ? desactivarGalpon(galpon.id) : activarGalpon(galpon.id)),
+      galpon.activo ? 'No se pudo desactivar el galpón.' : 'No se pudo activar el galpón.',
+    )
+  }
+
+  async function eliminarGalpon(galpon: GalponConLotes) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este galpón?',
+      entidad: galpon.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar galpón',
+      tono: 'peligro',
+    }))) return
+    void ejecutar(
+      () => eliminarGalponPermanente(galpon.id),
+      'No se pudo eliminar el galpón. Puede que tenga lotes asociados.',
+    )
+  }
+
+  function alternarLote(lote: Lote) {
+    void ejecutar(
+      () => (lote.estado === 'activo' ? desactivarLote(lote.id) : activarLote(lote.id)),
+      lote.estado === 'activo' ? 'No se pudo desactivar el lote.' : 'No se pudo activar el lote.',
+    )
+  }
+
+  async function eliminarLote(lote: Lote) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este lote?',
+      entidad: lote.codigo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar lote',
+      tono: 'peligro',
+    }))) return
+    void ejecutar(
+      () => eliminarLotePermanente(lote.id),
+      'No se pudo eliminar el lote. Puede que tenga registros de producción asociados.',
+    )
+  }
+
+  async function eliminarGranja(granja: Granja) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar esta granja?',
+      entidad: granja.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar granja',
+      tono: 'peligro',
+    }))) return
+    void ejecutar(
+      () => gestionGranjas.eliminar(granja),
+      'No se pudo eliminar la granja. Puede que tenga galpones asociados.',
+    )
+  }
+
+  const totales = useMemo(
+    () => ({
+      granjas: estructura.length,
+      galpones: estructura.reduce((total, item) => total + item.galpones.length, 0),
+      lotesActivos: estructura.reduce((total, item) => total + item.lotesActivos, 0),
+      aves: estructura.reduce((total, item) => total + item.avesAlojadas, 0),
+    }),
+    [estructura],
+  )
+
+  const etapas = useMemo(
+    () =>
+      calcularEtapasImplementacionGranjas(
+        catalogoPropietarios.propietarios,
+        estructura.map((item) => item.granja),
+        estructura.flatMap((item) => item.galpones),
+      ),
+    [catalogoPropietarios.propietarios, estructura],
+  )
+
+  const estructuraFiltrada = useMemo(() => {
+    const termino = busquedaAdministrativa.trim().toLocaleLowerCase('es-CO')
+    if (!termino) return estructura
+    return estructura.filter((item) =>
+      [
+        item.granja.nombre,
+        item.granja.propietario.nombre_completo,
+        item.granja.municipio,
+        item.granja.departamento,
+      ].some((valor) => valor?.toLocaleLowerCase('es-CO').includes(termino)),
+    )
+  }, [busquedaAdministrativa, estructura])
+
+  const contenidoPorRol = esAdministrador
+    ? {
+        contexto: 'Control de organización',
+        titulo: 'Granjas de la organización',
+        descripcion: 'Administra la estructura productiva y asígnala a cada propietario.',
+        resumen: 'Resumen de la organización',
+        vacioTitulo: 'Aún no hay granjas registradas.',
+        vacioDescripcion:
+          'Crea la primera granja y asígnala a un propietario para iniciar su estructura productiva.',
+        accionVacia: 'Crear primera granja',
+      }
+    : {
+        contexto: 'Mi operación',
+        titulo: 'Mis granjas',
+        descripcion: 'Tus galpones y lotes, con sus datos. Completa la ubicación, las medidas y la línea genética para que las proyecciones sean precisas.',
+        resumen: 'Resumen de mis granjas',
+        vacioTitulo: 'Aún no tienes granjas asignadas.',
+        vacioDescripcion:
+          'Cuando el administrador te asigne una granja, podrás consultar aquí sus galpones y lotes.',
+        accionVacia: 'Crear mi primera granja',
+      }
+
+  if (cargando && estructura.length === 0) {
+    return (
+      <div className="page-container gr-page adm-page">
+        <EsqueletoGranjas />
+      </div>
+    )
+  }
 
   return (
-    <div className="page-container grj-page">
+    <div className="page-container gr-page adm-page">
+      <CabeceraAdmin
+        eyebrow={contenidoPorRol.contexto}
+        titulo={contenidoPorRol.titulo}
+        subtitulo={contenidoPorRol.descripcion}
+      />
 
-      {/* ── Encabezado ──────────────────────────────────────────────────────── */}
-      <header className="grj-header">
-        <div>
-          <h1 className="grj-title">Mis Granjas</h1>
-          <p className="grj-sub">Gestión de granjas y galpones del propietario</p>
-        </div>
-      </header>
-
-      {/* ── Resumen global ──────────────────────────────────────────────────── */}
-      <div className="grj-resumen">
-        <div className="grj-stat">
-          <span className="grj-stat-valor">{GRANJAS_DETALLE.length}</span>
-          <span className="grj-stat-label">Granjas</span>
-        </div>
-        <div className="grj-stat">
-          <span className="grj-stat-valor">{totalGalpones}</span>
-          <span className="grj-stat-label">Galpones</span>
-        </div>
-        <div className="grj-stat">
-          <span className="grj-stat-valor">{galponesActivos}</span>
-          <span className="grj-stat-label">Activos</span>
-        </div>
-        <div className="grj-stat">
-          <span className="grj-stat-valor">{totalAves.toLocaleString()}</span>
-          <span className="grj-stat-label">Aves totales</span>
-        </div>
-      </div>
-
-      {/* ── Lista de granjas ─────────────────────────────────────────────────── */}
-      <div className="grj-lista">
-        {GRANJAS_DETALLE.map(granja => (
-          <div key={granja.id} className="grj-card">
-
-            {/* Cabecera de la granja — click para expandir/colapsar */}
-            <button
-              className="grj-card-head"
-              onClick={() => setGranjaExpandida(granjaExpandida === granja.id ? null : granja.id)}
-            >
-              <div className="grj-card-info">
-                <span className="grj-nombre">{granja.nombre}</span>
-                <span className="grj-ubicacion"><IcPin size={13} /> {granja.municipio}, {granja.departamento}</span>
-              </div>
-              <div className="grj-card-meta">
-                <span>{granja.galpones.length} galpones</span>
-                <span>{granja.areaTotalHa} ha</span>
-                <span className="grj-chevron">{granjaExpandida === granja.id ? '▲' : '▼'}</span>
-              </div>
-            </button>
-
-            {/* Tabla de galpones — visible solo cuando la granja está expandida */}
-            {granjaExpandida === granja.id && (
-              <div className="grj-galpones">
-                <table className="grj-tabla">
-                  <thead>
-                    <tr>
-                      <th>Código</th><th>Nombre</th><th>Área (m²)</th><th>Capacidad</th>
-                      <th>Aves actuales</th><th>Día de vida</th><th>Lote activo</th><th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {granja.galpones.map(g => (
-                      <FilaGalpon key={g.id} galpon={g} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <ul className="adm-kpis" aria-label={contenidoPorRol.resumen}>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Granjas</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcLeaf size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.granjas.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Registradas en operación</span>
           </div>
-        ))}
-      </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Galpones</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.galpones.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Espacios productivos</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Lotes activos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.lotesActivos.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Ciclos en curso</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Aves alojadas</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.aves.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Población actual</span>
+          </div>
+        </li>
+      </ul>
+
+      {error && (
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargarTodo()}>Reintentar</button>
+        </div>
+      )}
+
+      {estructura.length === 0 && !esAdministrador ? (
+        <div className="gr-vacio gr-vacio--grande">
+          <span className="gr-vacio-icono" aria-hidden="true">
+            <IcLeaf size={26} />
+          </span>
+          <h2>{contenidoPorRol.vacioTitulo}</h2>
+          <p>{contenidoPorRol.vacioDescripcion}</p>
+          {permisos.crear && (
+            <button
+              type="button"
+              className="gr-btn gr-btn--primario"
+              onClick={() => formularioGranja.abrirCrear()}
+            >
+              {contenidoPorRol.accionVacia}
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {esAdministrador && (
+            <section className="grj-gestion" aria-label="Gestión administrativa de granjas">
+              <div className="grj-vistas">
+                <div className="grj-vistas-cabecera">
+                  <div>
+                    <p className="grj-tablero-kicker">Granjas de la organización</p>
+                    <h2>{vistaAdministrativa === 'proceso' ? 'Flujo de implementación' : 'Todas las granjas'}</h2>
+                    <p>
+                      {vistaAdministrativa === 'proceso'
+                        ? 'Prioriza el paso que falta para poner cada granja en operación.'
+                        : 'Busca, compara e inspecciona la estructura de cada granja.'}
+                    </p>
+                  </div>
+                  <div className="grj-selector-vista" aria-label="Vista de granjas">
+                    <button
+                      type="button"
+                      aria-pressed={vistaAdministrativa === 'proceso'}
+                      className={vistaAdministrativa === 'proceso' ? 'is-activa' : undefined}
+                      onClick={() => setVistaAdministrativa('proceso')}
+                    >
+                      Proceso
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={vistaAdministrativa === 'tabla'}
+                      className={vistaAdministrativa === 'tabla' ? 'is-activa' : undefined}
+                      onClick={() => setVistaAdministrativa('tabla')}
+                    >
+                      Todas las granjas
+                    </button>
+                  </div>
+                </div>
+
+                {vistaAdministrativa === 'proceso' ? (
+                  <TableroImplementacionGranjas
+                    etapas={etapas}
+                    cargando={cargando || catalogoPropietarios.cargando}
+                    onAsignarGranja={(propietarioId) => formularioGranja.abrirCrear(propietarioId)}
+                    onAbrirGranja={setGranjaId}
+                  />
+                ) : (
+                  <div className="grj-tabla-contenedor">
+                    <label className="grj-busqueda">
+                      <span>Buscar granja, propietario o municipio</span>
+                      <div>
+                        <IcSearch size={16} aria-hidden="true" />
+                        <input
+                          type="search"
+                          value={busquedaAdministrativa}
+                          onChange={(evento) => setBusquedaAdministrativa(evento.target.value)}
+                          placeholder="Ej. La Esperanza o Ana Pérez"
+                        />
+                      </div>
+                    </label>
+                    <TablaControlGranjas
+                      estructura={estructuraFiltrada}
+                      granjaSeleccionadaId={idSeleccionada}
+                      onSeleccionar={setGranjaId}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {!esAdministrador && (
+            <SelectorGranjas
+              estructura={estructura}
+              granjaId={idSeleccionada}
+              onSeleccionar={setGranjaId}
+            />
+          )}
+
+          {seleccionada && (
+            <section className="gr-inspeccion">
+              {esAdministrador && (
+                <header className="gr-inspeccion-cabecera">
+                  <div>
+                    <span className="gr-eyebrow">
+                      <span className="gr-eyebrow-punto" aria-hidden="true" />
+                      Inspección administrativa
+                    </span>
+                    <h2>Detalle de la granja asignada</h2>
+                    <p>Revisa su estructura y gestiona los ajustes necesarios.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="gr-btn gr-btn--suave"
+                    onClick={() => setGranjaId(null)}
+                  >
+                    Cerrar inspección
+                  </button>
+                </header>
+              )}
+
+            <section className="gr-granja" aria-labelledby="gr-granja-titulo">
+              <header className="gr-granja-cabecera">
+                <div>
+                  <div className="gr-granja-titulo">
+                    <h2 id="gr-granja-titulo">{seleccionada.granja.nombre}</h2>
+                    <Badge
+                      tono={seleccionada.granja.activa ? 'activo' : 'neutral'}
+                      texto={seleccionada.granja.activa ? 'Activa' : 'Inactiva'}
+                    />
+                  </div>
+                  {(esAdministrador || seleccionada.granja.municipio || seleccionada.granja.departamento) && (
+                    <p className="gr-granja-lugar">
+                      <IcPin size={13} aria-hidden="true" />
+                      {seleccionada.granja.municipio ?? '—'},{' '}
+                      {seleccionada.granja.departamento ?? '—'}
+                      {esAdministrador && seleccionada.granja.propietario && (
+                        <> · Propietario: {seleccionada.granja.propietario.nombre_completo}</>
+                      )}
+                    </p>
+                  )}
+                  <p className="gr-granja-cifras">
+                    <strong>{seleccionada.galpones.length}</strong> {seleccionada.galpones.length === 1 ? 'galpón' : 'galpones'} ·{' '}
+                    <strong>{seleccionada.lotesActivos}</strong> {seleccionada.lotesActivos === 1 ? 'lote activo' : 'lotes activos'} ·{' '}
+                    <strong>{seleccionada.avesAlojadas.toLocaleString('es-CO')}</strong> aves
+                    {seleccionada.alertasAbiertas > 0 && (
+                      <span className="gr-granja-alertas">
+                        <IcAlert size={13} aria-hidden="true" />
+                        {seleccionada.alertasAbiertas} alertas
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="gr-granja-acciones">
+                  {permisos.crear && seleccionada.galpones.length > 0 && (
+                    <button
+                      type="button"
+                      className="gr-btn gr-btn--suave"
+                      onClick={() => formularioGalpon.abrirCrear(seleccionada.granja.id)}
+                    >
+                      <IcPlus size={14} aria-hidden="true" />
+                      Añadir galpón
+                    </button>
+                  )}
+                  <MenuAcciones
+                    etiqueta={`Acciones de ${seleccionada.granja.nombre}`}
+                    acciones={[
+
+                      ...(permisos.editar
+                        ? [
+                            {
+                              etiqueta: 'Editar granja',
+                              onSeleccionar: () =>
+                                formularioGranja.abrirEditar(seleccionada.granja),
+                            },
+                          ]
+                        : []),
+                      ...(permisos.alternarActivo
+                        ? [
+                            {
+                              etiqueta: seleccionada.granja.activa ? 'Desactivar' : 'Activar',
+                              onSeleccionar: () =>
+                                void gestionGranjas
+                                  .alternarActivo(seleccionada.granja)
+                                  .then(recargarTodo),
+                            },
+                          ]
+                        : []),
+                      ...(permisos.eliminar
+                        ? [
+                            {
+                              etiqueta: 'Eliminar granja',
+                              onSeleccionar: () => eliminarGranja(seleccionada.granja),
+                              peligrosa: true,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </div>
+              </header>
+
+              {seleccionada.galpones.length === 0 ? (
+                <div className="gr-vacio">
+                  <p>Esta granja todavía no tiene galpones.</p>
+                  {permisos.crear && (
+                    <button
+                      type="button"
+                      className="gr-btn gr-btn--suave"
+                      onClick={() => formularioGalpon.abrirCrear(seleccionada.granja.id)}
+                    >
+                      Añadir primer galpón
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="gr-galpones">
+                  {seleccionada.galpones.map((galpon) => (
+                    <AcordeonGalpon
+                      key={galpon.id}
+                      galpon={galpon}
+                      expandido={desplegados.has(galpon.id)}
+                      onAlternarExpansion={() => alternarDespliegue(galpon.id)}
+                      indicadoresPorLote={porLote}
+                      consumoPorLote={consumoPorLote}
+                      permisos={permisos}
+                      onEditarGalpon={(item) => formularioGalpon.abrirEditar(item.origen)}
+                      onAlternarGalpon={(item) => void alternarGalpon(item)}
+                      onEliminarGalpon={(item) => void eliminarGalpon(item)}
+                      onCrearLote={(item) => formularioLote.abrirCrear(item.id)}
+                      onEditarLote={formularioLote.abrirEditar}
+                      onAlternarLote={alternarLote}
+                      onEliminarLote={eliminarLote}
+                      onAbrirGuia={(lote) => navigate(`/guia-crecimiento?lote=${lote.id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+            </section>
+          )}
+        </>
+      )}
+
+      {formularioGranja.abierto && (
+        <FormularioGranja
+          form={formularioGranja.form}
+          modoEdicion={formularioGranja.modoEdicion}
+          esAdministrador={esAdministrador}
+          propietarios={catalogoPropietarios.propietarios}
+          cargandoPropietarios={catalogoPropietarios.cargando}
+          errorPropietarios={catalogoPropietarios.error}
+          guardando={formularioGranja.guardando}
+          error={formularioGranja.error}
+          onCambiar={formularioGranja.cambiar}
+          onGuardar={formularioGranja.guardar}
+          onCerrar={formularioGranja.cerrar}
+        />
+      )}
+
+      {formularioGalpon.abierto && seleccionada && (
+        <FormularioGalpon
+          form={formularioGalpon.form}
+          modoEdicion={formularioGalpon.modoEdicion}
+          granjas={[seleccionada.granja]}
+          guardando={formularioGalpon.guardando}
+          error={formularioGalpon.error}
+          onCambiar={formularioGalpon.cambiar}
+          onGuardar={formularioGalpon.guardar}
+          onCerrar={formularioGalpon.cerrar}
+        />
+      )}
+
+      {formularioLote.abierto && seleccionada && (
+        <FormularioLote
+          form={formularioLote.form}
+          modoEdicion={formularioLote.modoEdicion}
+          galpones={seleccionada.galpones.map((galpon) => galpon.origen)}
+          lineasGeneticas={lineasGeneticas}
+          errorLineasGeneticas={lineasGeneticasError}
+          guardando={formularioLote.guardando}
+          error={formularioLote.error}
+          onCambiar={formularioLote.cambiar}
+          onGuardar={formularioLote.guardar}
+          onCerrar={formularioLote.cerrar}
+        />
+      )}
     </div>
   )
 }
 
-// ─── Sub-componente: fila de galpón ──────────────────────────────────────────
-function FilaGalpon({ galpon }: { galpon: GalponDetalle }) {
-  const etiqueta: Record<EstadoGalpon, string> = {
-    activo:        'Activo',
-    vacio:         'Vacío',
-    preparacion:   'Preparando',
-    mantenimiento: 'Mto.',
-  }
-
-  return (
-    <tr className={`grj-fila grj-fila--${galpon.estado}`}>
-      <td><code>{galpon.codigo}</code></td>
-      <td>{galpon.nombre}</td>
-      <td>{galpon.areaM2.toLocaleString()}</td>
-      <td>{galpon.capacidadAves.toLocaleString()}</td>
-      <td>{galpon.avesActuales > 0 ? galpon.avesActuales.toLocaleString() : '—'}</td>
-      <td>{galpon.diaVida > 0 ? `Día ${galpon.diaVida}` : '—'}</td>
-      <td>{galpon.loteActual ?? '—'}</td>
-      <td>
-        <span className={`grj-estado grj-estado--${galpon.estado}`}>
-          <span className={`grj-dot grj-dot--${galpon.estado}`} />
-          {etiqueta[galpon.estado]}
-        </span>
-      </td>
-    </tr>
-  )
+function GranjasPage() {
+  return getRol() === ROL_ADMIN ? <GranjasAdministracion /> : <GranjasPropietario />
 }
 
 export default GranjasPage

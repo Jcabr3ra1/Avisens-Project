@@ -1,0 +1,23 @@
+meta {
+  name: Admin Exportar prospectos a CSV
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/prospectos/exportar
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+query {
+  clasificacion: caliente
+  estado: calificado
+}
+
+docs {
+  Exporta todos los prospectos a CSV. Respeta los filtros del listado (clasificacion, estado, sin_asignar).
+}

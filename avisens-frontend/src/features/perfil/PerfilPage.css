@@ -1,0 +1,498 @@
+.per-cabecera {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.per-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.9rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.per-subtitulo {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+/* ─── Expediente de 2 columnas (Diseño B) ─── */
+
+.per-expediente {
+  display: grid;
+  grid-template-columns: minmax(17.5rem, 20.5rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
+}
+
+/* ─── Columna izquierda: tarjeta de identidad ─── */
+
+.per-perfil {
+  position: sticky;
+  top: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--avisens-ink) 28%, transparent), var(--shadow-sm);
+}
+
+.per-perfil-banda {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0.85rem var(--space-4) 2.75rem;
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 72%, #0a2e25) 100%);
+}
+
+.per-estado-pill,
+.per-rol-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 16%);
+  color: var(--on-primary);
+  font-size: 0.7rem;
+  font-weight: 750;
+  backdrop-filter: blur(6px);
+}
+
+.per-estado-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6ee7b7;
+}
+
+.per-perfil-cuerpo {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0 var(--space-5) var(--space-5);
+  text-align: center;
+}
+
+.per-avatar {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-top: -2.5rem;
+  margin-bottom: 0.45rem;
+  overflow: hidden;
+  border: 4px solid var(--surface-base);
+  border-radius: 50%;
+  background: var(--surface-tinted);
+  box-shadow: var(--shadow-sm);
+}
+
+.per-perfil-nombre {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.per-perfil-usuario {
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.per-perfil-org {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.per-perfil-metricas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  width: 100%;
+  margin: var(--space-4) 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--border-subtle);
+  text-align: left;
+}
+
+.per-perfil-metricas > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0.65rem 0.85rem;
+  background: var(--surface-tinted);
+}
+
+.per-perfil-metricas dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.per-perfil-metricas dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.per-salir {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ─── Columna derecha: tarjetas ejecutivas ─── */
+
+.per-espacio {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.per-tarjeta {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: 0 10px 26px -20px color-mix(in srgb, var(--avisens-ink) 28%, transparent), var(--shadow-sm);
+}
+
+.per-tarjeta-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.per-rotulo {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.per-tarjeta h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.per-chip-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.per-icono-seguridad {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-tinted);
+  color: var(--primary);
+}
+
+.per-datos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--border-subtle);
+}
+
+.per-datos > div {
+  display: grid;
+  align-content: start;
+  gap: 0.22rem;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  background: var(--surface-tinted);
+}
+
+.per-datos dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.per-datos dd {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.per-datos dd code {
+  color: var(--text-primary);
+  font-weight: 750;
+}
+
+.per-sin-dato {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* ─── Seguridad y cambio de contraseña ─── */
+
+.per-ayuda {
+  margin: -0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.per-formulario {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.per-formulario-par {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.per-campo {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.per-campo span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.per-campo input {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.per-campo input:hover {
+  border-color: var(--border-strong);
+}
+
+.per-campo input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.per-fortaleza {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: -0.2rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.per-fortaleza-barras {
+  display: grid;
+  grid-template-columns: repeat(3, 2.2rem);
+  gap: 4px;
+}
+
+.per-fortaleza-barras i {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border-default);
+}
+
+.per-fortaleza--1 .per-fortaleza-barras i:nth-child(-n + 1) { background: var(--danger); }
+.per-fortaleza--2 .per-fortaleza-barras i:nth-child(-n + 2) { background: var(--warning); }
+.per-fortaleza--3 .per-fortaleza-barras i:nth-child(-n + 3) { background: var(--primary); }
+
+.per-mostrar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.per-mostrar input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.per-error {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger3);
+  font-size: 0.84rem;
+}
+
+.per-formulario-pie {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.per-guardar {
+  min-height: 44px;
+}
+
+.per-aviso-admin {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0.95rem 1.05rem;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.per-aviso-icono {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.per-aviso-admin strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.per-aviso-admin p {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 64rem) {
+  .per-expediente {
+    grid-template-columns: 1fr;
+  }
+
+  .per-perfil {
+    position: static;
+  }
+
+  .per-datos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .per-datos,
+  .per-formulario-par {
+    grid-template-columns: 1fr;
+  }
+
+  .per-tarjeta {
+    padding: var(--space-4);
+  }
+}
+
+/* ─── Foto real de perfil ─── */
+
+.per-avatar-foto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.per-input-oculto {
+  display: none;
+}
+
+.per-foto-acciones {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.per-foto-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-height: 30px;
+  padding: 0.22rem 0.65rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.per-foto-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.per-foto-btn--peligro {
+  padding: 0.22rem 0.45rem;
+}
+
+.per-foto-btn--peligro:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}

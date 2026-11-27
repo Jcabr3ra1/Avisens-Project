@@ -1,376 +1,555 @@
-// BitacoraPage.tsx — Módulo de Bitácora Productiva (EP-06 HU-26 a HU-29).
-// Pestañas visibles por rol según las historias épicas:
-//   Operario    → Mortalidad (HU-27) y Consumo (HU-28)
-//   Propietario → Registros, Peso (HU-26), Mortalidad, Consumo, + Reporte (HU-29)
-
-import { useState } from 'react'
-import type { ReactNode } from 'react'
-import {
-  REGISTROS_BITACORA,
-  REGISTROS_MORTALIDAD,
-  REGISTROS_CONSUMO,
-  CURVAS_PESO,
-  type TipoRegistro,
-  type PuntoCurva,
-} from './data'
-import { GALPONES_MONITOREO } from '../monitoreo/data'
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { IcDoc, IcScale, IcHeart, IcSeed, IcDrop, IcAlert } from '@shared/ui/icons/icons'
+import { ROL_ADMIN, ROL_PROPIETARIO, permisosDeRegistro } from '@shared/auth/permisos'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { IcAlert, IcBarn, IcCal, IcDoc, IcDrop, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
+import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
+import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
+import ActividadRecienteBitacora from './components/ActividadRecienteBitacora'
+import FormularioRegistro from './components/FormularioRegistro'
+import HistorialRegistros from './components/HistorialRegistros'
+import ModalFotoMortalidad from './components/ModalFotoMortalidad'
+import ResumenLote from './components/ResumenLote'
+import { subirFotoMortalidad } from './api/bitacora'
+import { useBitacora } from './hooks/useBitacora'
+import { useInsumosDeGranja } from './hooks/useInsumosDeGranja'
+import {
+  errorDeRegistro,
+  FORMULARIO_INICIAL,
+  formularioDesde,
+  payloadRegistro,
+  type FormularioRegistro as DatosFormulario,
+  type TipoRegistro,
+} from './model/bitacora'
+import {
+  calcularResumenBitacora,
+  calcularSaludCicloLote,
+  crearActividadReciente,
+  crearFilasRegistro,
+  filtrarRegistrosPorLote,
+  type VistaBitacora,
+} from './model/resumenBitacora'
+import '@shared/ui/admin/AdminKit.css'
 import './BitacoraPage.css'
 
-// Galpones con lote activo — los únicos que tiene sentido registrar en bitácora
-const GALPONES_ACTIVOS = GALPONES_MONITOREO.filter(g => g.diaVida > 0)
+const ETIQUETA: Record<TipoRegistro, string> = {
+  peso: 'Pesajes',
+  mortalidad: 'Mortalidad',
+  sanitario: 'Sanidad',
+}
 
-// ─── Gráfica SVG de curva de crecimiento ─────────────────────────────────────
-// Real del lote vs. estándar Ross 308. SVG puro — sin librerías externas.
-// Diferenciador clave vs. Avi-Smart, AviSoft y Smelpro en Colombia.
-function CurvaPesoChart({ datos }: { datos: PuntoCurva[] }) {
-  if (!datos.length) return null
+function fechaIngresoLegible(fecha: string) {
+  return new Date(`${fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
 
-  const W = 560; const H = 220
-  const padL = 52; const padR = 20; const padT = 20; const padB = 36
-  const plotW = W - padL - padR; const plotH = H - padT - padB
+function BitacoraPage() {
+  const navigate = useNavigate()
+  const datos = useBitacora()
+  useRefetchOnFocus(datos.recargar)
+  const rol = getRol()
+  const esAdministrador = rol === ROL_ADMIN
+  const permisosRegistro = permisosDeRegistro(rol)
+  const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [galponId, setGalponId] = useState<number | null>(null)
+  const [parametros] = useSearchParams()
+  const vistaSolicitada = parametros.get('vista')
+  const [loteId, setLoteId] = useState<number | null>(null)
+  const [vista, setVista] = useState<VistaBitacora>(() =>
+    vistaSolicitada === 'peso' || vistaSolicitada === 'mortalidad' || vistaSolicitada === 'sanitario' || vistaSolicitada === 'consumo'
+      ? vistaSolicitada
+      : 'resumen',
+  )
+  const [modal, setModal] = useState<TipoRegistro | null>(null)
+  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const loteSolicitado = Number(parametros.get('lote'))
+  const destinoAplicado = useRef(false)
 
-  const allPesos = datos.flatMap(d => [d.pesoReal, d.pesoObjetivo])
-  const minPeso  = Math.floor(Math.min(...allPesos) * 0.85 / 100) * 100
-  const maxPeso  = Math.ceil( Math.max(...allPesos) * 1.08 / 100) * 100
+  // Para el Propietario, la bitácora oficial está integrada en la vista de Granjas (/granjas)
+  useEffect(() => {
+    if (rol === ROL_PROPIETARIO && datos.lotes.length > 0) {
+      const destino = Number.isSafeInteger(loteSolicitado) && loteSolicitado > 0
+        ? datos.lotes.find((item) => item.id === loteSolicitado)
+        : datos.lotes[0]
+      if (destino) {
+        navigate(
+          `/granjas?granjaId=${destino.galpon.granja.id}&galpon=${destino.galpon.id}&pestana=bitacora${vistaSolicitada ? `&vista=${vistaSolicitada}` : ''}`,
+          { replace: true },
+        )
+      }
+    }
+  }, [rol, datos.lotes, loteSolicitado, vistaSolicitada, navigate])
 
-  // Coordenadas SVG a partir de semana y peso
-  const xOf = (s: number) => padL + ((s - 1) / (datos.length - 1)) * plotW
-  const yOf = (p: number) => padT + plotH - ((p - minPeso) / (maxPeso - minPeso)) * plotH
-  const pts  = (k: 'pesoReal' | 'pesoObjetivo') =>
-    datos.map(d => `${xOf(d.semana).toFixed(1)},${yOf(d[k]).toFixed(1)}`).join(' ')
+  useEffect(() => {
+    if (destinoAplicado.current || !Number.isSafeInteger(loteSolicitado) || loteSolicitado <= 0) return
+    const destino = datos.lotes.find((item) => item.id === loteSolicitado)
+    if (!destino) return
+    destinoAplicado.current = true
+    setGranjaId(destino.galpon.granja.id)
+    setGalponId(destino.galpon.id)
+    setLoteId(destino.id)
+  }, [datos.lotes, loteSolicitado])
 
-  // Polígono de zona de tolerancia ±7%
-  const zonaAlerta = [
-    ...datos.map(d => `${xOf(d.semana).toFixed(1)},${yOf(d.pesoObjetivo * 1.07).toFixed(1)}`),
-    ...datos.slice().reverse().map(d => `${xOf(d.semana).toFixed(1)},${yOf(d.pesoObjetivo * 0.93).toFixed(1)}`),
-  ].join(' ')
+  const [form, setForm] = useState<DatosFormulario>(FORMULARIO_INICIAL)
+  const [fotoMortalidad, setFotoMortalidad] = useState<File | null>(null)
+  const [mortalidadFotoId, setMortalidadFotoId] = useState<number | null>(null)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
 
-  // Líneas de cuadrícula
-  const gridStep = Math.round((maxPeso - minPeso) / 4 / 100) * 100
-  const gridLines = []
-  for (let v = minPeso; v <= maxPeso; v += gridStep) {
-    gridLines.push({ y: yOf(v), label: (v / 1000).toFixed(1) + ' kg' })
+  const granjas = useMemo(() => {
+    const granjasPorId = new Map<number, { id: number; nombre: string }>()
+
+    datos.lotes.forEach((item) => {
+      granjasPorId.set(item.galpon.granja.id, {
+        id: item.galpon.granja.id,
+        nombre: item.galpon.granja.nombre,
+      })
+    })
+
+    return [...granjasPorId.values()].sort((primera, segunda) => primera.nombre.localeCompare(segunda.nombre, 'es'))
+  }, [datos.lotes])
+
+  const granjaSeleccionadaId = granjas.some((granja) => granja.id === granjaId)
+    ? granjaId
+    : (granjas[0]?.id ?? null)
+
+  const galpones = useMemo(() => {
+    const galponesPorId = new Map<number, { id: number; nombre: string }>()
+
+    datos.lotes
+      .filter((item) => item.galpon.granja.id === granjaSeleccionadaId)
+      .forEach((item) => {
+        galponesPorId.set(item.galpon.id, { id: item.galpon.id, nombre: item.galpon.nombre })
+      })
+
+    return [...galponesPorId.values()].sort((primero, segundo) => primero.nombre.localeCompare(segundo.nombre, 'es'))
+  }, [datos.lotes, granjaSeleccionadaId])
+
+  const galponSeleccionadoId = galpones.some((galpon) => galpon.id === galponId)
+    ? galponId
+    : (galpones[0]?.id ?? null)
+
+  const lotesDelGalpon = useMemo(
+    () => datos.lotes.filter((item) => item.galpon.id === galponSeleccionadoId),
+    [datos.lotes, galponSeleccionadoId],
+  )
+
+  const loteSeleccionadoId = lotesDelGalpon.some((item) => item.id === loteId)
+    ? loteId
+    : (lotesDelGalpon[0]?.id ?? null)
+
+  const lote = lotesDelGalpon.find((item) => item.id === loteSeleccionadoId)
+  const insumosGranja = useInsumosDeGranja(lote?.galpon.granja.id ?? null, modal === 'sanitario')
+  const pesajes = useMemo(() => filtrarRegistrosPorLote(datos.pesajes, loteSeleccionadoId), [datos.pesajes, loteSeleccionadoId])
+  const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
+  const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
+  const consumos = useMemo(() => filtrarRegistrosPorLote(datos.consumos, loteSeleccionadoId), [datos.consumos, loteSeleccionadoId])
+
+  const resumen = useMemo(
+    () => calcularResumenBitacora(pesajes, mortalidad, sanitarios, consumos),
+    [consumos, mortalidad, pesajes, sanitarios],
+  )
+
+  const saludCiclo = useMemo(
+    () =>
+      lote
+        ? calcularSaludCicloLote(lote.fecha_ingreso, lote.cantidad_inicial, resumen.avesMuertas)
+        : null,
+    [lote, resumen.avesMuertas],
+  )
+
+  const actividadReciente = useMemo(
+    () => crearActividadReciente(pesajes, mortalidad, sanitarios, consumos, 6),
+    [consumos, mortalidad, pesajes, sanitarios],
+  )
+
+  const filas = useMemo(
+    () => crearFilasRegistro(vista, pesajes, mortalidad, sanitarios),
+    [mortalidad, pesajes, sanitarios, vista],
+  )
+
+  const abrir = (tipo: TipoRegistro) => {
+    setForm(FORMULARIO_INICIAL)
+    setFotoMortalidad(null)
+    setErrorForm('')
+    setEditandoId(null)
+    setModal(tipo)
   }
 
-  return (
-    <div className="bit-chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="grad-real-bit" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#3b82f6" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
+  const abrirEdicion = (tipo: TipoRegistro, id: number) => {
+    const registros = tipo === 'peso' ? pesajes : tipo === 'mortalidad' ? mortalidad : sanitarios
+    const registro = registros.find((item) => item.id === id)
+    if (!registro) return
+    setForm(formularioDesde(tipo, registro))
+    setFotoMortalidad(null)
+    setErrorForm('')
+    setEditandoId(id)
+    setModal(tipo)
+  }
 
-        {/* Zona óptima ±7% */}
-        <polygon points={zonaAlerta} fill="rgba(16,185,129,0.08)" />
+  const cambiar = <K extends keyof DatosFormulario>(campo: K, valor: DatosFormulario[K]) => {
+    setForm((actual) => ({ ...actual, [campo]: valor }))
+  }
 
-        {/* Cuadrícula */}
-        {gridLines.map(({ y, label }) => (
-          <g key={label}>
-            <line x1={padL} y1={y.toFixed(1)} x2={W - padR} y2={y.toFixed(1)}
-              stroke="rgba(10,26,20,0.07)" strokeWidth="1" strokeDasharray="4 3" />
-            <text x={padL - 6} y={y.toFixed(1)} textAnchor="end" dominantBaseline="middle"
-              fontSize="9" fill="rgba(10,26,20,0.4)" fontFamily="DM Mono,monospace">
-              {label}
-            </text>
-          </g>
-        ))}
+  const guardar = (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault()
+    if (!modal || !loteSeleccionadoId) return
 
-        {/* Etiquetas eje X */}
-        {datos.map(d => (
-          <text key={d.semana} x={xOf(d.semana).toFixed(1)} y={H - 8}
-            textAnchor="middle" fontSize="9.5" fill="rgba(10,26,20,0.45)" fontFamily="Inter,sans-serif">
-            S{d.semana}
-          </text>
-        ))}
+    const problema = errorDeRegistro(modal, form)
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
 
-        {/* Área rellena bajo línea real */}
-        <polygon
-          points={`${pts('pesoReal')} ${xOf(datos[datos.length - 1].semana).toFixed(1)},${(padT+plotH).toFixed(1)} ${padL},${(padT+plotH).toFixed(1)}`}
-          fill="url(#grad-real-bit)"
-        />
-
-        {/* Línea objetivo Ross 308 (verde punteada) */}
-        <polyline points={pts('pesoObjetivo')} fill="none"
-          stroke="#10b981" strokeWidth="2" strokeDasharray="6 3"
-          strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Línea real del lote (azul) */}
-        <polyline points={pts('pesoReal')} fill="none"
-          stroke="#3b82f6" strokeWidth="2.5"
-          strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Puntos del lote */}
-        {datos.map(d => {
-          const desv  = Math.abs((d.pesoReal - d.pesoObjetivo) / d.pesoObjetivo * 100)
-          const color = desv > 7 ? '#ef4444' : '#3b82f6'
-          return (
-            <g key={d.semana}>
-              <circle cx={xOf(d.semana).toFixed(1)} cy={yOf(d.pesoReal).toFixed(1)}
-                r="5" fill="white" stroke={color} strokeWidth="2.5" />
-              <text x={xOf(d.semana).toFixed(1)} y={(yOf(d.pesoReal) - 9).toFixed(1)}
-                textAnchor="middle" fontSize="9" fill={color}
-                fontFamily="DM Mono,monospace" fontWeight="700">
-                {d.pesoReal.toLocaleString()}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-
-      {/* Leyenda */}
-      <div className="bit-chart-leyenda">
-        <span className="bit-chart-item">
-          <span className="bit-chart-linea bit-chart-linea--real" /> Peso real del lote
-        </span>
-        <span className="bit-chart-item">
-          <span className="bit-chart-linea bit-chart-linea--obj" /> Estándar Ross 308
-        </span>
-        <span className="bit-chart-item">
-          <span className="bit-chart-zona" /> Zona óptima (±7%)
-        </span>
-      </div>
-    </div>
-  )
-}
-
-// Todas las pestañas posibles del módulo
-type TabBitacora = 'registros' | 'peso' | 'mortalidad' | 'consumo'
-
-// Definición de cada pestaña con su ícono, label y los roles que pueden verla
-// (sin campo 'roles' = todos los roles)
-const TABS: { id: TabBitacora; label: string; icon: ReactNode; roles?: string[] }[] = [
-  // HU-26 aplica: Registros generales — solo Propietario tiene visión completa del ciclo
-  { id: 'registros',  label: 'Todos los registros', icon: <IcDoc   size={14} />, roles: ['Propietario'] },
-  // HU-26: Curva de peso semanal — "Como Usuario" = Propietario
-  { id: 'peso',       label: 'Curva de peso',       icon: <IcScale size={14} />, roles: ['Propietario'] },
-  // HU-27: Mortalidad diaria — "Como Operario" (Propietario también puede consultarla)
-  { id: 'mortalidad', label: 'Mortalidad',          icon: <IcHeart size={14} /> },
-  // HU-28: Consumo de alimento y agua — "Como Operario"
-  { id: 'consumo',    label: 'Consumo',             icon: <IcSeed  size={14} /> },
-]
-
-// Ícono por tipo de registro para la tabla general
-const ICONO_TIPO: Record<TipoRegistro, ReactNode> = {
-  peso:       <IcScale size={13} />,
-  mortalidad: <IcHeart size={13} />,
-  consumo:    <IcSeed  size={13} />,
-  sanitario:  <IcDrop  size={13} />,
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
-function BitacoraPage() {
-  const rol = getRol()
-
-  // Filtra las pestañas según el rol activo:
-  // Si una pestaña tiene `roles`, solo la ven esos roles; sin `roles` la ven todos.
-  const tabsVisibles = TABS.filter(t => !t.roles || (rol !== null && t.roles.includes(rol)))
-
-  // Pestaña activa — arranca en la primera disponible para el rol
-  const [tab, setTab] = useState<TabBitacora>(tabsVisibles[0]?.id ?? 'mortalidad')
-
-  // Galpón seleccionado para filtrar registros
-  const [galpon, setGalpon] = useState<string>(GALPONES_ACTIVOS[0]?.codigo ?? 'GP-01')
-
-  // Curva de peso del galpón seleccionado (puede no existir para alguno)
-  const curvaSeleccionada = CURVAS_PESO[galpon] ?? []
-  const ultimoPunto = curvaSeleccionada[curvaSeleccionada.length - 1]
-  const desvUltima  = ultimoPunto
-    ? ((ultimoPunto.pesoReal - ultimoPunto.pesoObjetivo) / ultimoPunto.pesoObjetivo) * 100
-    : 0
-
-  // Registros filtrados por galpón seleccionado
-  const registrosFiltrados = REGISTROS_BITACORA.filter(r => r.galpon === galpon)
-
-  // Subtítulo adaptado al rol
-  const subtitulo = rol === 'Operario'
-    ? 'Registra la mortalidad y el consumo diario de tu galpón'
-    : 'Registro del ciclo: peso, mortalidad, consumo y eventos sanitarios'
-
-  return (
-    <div className="page-container bit-page">
-
-      {/* ── Encabezado ──────────────────────────────────────────────────────── */}
-      <header className="bit-header">
-        <div>
-          <h1 className="bit-title">Bitácora Productiva</h1>
-          <p className="bit-sub">{subtitulo}</p>
-        </div>
-
-        {/* Selector de galpón — generado de los mismos galpones que usa Monitoreo */}
-        <select className="bit-select" value={galpon} onChange={e => setGalpon(e.target.value)}>
-          {GALPONES_ACTIVOS.map(g => (
-            <option key={g.codigo} value={g.codigo}>
-              {g.codigo} · {g.nombre} (Día {g.diaVida})
-            </option>
-          ))}
-        </select>
-      </header>
-
-      {/* ── Pestañas filtradas por rol ───────────────────────────────────────── */}
-      <div className="bit-tabs">
-        {tabsVisibles.map(({ id, label, icon }) => (
-          <button
-            key={id}
-            className={`bit-tab${tab === id ? ' bit-tab--activo' : ''}`}
-            onClick={() => setTab(id)}
-          >
-            {icon} {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── PESTAÑA: Todos los registros (solo Propietario) ─────────────────── */}
-      {tab === 'registros' && (
-        <div className="bit-card">
-          {registrosFiltrados.length === 0
-            ? <p className="bit-vacio">No hay registros para {galpon}.</p>
-            : (
-              <table className="bit-tabla">
-                <thead>
-                  <tr>
-                    <th>Tipo</th><th>Fecha</th><th>Galpón</th>
-                    <th>Valor</th><th>Observación</th><th>Operario</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrosFiltrados.map(r => (
-                    <tr key={r.id}>
-                      <td><span className="bit-tipo-badge">{ICONO_TIPO[r.tipo]} {r.tipo}</span></td>
-                      <td>{r.fecha}</td>
-                      <td>{r.galpon}</td>
-                      <td><strong>{r.valor}</strong> {r.unidad}</td>
-                      <td className="bit-obs">{r.observacion ?? '—'}</td>
-                      <td>{r.operario}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+    setGuardando(true)
+    setErrorForm('')
+    const tipoActual = modal
+    const archivoAdjunto = tipoActual === 'mortalidad' ? fotoMortalidad : null
+    const accion = editandoId !== null
+      ? datos.actualizar(tipoActual, editandoId, payloadRegistro(tipoActual, form, loteSeleccionadoId))
+      : datos.crear(tipoActual, payloadRegistro(tipoActual, form, loteSeleccionadoId))
+    void accion
+      .then(async (guardado) => {
+        if (archivoAdjunto && guardado?.id) {
+          try {
+            const res = await subirFotoMortalidad(guardado.id, archivoAdjunto)
+            datos.marcarFotoMortalidad(guardado.id, res.mime_type)
+          } catch (falloFoto) {
+            toast.error(
+              mensajeDeError(falloFoto, 'El registro se guardó, pero no se pudo subir la fotografía.'),
             )
           }
+        }
+        setModal(null)
+        setEditandoId(null)
+        setFotoMortalidad(null)
+      })
+      .catch((error) => setErrorForm(mensajeDeError(error, 'No se pudo guardar el registro.')))
+      .finally(() => setGuardando(false))
+  }
+
+  const borrar = async (tipo: TipoRegistro, id: number) => {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este registro?',
+      entidad: ETIQUETA[tipo],
+      descripcion: 'Esta acción eliminará el registro seleccionado de la bitácora del lote.',
+      textoConfirmar: 'Eliminar registro',
+      tono: 'peligro',
+    }))) return
+    void datos.eliminar(tipo, id).catch((error) => {
+      toast.error(mensajeDeError(error, 'No se pudo eliminar el registro.'))
+    })
+  }
+
+  if (datos.cargando) {
+    return (
+      <div className="page-container bit-page adm-page" role="status">
+        <p className="bit-vacio">Cargando bitácora…</p>
+      </div>
+    )
+  }
+
+  const lineaGenetica = lote?.linea_genetica?.nombre || lote?.raza || null
+
+  return (
+    <div className={`page-container bit-page adm-page${esAdministrador ? ' bit-page--admin' : ''}`}>
+      <CabeceraAdmin
+        eyebrow={esAdministrador ? 'Control de organización' : 'Seguimiento de campo'}
+        titulo={esAdministrador ? 'Bitácora de producción' : 'Bitácora del lote'}
+        subtitulo={esAdministrador
+          ? 'Consulta y registra la actividad de los lotes activos.'
+          : 'Registra y consulta el estado diario de tus aves.'}
+        acciones={lote ? (
+          <div className="bit-cab-acciones">
+            <button
+              type="button"
+              className="adm-btn adm-btn--secundario"
+              onClick={() => abrir('mortalidad')}
+            >
+              <IcAlert size={15} aria-hidden="true" />
+              Mortalidad
+            </button>
+            <button
+              type="button"
+              className="adm-btn adm-btn--primario"
+              onClick={() => abrir('peso')}
+            >
+              <IcScale size={15} aria-hidden="true" />
+              Registrar peso
+            </button>
+          </div>
+        ) : undefined}
+      />
+
+      {datos.error && (
+        <div className="bit-alert adm-alerta" role="alert">
+          <span>{datos.error}</span>
+          <button type="button" onClick={() => void datos.recargar()}>Reintentar</button>
         </div>
       )}
 
-      {/* ── PESTAÑA: Curva de peso — HU-26 (solo Propietario) ───────────────── */}
-      {tab === 'peso' && (
-        <div className="bit-card">
-          {curvaSeleccionada.length === 0 ? (
-            <p className="bit-vacio">Todavía no hay pesajes registrados para {galpon}.</p>
-          ) : (
-            <>
-              {/* Resumen de la curva antes de la gráfica */}
-              <div className="bit-curva-resumen">
-                <div className="bit-curva-stat">
-                  <span>Último peso</span>
-                  <strong>{ultimoPunto?.pesoReal.toLocaleString() ?? '—'} g</strong>
-                </div>
-                <div className="bit-curva-stat">
-                  <span>Objetivo S{ultimoPunto?.semana}</span>
-                  <strong>{ultimoPunto?.pesoObjetivo.toLocaleString() ?? '—'} g</strong>
-                </div>
-                <div className="bit-curva-stat">
-                  <span>Curva usada</span>
-                  <strong>Ross 308</strong>
-                </div>
-                <div className="bit-curva-stat">
-                  <span>Estado</span>
-                  <strong style={{ color: Math.abs(desvUltima) > 7 ? 'var(--red)' : desvUltima < 0 ? 'var(--warning3)' : 'var(--green-d)' }}>
-                    {desvUltima >= 0 ? '+' : ''}{desvUltima.toFixed(1)}% {desvUltima < 0 ? 'bajo' : 'sobre'} estándar
-                  </strong>
+      {!lote ? (
+        <section className="bit-card bit-vacio">
+          <h2>No hay lotes activos</h2>
+          <p>Cuando exista un lote activo, su control diario aparecerá aquí.</p>
+        </section>
+      ) : (
+        <div className="bit-expediente">
+          <aside className="bit-ficha" aria-label="Expediente del lote seleccionado">
+            <header className="bit-ficha-hero">
+              <div className="bit-ficha-hero-top">
+                <span className="bit-ficha-pill">
+                  <span className="bit-ficha-dot" aria-hidden="true" />
+                  Lote activo
+                </span>
+                {saludCiclo && (
+                  <span className="bit-ficha-dia">Día {saludCiclo.diasCiclo}</span>
+                )}
+              </div>
+              <h2 className="bit-ficha-codigo">{lote.codigo}</h2>
+              <p className="bit-ficha-ubicacion">
+                <IcBarn size={14} aria-hidden="true" />
+                <span>{lote.galpon.nombre} · {lote.galpon.granja.nombre}</span>
+              </p>
+              <div className="bit-ficha-tags">
+                <span className="bit-ficha-tag">
+                  <IcCal size={12} aria-hidden="true" />
+                  Ingreso {fechaIngresoLegible(lote.fecha_ingreso)}
+                </span>
+                {lineaGenetica && (
+                  <span className="bit-ficha-tag">{lineaGenetica}</span>
+                )}
+              </div>
+            </header>
+
+            <div className="bit-ficha-cuerpo">
+              <div className="bit-ficha-bloque">
+                <span className="bit-ficha-seccion-titulo">Ubicación en seguimiento</span>
+                <div className="bit-ficha-selectores">
+                  <label className="bit-campo">
+                    <span>Granja</span>
+                    <select
+                      value={granjaSeleccionadaId ?? ''}
+                      disabled={!granjas.length}
+                      onChange={(evento) => {
+                        setGranjaId(Number(evento.target.value))
+                        setGalponId(null)
+                        setLoteId(null)
+                      }}
+                    >
+                      {!granjas.length && <option value="">Sin granjas</option>}
+                      {granjas.map((granja) => <option key={granja.id} value={granja.id}>{granja.nombre}</option>)}
+                    </select>
+                  </label>
+                  <div className="bit-ficha-par">
+                    <label className="bit-campo">
+                      <span>Galpón</span>
+                      <select
+                        value={galponSeleccionadoId ?? ''}
+                        disabled={!galpones.length}
+                        onChange={(evento) => {
+                          setGalponId(Number(evento.target.value))
+                          setLoteId(null)
+                        }}
+                      >
+                        {!galpones.length && <option value="">Sin galpones</option>}
+                        {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre}</option>)}
+                      </select>
+                    </label>
+                    <label className="bit-campo">
+                      <span>Lote</span>
+                      <select
+                        value={loteSeleccionadoId ?? ''}
+                        disabled={!lotesDelGalpon.length}
+                        onChange={(evento) => setLoteId(Number(evento.target.value))}
+                      >
+                        {!lotesDelGalpon.length && <option value="">Sin lotes</option>}
+                        {lotesDelGalpon.map((item) => <option key={item.id} value={item.id}>{item.codigo}</option>)}
+                      </select>
+                    </label>
+                  </div>
                 </div>
               </div>
-              {/* Gráfica SVG de curva de peso — diferenciador vs competencia */}
-              <CurvaPesoChart datos={curvaSeleccionada} />
 
-              {/* Tabla de datos debajo de la gráfica */}
-              <table className="bit-tabla" style={{ marginTop: 0 }}>
-                <thead>
-                  <tr><th>Semana</th><th>Peso real (g)</th><th>Objetivo Ross 308 (g)</th><th>Desviación</th><th>Muestra</th></tr>
-                </thead>
-                <tbody>
-                  {curvaSeleccionada.map((p: PuntoCurva) => {
-                    const desv    = (((p.pesoReal - p.pesoObjetivo) / p.pesoObjetivo) * 100).toFixed(1)
-                    const critico = Math.abs(Number(desv)) > 7
-                    return (
-                      <tr key={p.semana} className={critico ? 'bit-fila-alerta' : ''}>
-                        <td>Semana {p.semana}</td>
-                        <td><strong>{p.pesoReal.toLocaleString()}</strong></td>
-                        <td>{p.pesoObjetivo.toLocaleString()}</td>
-                        <td>
-                          <span className={`bit-desv ${Number(desv) < 0 ? 'bit-desv--neg' : 'bit-desv--pos'}`}>
-                            {Number(desv) >= 0 ? '+' : ''}{desv}% {critico && <IcAlert size={12} />}
-                          </span>
-                        </td>
-                        <td>{p.muestraAves} aves</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </>
-          )}
-        </div>
-      )}
+              {saludCiclo && (
+                <div className="bit-ficha-bloque">
+                  <span className="bit-ficha-seccion-titulo">Estado del lote</span>
 
-      {/* ── PESTAÑA: Mortalidad — HU-27 (Operario y Propietario) ─────────────── */}
-      {tab === 'mortalidad' && (
-        <div className="bit-card">
-          <p className="bit-card-desc">
-            Registro diario de mortalidad. Alerta si supera 0.5% del lote por día o 3% acumulado.
-          </p>
-          <table className="bit-tabla">
-            <thead>
-              <tr>
-                <th>Fecha</th><th>Galpón</th><th>Aves</th>
-                <th>Causa probable</th><th>Operario</th>
-              </tr>
-            </thead>
-            <tbody>
-              {REGISTROS_MORTALIDAD.filter(r => r.galpon === galpon).map(r => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.galpon}</td>
-                  <td><strong>{r.cantidadAves}</strong> aves</td>
-                  <td>{r.causaProbable}</td>
-                  <td>{r.operario}</td>
-                </tr>
+                  <div className="bit-progreso">
+                    <div className="bit-progreso-cab">
+                      <span>Supervivencia</span>
+                      <strong className={`bit-progreso-val bit-progreso-val--${saludCiclo.tonoSupervivencia}`}>
+                        {saludCiclo.supervivenciaPct.toLocaleString('es-CO')}%
+                      </strong>
+                    </div>
+                    <div className="bit-barra" aria-hidden="true">
+                      <span
+                        className={`bit-barra-fill bit-barra-fill--${saludCiclo.tonoSupervivencia}`}
+                        style={{ width: `${saludCiclo.supervivenciaPct}%` }}
+                      />
+                    </div>
+                    <small className="bit-progreso-pie">
+                      {saludCiclo.avesVivas.toLocaleString('es-CO')} vivas de {lote.cantidad_inicial.toLocaleString('es-CO')} iniciales
+                    </small>
+                  </div>
+
+                  <div className="bit-progreso">
+                    <div className="bit-progreso-cab">
+                      <span>Avance del ciclo</span>
+                      <strong className="bit-progreso-val">Día {saludCiclo.diasCiclo} / 42</strong>
+                    </div>
+                    <div className="bit-barra" aria-hidden="true">
+                      <span
+                        className="bit-barra-fill bit-barra-fill--ciclo"
+                        style={{ width: `${saludCiclo.progresoCicloPct}%` }}
+                      />
+                    </div>
+                    <small className="bit-progreso-pie" role="status" aria-atomic="true">
+                      {resumen.totalRegistros} {resumen.totalRegistros === 1 ? 'registro' : 'registros'} en este lote
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              <div className="bit-ficha-bloque">
+                <span className="bit-ficha-seccion-titulo">Registros por frente</span>
+                <div className="bit-ficha-contadores">
+                  {(
+                    [
+                      ['peso', 'Pesajes', pesajes.length],
+                      ['mortalidad', 'Mortalidad', mortalidad.length],
+                      ['sanitario', 'Sanidad', sanitarios.length],
+                      ['consumo', 'Consumos', consumos.length],
+                    ] as const
+                  ).map(([id, etiqueta, total]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`bit-mini-stat${vista === id ? ' is-activo' : ''}`}
+                      onClick={() => setVista(id)}
+                    >
+                      <span>{etiqueta}</span>
+                      <strong>{total}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="bit-main">
+            <ResumenLote resumen={resumen} vistaActiva={vista} onSeleccionarVista={setVista} />
+
+            <div className="bit-tabs" role="tablist" aria-label="Secciones de la bitácora">
+              {(
+                [
+                  ['resumen', 'Resumen', <IcDoc size={15} />, null],
+                  ['peso', 'Pesajes', <IcScale size={15} />, pesajes.length],
+                  ['mortalidad', 'Mortalidad', <IcAlert size={15} />, mortalidad.length],
+                  ['sanitario', 'Sanidad', <IcDrop size={15} />, sanitarios.length],
+                  ['consumo', 'Consumos', <IcSeed size={15} />, consumos.length],
+                ] as const
+              ).map(([id, etiqueta, icono, cantidad]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === id}
+                  className={`bit-tab${vista === id ? ' is-activa' : ''}`}
+                  onClick={() => setVista(id)}
+                >
+                  <span className="bit-tab-icono" aria-hidden="true">{icono}</span>
+                  <span>{etiqueta}</span>
+                  {cantidad !== null && <span className="bit-tab-conteo">{cantidad}</span>}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {vista === 'resumen' ? (
+              <div className="bit-resumen-stack">
+                <AccionesRapidasBitacora
+                  codigoLote={lote.codigo}
+                  resumen={resumen}
+                  conteos={{
+                    pesajes: pesajes.length,
+                    mortalidad: mortalidad.length,
+                    sanitarios: sanitarios.length,
+                    consumos: consumos.length,
+                  }}
+                  onRegistrar={abrir}
+                  onRegistrarConsumo={() => setVista('consumo')}
+                />
+                <ActividadRecienteBitacora
+                  eventos={actividadReciente}
+                  codigoLote={lote.codigo}
+                  onVerSeccion={setVista}
+                />
+              </div>
+            ) : vista === 'consumo' ? (
+              <GestionConsumos loteFijo={loteSeleccionadoId} />
+            ) : (
+              <HistorialRegistros
+                titulo={ETIQUETA[vista]}
+                codigoLote={lote.codigo}
+                filas={filas}
+                permisos={permisosRegistro}
+                onNuevo={() => abrir(vista)}
+                onEditar={(id) => abrirEdicion(vista, id)}
+                onEliminar={(id) => borrar(vista, id)}
+                onVerFoto={vista === 'mortalidad' ? (id) => setMortalidadFotoId(id) : undefined}
+                resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
+              />
+            )}
+          </div>
         </div>
       )}
 
-      {/* ── PESTAÑA: Consumo — HU-28 (Operario y Propietario) ───────────────── */}
-      {tab === 'consumo' && (
-        <div className="bit-card">
-          <p className="bit-card-desc">
-            Consumo diario de alimento y agua. Relación ideal: ~2 litros de agua por kg de alimento.
-          </p>
-          <table className="bit-tabla">
-            <thead>
-              <tr>
-                <th>Fecha</th><th>Galpón</th><th>Alimento (kg)</th>
-                <th>Agua (L)</th><th>g/ave</th><th>Rel. A/A</th>
-              </tr>
-            </thead>
-            <tbody>
-              {REGISTROS_CONSUMO.filter(r => r.galpon === galpon).map(r => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.galpon}</td>
-                  <td><strong>{r.alimentoKg.toLocaleString()}</strong></td>
-                  <td>{r.aguaLitros.toLocaleString()}</td>
-                  <td>{r.consumoPorAve}</td>
-                  <td>{r.relacionAguaAlimento.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {modal && (
+        <FormularioRegistro
+          tipo={modal}
+          form={form}
+          guardando={guardando}
+          error={errorForm}
+          onCambiar={cambiar}
+          onGuardar={guardar}
+          onCerrar={() => {
+            if (guardando) return
+            setModal(null)
+            setEditandoId(null)
+            setFotoMortalidad(null)
+          }}
+          editando={editandoId !== null}
+          insumos={insumosGranja}
+          fotoMortalidad={modal === 'mortalidad' ? fotoMortalidad : null}
+          tieneFotoActual={
+            modal === 'mortalidad' && editandoId !== null
+              ? Boolean(mortalidad.find((item) => item.id === editandoId)?.foto_mime_type)
+              : false
+          }
+          onCambiarFotoMortalidad={modal === 'mortalidad' ? setFotoMortalidad : undefined}
+          onErrorFoto={modal === 'mortalidad' ? setErrorForm : undefined}
+        />
       )}
+
+      {mortalidadFotoId !== null && (() => {
+        const registroFoto = mortalidad.find((item) => item.id === mortalidadFotoId)
+        if (!registroFoto) return null
+        return (
+          <ModalFotoMortalidad
+            registro={registroFoto}
+            onCerrar={() => setMortalidadFotoId(null)}
+            onActualizado={datos.marcarFotoMortalidad}
+          />
+        )
+      })()}
     </div>
   )
 }

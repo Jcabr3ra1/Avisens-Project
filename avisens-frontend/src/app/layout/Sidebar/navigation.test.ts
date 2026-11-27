@@ -1,0 +1,167 @@
+import { describe, expect, it } from 'vitest'
+import { ROL_ADMIN, ROL_OPERARIO, ROL_PROPIETARIO, esGrupo, puedeAcceder } from './navConfig'
+import { LINK_DETAILS, descripcionDe, tituloDeRuta, matchesPath, navigationFilter, navigationSpaces, spaceForPath, tieneUnSoloDestino, visibleSections } from './navigation'
+
+describe('navegación por espacios', () => {
+  it('solo ofrece espacios e ítems permitidos para la cuenta', () => {
+    expect(navigationSpaces(visibleSections(ROL_ADMIN)).map((space) => space.id)).toEqual(['plataforma'])
+    expect(navigationSpaces(visibleSections(ROL_PROPIETARIO)).map((space) => space.id)).toEqual(['granja', 'gestion'])
+    expect(navigationSpaces(visibleSections(ROL_OPERARIO)).map((space) => space.id)).toEqual(['granja', 'bodega'])
+    expect(visibleSections(null)).toEqual([])
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      const links = visibleSections(rol).flatMap((section) => section.items).flatMap((item) => esGrupo(item) ? item.children : [item])
+      for (const link of links) expect(puedeAcceder(link.path, rol)).toBe(true)
+      expect(links.some((link) => ['/galpones', '/lotes', '/sensores'].includes(link.path))).toBe(false)
+    }
+  })
+
+  it('mantiene todos los destinos actuales al distribuirlos entre espacios', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      const sections = visibleSections(rol)
+      const expected = sections.filter((section) => section.label !== 'Inicio' && section.label !== 'Riel').flatMap((section) => section.items.map((item) => item.path)).sort()
+      const actual = navigationSpaces(sections).flatMap((space) => space.sections.flatMap((section) => section.items.map((item) => item.path))).sort()
+      expect(actual).toEqual(expected)
+    }
+  })
+
+  it('reconoce el espacio de una ficha y no confunde prefijos parecidos', () => {
+    const spaces = navigationSpaces(visibleSections(ROL_ADMIN))
+    expect(spaceForPath('/organizaciones/42', spaces)?.id).toBe('plataforma')
+    expect(spaceForPath('/usuarios', spaces)?.id).toBe('plataforma')
+    expect(spaceForPath('/catalogos', spaces)?.id).toBe('plataforma')
+    expect(spaceForPath('/solicitudes-pqrs', spaces)?.id).toBe('plataforma')
+    const espaciosPropietario = navigationSpaces(visibleSections(ROL_PROPIETARIO))
+    expect(spaceForPath('/bitacora', espaciosPropietario)?.id).toBe('granja')
+    expect(spaceForPath('/inventario', espaciosPropietario)?.id).toBe('gestion')
+    expect(matchesPath('/usuarios-extra', '/usuarios')).toBe(false)
+    expect(spaceForPath('/dashboard', navigationSpaces(visibleSections(ROL_PROPIETARIO)))?.id).toBe('granja')
+  })
+
+  it('al administrador no le muestra pantallas de granja, pero conserva su acceso por ruta', () => {
+    const rutas = visibleSections(ROL_ADMIN).flatMap((section) => section.items.map((item) => item.path))
+    for (const ruta of ['/bitacora', '/alertas', '/guia-crecimiento', '/inventario']) {
+      expect(rutas).not.toContain(ruta)
+    }
+    expect(puedeAcceder('/alertas', ROL_ADMIN)).toBe(true)
+  })
+
+  it('lleva la guía de peso dentro del lote: sin ítem propio, pero con acceso por ruta', () => {
+    for (const rol of [ROL_PROPIETARIO, ROL_OPERARIO]) {
+      const rutas = visibleSections(rol).flatMap((section) => section.items.map((item) => item.path))
+      expect(rutas).not.toContain('/guia-crecimiento')
+      expect(puedeAcceder('/guia-crecimiento', rol)).toBe(true)
+    }
+  })
+
+  it('al propietario le deja solo Granjas en su espacio: bitácora, monitoreo y alertas viven dentro del galpón', () => {
+    const espacioGranja = navigationSpaces(visibleSections(ROL_PROPIETARIO)).find((space) => space.id === 'granja')
+    const rutas = espacioGranja?.sections.flatMap((section) => section.items.map((item) => item.path)) ?? []
+    expect(rutas).toEqual(['/granjas'])
+    for (const ruta of ['/bitacora', '/monitoreo', '/alertas']) {
+      expect(puedeAcceder(ruta, ROL_PROPIETARIO)).toBe(true)
+    }
+    expect(tieneUnSoloDestino(espacioGranja)).toBe(true)
+    const gestion = navigationSpaces(visibleSections(ROL_PROPIETARIO)).find((space) => space.id === 'gestion')
+    expect(tieneUnSoloDestino(gestion)).toBe(false)
+  })
+
+  it('le da al operario su Bodega con inventario, y solo a él', () => {
+    const bodega = navigationSpaces(visibleSections(ROL_OPERARIO)).find((space) => space.id === 'bodega')
+    expect(bodega?.label).toBe('Bodega')
+    expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario'])
+    expect(spaceForPath('/inventario', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).toBe('bodega')
+    expect(tituloDeRuta('/inventario', ROL_OPERARIO)).toBe('Bodega')
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
+      expect(navigationSpaces(visibleSections(rol)).some((space) => space.id === 'bodega')).toBe(false)
+    }
+    // El propietario conserva su «Bodega» en Gestión.
+    expect(spaceForPath('/inventario', navigationSpaces(visibleSections(ROL_PROPIETARIO)))?.id).toBe('gestion')
+  })
+
+  it('ofrece el monitoreo en Organizaciones al administrador y conserva el acceso de los otros roles', () => {
+    const rutas = (rol: string) => visibleSections(rol).flatMap((section) => section.items.map((item) => item.path))
+    expect(rutas(ROL_ADMIN)).not.toContain('/monitoreo')
+    expect(rutas(ROL_ADMIN)).toContain('/organizaciones')
+    expect(rutas(ROL_OPERARIO)).toContain('/monitoreo')
+    expect(navigationFilter('/organizaciones', 'monitoreo humedad', LINK_DETAILS['/organizaciones'].keywords)).toBe(1)
+  })
+})
+
+describe('búsqueda de navegación', () => {
+  it('encuentra nombres y sinónimos sin exigir tildes, con todas las palabras de la consulta', () => {
+    expect(navigationFilter('/bitacora', 'BITÁCORA', ['Bitácora'])).toBe(1)
+    expect(navigationFilter('/monitoreo', 'sensores humedad', ['temperatura', 'sensores', 'humedad'])).toBe(1)
+    expect(navigationFilter('/monitoreo', 'sensores finanzas', ['sensores'])).toBe(0)
+    expect(navigationFilter('/guia-crecimiento', 'peso', ['Guía de peso'])).toBe(1)
+  })
+})
+
+describe('descripcionDe', () => {
+  it('le habla al administrador cuando la ruta tiene texto propio para él', () => {
+    expect(descripcionDe('/usuarios', 'Administrador')).toBe('Todas las cuentas y sus roles')
+    expect(descripcionDe('/usuarios', 'Propietario')).toBe('Las personas de tu equipo')
+  })
+
+  it('sin texto propio usa la descripción general', () => {
+    expect(descripcionDe('/crm', 'Administrador')).toBe(LINK_DETAILS['/crm'].description)
+    expect(descripcionDe('/no-existe', 'Administrador')).toBeUndefined()
+  })
+})
+
+describe('tituloDeRuta', () => {
+  it('usa el nombre del menú del rol', () => {
+    expect(tituloDeRuta('/solicitudes-pqrs', 'Administrador')).toBe('Solicitudes PQRS')
+    expect(tituloDeRuta('/organizaciones/18', 'Administrador')).toBe('Organizaciones')
+  })
+
+  it('nombra rutas que el rol abre aunque no estén en su menú', () => {
+    expect(tituloDeRuta('/alertas', 'Administrador')).toBe('Alertas')
+    expect(tituloDeRuta('/notificaciones', 'Administrador')).toBe('Notificaciones')
+    // Antes la miga decía «Granja › Avisens» en Consumos diarios.
+    expect(tituloDeRuta('/consumos-diarios', ROL_OPERARIO)).toBe('Consumos diarios')
+  })
+
+  it('sin coincidencia muestra la marca, no un texto genérico', () => {
+    expect(tituloDeRuta('/ruta-desconocida', 'Administrador')).toBe('Avisens')
+  })
+})
+
+describe('Monitoreo: Sensores y Actuadores', () => {
+  const grupoMonitoreo = (rol: string) =>
+    visibleSections(rol).flatMap((section) => section.items).find((item) => item.path === '/monitoreo')
+
+  it('el operario ve Actuadores inmediatamente debajo de Sensores, dentro de Monitoreo', () => {
+    const grupo = grupoMonitoreo(ROL_OPERARIO)
+    expect(grupo && esGrupo(grupo)).toBe(true)
+    if (!grupo || !esGrupo(grupo)) return
+    expect(grupo.children.map((hijo) => [hijo.path, hijo.label])).toEqual([
+      ['/monitoreo/sensores', 'Sensores'],
+      ['/monitoreo/actuadores', 'Actuadores'],
+    ])
+  })
+
+  it('las dos secciones no son prefijo una de la otra: solo se marca la abierta', () => {
+    expect(matchesPath('/monitoreo/actuadores', '/monitoreo/sensores')).toBe(false)
+    expect(matchesPath('/monitoreo/sensores', '/monitoreo/actuadores')).toBe(false)
+  })
+
+  it('respeta los permisos por ruta de los tres roles', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      expect(puedeAcceder('/monitoreo/sensores', rol)).toBe(true)
+      expect(puedeAcceder('/monitoreo/actuadores', rol)).toBe(true)
+    }
+    expect(puedeAcceder('/monitoreo/actuadores', null)).toBe(false)
+    // El administrador y el propietario siguen sin el ítem en el menú.
+    expect(grupoMonitoreo(ROL_ADMIN)).toBeUndefined()
+    expect(grupoMonitoreo(ROL_PROPIETARIO)).toBeUndefined()
+  })
+
+  it('titula cada sección con su nombre', () => {
+    expect(tituloDeRuta('/monitoreo/actuadores', ROL_OPERARIO)).toBe('Actuadores')
+    expect(tituloDeRuta('/monitoreo/sensores', ROL_OPERARIO)).toBe('Sensores')
+  })
+
+  it('el buscador encuentra Actuadores por sus equipos', () => {
+    expect(navigationFilter('/monitoreo/actuadores', 'ventiladores', LINK_DETAILS['/monitoreo/actuadores'].keywords)).toBe(1)
+  })
+})

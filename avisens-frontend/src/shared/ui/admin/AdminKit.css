@@ -1,0 +1,645 @@
+/* ═══════════════════════════════════════════════════════════════
+   Kit de administración — la piel común de los módulos operativos.
+
+   Estas tres pantallas son la consola del administrador: es donde se
+   crea la estructura productiva (granja → galpón → lote). Antes cada
+   una repetía su propio CSS casi idéntico bajo un prefijo distinto
+   (grj-, galpones-, lotes-), así que ninguna se sentía parte de un
+   mismo producto. Aquí vive el lenguaje visual único: `adm-`.
+   ═══════════════════════════════════════════════════════════════ */
+
+.adm-page {
+  --adm-deep: var(--primary);
+  --adm-line: var(--border-subtle);
+  --adm-shadow: var(--shadow-sm);
+  --adm-shadow-alto: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Cabecera — la que le pone cara de consola de gestión
+   ───────────────────────────────────────────────────────────── */
+
+.adm-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.adm-cabecera-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.adm-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.adm-eyebrow-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.adm-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.9rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.adm-titulo-contexto {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.adm-subtitulo {
+  max-width: 62ch;
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.adm-cabecera-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ─── Migas: la cadena granja › galpón › lote, siempre visible ─── */
+
+.adm-migas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}
+
+.adm-miga {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.24rem 0.55rem;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+a.adm-miga:hover {
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  color: var(--primary);
+}
+
+.adm-miga--actual {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font-weight: 750;
+}
+
+.adm-miga-sep {
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Botones
+   ───────────────────────────────────────────────────────────── */
+
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 44px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.adm-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.adm-btn--primario {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-btn--primario:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.adm-btn--secundario {
+  border-color: var(--border2);
+  background: var(--card);
+  color: var(--text2);
+}
+
+.adm-btn--secundario:hover:not(:disabled) {
+  border-color: var(--border3);
+  background: var(--bg-tint);
+  /* --adm-deep lo define .adm-page; este botón también se usa desde
+     PlanDeLote dentro del portal de PantallaHija, fuera de ese ancestro. */
+  color: var(--adm-deep, var(--primary));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tarjetas de resumen (KPI)
+   ───────────────────────────────────────────────────────────── */
+
+.adm-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 0.75rem;
+}
+
+.adm-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--adm-shadow);
+  transition: border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
+}
+
+.adm-stat:hover {
+  border-color: var(--border2);
+  box-shadow: var(--adm-shadow-alto);
+}
+
+.adm-stat-icono {
+  display: grid;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.adm-stat-texto { display: flex; min-width: 0; flex-direction: column; gap: 0.05rem; }
+
+.adm-stat-valor {
+  color: var(--dash-ink);
+  font-size: 1.4rem;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.adm-stat-label {
+  color: var(--text3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.adm-stat--neutral .adm-stat-icono { color: var(--adm-deep); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.adm-stat--ok      .adm-stat-icono { color: var(--green-d);  background: color-mix(in srgb, var(--primary) 13%, transparent); }
+.adm-stat--aviso   .adm-stat-icono { color: var(--warning3); background: var(--warning-soft); }
+.adm-stat--peligro .adm-stat-icono { color: var(--danger3);  background: var(--danger-soft); }
+.adm-stat--info    .adm-stat-icono { color: var(--info3);    background: var(--info-soft); }
+
+/* ─────────────────────────────────────────────────────────────
+   Panel: la caja que envuelve barra + tabla
+   ───────────────────────────────────────────────────────────── */
+
+.adm-panel {
+  overflow: hidden;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--adm-shadow);
+}
+
+/* ─── Barra de herramientas ─── */
+
+.adm-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 0.95rem;
+  border-bottom: 1px solid var(--adm-line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 2.2%, transparent), transparent);
+}
+
+.adm-buscador {
+  position: relative;
+  flex: 1;
+  min-width: 210px;
+}
+
+.adm-buscador svg {
+  position: absolute;
+  top: 50%;
+  left: 0.7rem;
+  color: var(--text4);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.adm-buscador input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.7rem 0.5rem 2.1rem;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.adm-buscador input::placeholder { color: var(--text4); }
+.adm-buscador input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+
+/* Filtros como pastillas segmentadas: se ve de un vistazo qué está
+   activo, cosa que un <select> cerrado nunca deja ver. */
+.adm-segmentos {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border2);
+  border-radius: 11px;
+  background: var(--bg);
+}
+
+.adm-segmento {
+  min-height: 44px;
+  padding: 0.36rem 0.68rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  font-size: 0.79rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.adm-segmento:hover { color: var(--adm-deep); }
+.adm-segmento:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+
+.adm-segmento[aria-pressed='true'] {
+  background: var(--card);
+  color: var(--adm-deep);
+  font-weight: 750;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 10%, transparent);
+}
+
+.adm-conteo {
+  margin-left: auto;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.adm-barra-extra,
+.adm-barra-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.adm-barra-extra label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.adm-barra-extra select {
+  min-height: 44px;
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.adm-barra-extra select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Avisos
+   ───────────────────────────────────────────────────────────── */
+
+.adm-alerta, .adm-aviso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.adm-alerta {
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger3);
+}
+
+.adm-alerta button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.adm-aviso {
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: var(--warning-soft);
+  color: var(--warning3);
+}
+
+@media (max-width: 760px) {
+  .adm-cabecera-fila { flex-direction: column; }
+  .adm-cabecera-acciones { justify-content: flex-start; }
+  .adm-barra { align-items: stretch; flex-direction: column; }
+  .adm-barra > * { min-width: 0; max-width: 100%; }
+  .adm-buscador { width: 100%; }
+  .adm-conteo { margin-left: 0; align-self: flex-start; }
+  .adm-segmentos { width: 100%; overflow-x: auto; }
+  .adm-barra-extra,
+  .adm-barra-acciones { width: 100%; }
+  .adm-barra-extra label,
+  .adm-barra-extra select,
+  .adm-barra-acciones .adm-btn { width: 100%; }
+}
+
+/* Botones pequeños para las acciones dentro de una fila de tabla. */
+.adm-btn-fila {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--adm-line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.adm-btn-fila:hover {
+  color: var(--adm-deep);
+  border-color: var(--adm-deep);
+}
+
+.adm-btn-fila:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.adm-btn-fila--peligro:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tarjetas KPI unificadas (patrón franja superior + ícono)
+   ───────────────────────────────────────────────────────────── */
+
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-kpis--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.adm-kpis > li {
+  display: flex;
+  min-width: 0;
+}
+
+.adm-kpi {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 6px 18px -14px color-mix(in srgb, var(--avisens-ink) 32%, transparent), var(--shadow-sm);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+button.adm-kpi {
+  cursor: pointer;
+}
+
+button.adm-kpi:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -16px color-mix(in srgb, var(--avisens-ink) 36%, transparent);
+}
+
+button.adm-kpi:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.adm-kpi:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.adm-kpi--primario { border-top-color: var(--primary); }
+.adm-kpi--ok { border-top-color: var(--success); }
+.adm-kpi--info { border-top-color: var(--info); }
+.adm-kpi--alerta { border-top-color: var(--warning); }
+.adm-kpi--peligro { border-top-color: var(--danger); }
+
+.adm-kpi.is-activo {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 50%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi--peligro.is-activo {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger-soft) 55%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi--alerta.is-activo {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warning-soft) 55%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.adm-kpi-etiqueta {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.adm-kpi-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.adm-kpi--ok .adm-kpi-icono { background: var(--success-soft); color: var(--success); }
+.adm-kpi--info .adm-kpi-icono { background: var(--info-soft); color: var(--info); }
+.adm-kpi--alerta .adm-kpi-icono { background: var(--warning-soft); color: var(--warning); }
+.adm-kpi--peligro .adm-kpi-icono { background: var(--danger-soft); color: var(--danger); }
+
+.adm-kpi-valor {
+  color: var(--text-primary);
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.adm-kpi-valor--texto {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.adm-kpi--peligro .adm-kpi-valor.is-tono { color: var(--danger); }
+.adm-kpi--alerta .adm-kpi-valor.is-tono { color: var(--warning3, var(--warning)); }
+.adm-kpi--ok .adm-kpi-valor.is-tono { color: var(--success); }
+.adm-kpi--primario .adm-kpi-valor.is-tono { color: var(--primary); }
+
+.adm-kpi-nota {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.adm-vacio {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.adm-vacio h2,
+.adm-vacio h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.adm-vacio p {
+  max-width: 48ch;
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 64rem) {
+  .adm-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-kpis--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 34rem) {
+  .adm-kpis,
+  .adm-kpis--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Texto solo para lectores de pantalla: encabezados de columna sin título
+   visible, como la de acciones. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

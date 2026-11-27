@@ -1,0 +1,14 @@
+meta {
+  name: Listar mantenimientos
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/mantenimientos?page=1&limit=100
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

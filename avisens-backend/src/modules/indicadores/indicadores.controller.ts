@@ -4,6 +4,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,22 +13,58 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { IndicadoresService } from './indicadores.service';
+import { ResumenCrecimientoDto } from './dto/resumen-crecimiento.dto';
+import { ResumenCrecimientoService } from './resumen-crecimiento.service';
+import { CompararLotesDto } from './dto/comparar-lotes.dto';
+import { CompararLotesService } from './comparar-lotes.service';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('indicadores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('indicadores')
 export class IndicadoresController {
-  constructor(private indicadoresService: IndicadoresService) {}
+  constructor(
+    private indicadoresService: IndicadoresService,
+    private resumenCrecimientoService: ResumenCrecimientoService,
+    private compararLotesService: CompararLotesService,
+  ) {}
+
+  @Get('resumen-crecimiento')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Resumen de crecimiento y riesgos de los lotes activos' })
+  resumenCrecimiento(
+    @Query() query: ResumenCrecimientoDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.resumenCrecimientoService.obtener(req.user, query);
+  }
+
+  @Get('comparar-lotes')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Comparar dos lotes organizados día por día para graficar curvas superpuestas',
+  })
+  compararLotes(
+    @Query() query: CompararLotesDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.compararLotesService.comparar(
+      query.lote1Id,
+      query.lote2Id,
+      req.user,
+    );
+  }
 
   @Post('calcular/:loteId')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Calcular y guardar los indicadores de hoy de un lote',
   })
@@ -36,6 +73,38 @@ export class IndicadoresController {
     @Req() req: AuthRequest,
   ) {
     return this.indicadoresService.calcular(loteId, req.user);
+  }
+
+  @Get(':loteId/comparacion')
+  @ApiOperation({
+    summary: 'Comparar el ultimo indicador del lote contra la curva objetivo',
+  })
+  comparar(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.indicadoresService.compararConCurva(loteId, req.user);
+  }
+
+  @Get(':loteId/finanzas')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary: 'KPIs financieros del lote (costo/kg, margen, ROI)',
+  })
+  kpisFinancieros(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.indicadoresService.kpisFinancieros(loteId, req.user);
+  }
+
+  @Post(':loteId/alerta-desvio')
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiOperation({
+    summary: 'Generar la alerta de desvio del lote ahora (si va por debajo)',
+  })
+  generarAlertaDesvio(@Param('loteId', ParseIntPipe) loteId: number) {
+    return this.indicadoresService.generarAlertaDesvio(loteId);
   }
 
   @Get(':loteId')

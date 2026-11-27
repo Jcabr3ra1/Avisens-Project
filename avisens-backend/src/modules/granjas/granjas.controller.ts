@@ -16,29 +16,28 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { GranjasService } from './granjas.service';
 import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
+import { DatosGranjaDto } from './dto/datos-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('granjas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('granjas')
 export class GranjasController {
   constructor(private granjasService: GranjasService) {}
 
   @Post()
-  @ApiOperation({
-    summary:
-      'Crear una granja (Admin: para cualquier propietario · Propietario: para sí mismo)',
-  })
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiOperation({ summary: 'Crear una granja para un propietario' })
   crear(@Body() dto: CreateGranjaDto, @Req() req: AuthRequest) {
     return this.granjasService.crear(dto, req.user);
   }
@@ -58,6 +57,7 @@ export class GranjasController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar una granja' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -67,21 +67,39 @@ export class GranjasController {
     return this.granjasService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/datos')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Completar la dirección, el municipio y el departamento de una granja. Coordenadas y área las registra el administrador',
+  })
+  actualizarDatos(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DatosGranjaDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.granjasService.actualizar(id, dto, req.user);
+  }
+
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar una granja' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.granjasService.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar una granja (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.granjasService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
-    summary: 'Eliminar una granja de forma permanente (casos legales)',
+    summary:
+      'Eliminar una granja de forma permanente (casos legales) — sólo Administrador',
   })
   eliminarPermanente(
     @Param('id', ParseIntPipe) id: number,

@@ -1,0 +1,30 @@
+meta {
+  name: [Admin] Crear item del catálogo
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/catalogo-sensores
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "tipo_sensor": "amoniaco",
+    "nombre": "Sensor de amoníaco",
+    "descripcion": "Mide NH3 en ppm dentro del galpón",
+    "precio_unitario_cop": 185000,
+    "cobertura_m2": 120,
+    "obligatorio": false
+  }
+}

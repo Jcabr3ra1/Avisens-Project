@@ -53,41 +53,53 @@ model Usuario {
   organizacion_id Int?
   nombre_completo String
   cedula          String   @unique
-  email           String   @unique
+  username        String   @unique
+  email           String?  @unique
   password_hash   String
   telefono        String?
-  foto_url        String?
-  huella_voz_url  String?
-  pin_voz_hash    String?
+  foto            Bytes?
+  foto_mime_type  String?
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  rol                     Rol                    @relation(fields: [rol_id], references: [id])
-  seguridad_cuenta        SeguridadCuenta?
-  sesiones                Sesion[]
-  granjas                 Granja[]
-  pesajes                 Pesaje[]
-  registros_mortalidad    RegistroMortalidad[]
-  eventos_sanitarios      EventoSanitario[]
-  consumos_diarios        ConsumoDiario[]
-  registros_plagas        RegistroPlaga[]
-  auditorias              BitacoraAuditoria[]
-  recuperaciones          RecuperacionPassword[]
-  usuarios_galpones       UsuarioGalpon[]
-  prospectos_asesorados   Prospecto[]
-  comandos_voz            ComandoVoz[]
-  accionamientos          AccionamientoEquipo[]
-  alertas_responsable     Alerta[]               @relation("AlertaResponsable")
-  alertas_escalado        Alerta[]               @relation("AlertaEscalado")
-  evidencias_alertas      EvidenciaAlerta[]
-  ordenes_compra          OrdenCompra[]
-  movimientos_financieros MovimientoFinanciero[]
-  movimientos_inventario  MovimientoInventario[]
-  mantenimientos          Mantenimiento[]
-  organizacion            Organizacion?          @relation(fields: [organizacion_id], references: [id])
-  recomendaciones         Recomendacion[]
-  conversaciones_ia       ConversacionIa[]
+  rol                        Rol                    @relation(fields: [rol_id], references: [id])
+  seguridad_cuenta           SeguridadCuenta?
+  sesiones                   Sesion[]
+  granjas                    Granja[]
+  pesajes                    Pesaje[]
+  registros_mortalidad       RegistroMortalidad[]
+  eventos_sanitarios         EventoSanitario[]
+  consumos_diarios           ConsumoDiario[]
+  registros_plagas           RegistroPlaga[]
+  auditorias                 BitacoraAuditoria[]
+  recuperaciones_solicitadas RecuperacionPassword[] @relation("RecuperacionSolicitante")
+  recuperaciones_atendidas   RecuperacionPassword[] @relation("RecuperacionAdministrador")
+  usuarios_galpones          UsuarioGalpon[]
+  prospectos_asesorados      Prospecto[] @relation("AsesorDelProspecto")
+  prospectos_convertidos     Prospecto[] @relation("ProspectoConvertido")
+  solicitudes_pqrs           SolicitudPqrs[]
+  notificaciones             Notificacion[]
+  comandos_voz               ComandoVoz[]
+  accionamientos             AccionamientoEquipo[]
+  ordenes_actuadores         OrdenActuador[]
+  alertas_responsable       Alerta[]               @relation("AlertaResponsable")
+  alertas_escalado           Alerta[]               @relation("AlertaEscalado")
+  curvas_geneticas_publicadas CurvaGeneticaVersion[]
+  planes_lote_creados        PlanLote[]
+  estimaciones_alimento_creadas EstimacionAlimentoPlan[]
+  evidencias_alertas         EvidenciaAlerta[]
+  movimientos_financieros    MovimientoFinanciero[]
+  movimientos_inventario     MovimientoInventario[]
+  mantenimientos             Mantenimiento[]
+  organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
+  recomendaciones            Recomendacion[]
+  conversaciones_ia          ConversacionIa[]
+  lotes_cerrados             Lote[]                 @relation("LoteCerradoPor")
 
+  // Permite que la FK compuesta de granjas garantice que el propietario y la
+  // granja pertenezcan a la misma organización.
+  @@unique([id, organizacion_id])
+  @@index([organizacion_id])
   @@map("usuarios")
 }
 
@@ -98,6 +110,8 @@ model SeguridadCuenta {
   bloqueado_hasta              DateTime?
   fecha_ultimo_login           DateTime?
   fecha_ultimo_cambio_password DateTime?
+  debe_cambiar_password        Boolean   @default(false)
+  password_temporal_expira_en  DateTime?
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
@@ -106,7 +120,16 @@ model SeguridadCuenta {
 
 model Sesion {
   id                 Int      @id @default(autoincrement())
+  // Identidad estable de la sesión: fija desde el login, viaja en el
+  // payload del refresh token y NO cambia al rotar. Permite que logout
+  // revoque por sesión aunque el token ya haya rotado (a diferencia del
+  // hash, que sí cambia en cada refresh). Separada del "id" serial para
+  // no exponer un entero adivinable dentro de un JWT.
+  session_id         String   @unique @db.Uuid
   usuario_id         Int
+  // SHA-256 del token completo (no bcrypt: bcrypt trunca a 72 bytes y
+  // confundía tokens distintos entre sí). bcrypt sigue intacto para
+  // password_hash, en Usuario.
   refresh_token_hash String
   ip_origen          String?
   user_agent         String?
@@ -126,25 +149,29 @@ model Sesion {
 // ---------------------------------------------------------------------------
 
 model Granja {
-  id             Int      @id @default(autoincrement())
-  propietario_id Int
-  nombre         String
-  direccion      String?
-  municipio      String?
-  departamento   String?
-  latitud        Float?
-  longitud       Float?
-  area_total_m2  Float?
-  activa         Boolean  @default(true)
-  fecha_creacion DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  propietario_id  Int
+  organizacion_id Int
+  nombre          String
+  direccion       String?
+  municipio       String?
+  departamento    String?
+  latitud         Float?
+  longitud        Float?
+  area_total_m2   Float?
+  activa          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
 
-  propietario      Usuario          @relation(fields: [propietario_id], references: [id])
-  galpones         Galpon[]
-  politicas_alerta PoliticaAlerta[]
-  clima            Clima[]
+  propietario             Usuario                @relation(fields: [propietario_id, organizacion_id], references: [id, organizacion_id])
+  organizacion            Organizacion           @relation(fields: [organizacion_id], references: [id])
+  galpones                Galpon[]
+  clima                   Clima[]
+  insumos                 InventarioInsumo[]
+  movimientos_financieros MovimientoFinanciero[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
+  @@index([organizacion_id])
   @@map("granjas")
 }
 
@@ -158,7 +185,8 @@ model Galpon {
   largo_metros       Float?
   orientacion        String?
   tipo_techo         String?
-  plano_url          String?
+  foto               Bytes?
+  foto_mime_type     String?
   activo             Boolean   @default(true)
   fecha_construccion DateTime? @db.Date
 
@@ -175,6 +203,7 @@ model Galpon {
   recomendaciones      Recomendacion[]
   analisis_bioacustico AnalisisBioacustico[]
   analisis_vision      AnalisisVision[]
+  capturas_vision      CapturaVision[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -186,62 +215,113 @@ model Galpon {
 // Dispositivos (nodos ESP32 que agrupan sensores en un galpon)
 // ---------------------------------------------------------------------------
 
+enum EstadoDispositivo {
+  online
+  offline
+}
+
 model Dispositivo {
-  id               Int       @id @default(autoincrement())
-  galpon_id        Int
-  mac_address      String    @unique
-  codigo_topic     String    @unique
-  nombre           String
-  version_firmware String?
-  estado           String    @default("offline")
-  ip_local         String?
+  id                 Int               @id @default(autoincrement())
+  galpon_id          Int
+  codigo_topic       String            @unique
+  nombre             String
+  version_firmware   String?
+  estado             EstadoDispositivo @default(offline)
+  ip_local           String?
   // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
-  // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
-  token_ingesta    String?   @unique
-  ultima_conexion  DateTime?
-  activo           Boolean   @default(true)
-  fecha_creacion   DateTime  @default(now())
+  // token_ingesta solo se conserva temporalmente para migrar instalaciones
+  // anteriores; los tokens nuevos y migrados se guardan como SHA-256.
+  token_ingesta      String?           @unique
+  token_ingesta_hash String?           @unique
+  ultima_conexion    DateTime?
+  // Sesión de arranque del ESP32 (UUID que genera en cada encendido). Un
+  // valor nuevo en /ingest = el dispositivo se reinició. Se guarda también
+  // el anterior para reconocer un envío retrasado de la sesión previa.
+  arranque_id        String?
+  arranque_anterior  String?
+  arranque_desde     DateTime?
+  activo             Boolean           @default(true)
+  fecha_creacion     DateTime          @default(now())
+  retirado_en        DateTime?
 
-  galpon   Galpon   @relation(fields: [galpon_id], references: [id])
+  galpon   Galpon               @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
+  ingestas IngestaDispositivo[]
+  ordenes  OrdenActuador[]
+  capturas_vision CapturaVision[]
 
+  // La relación compuesta impide conectar un sensor a un dispositivo de otro
+  // galpón, incluso si se escribe directamente en la base de datos.
+  @@unique([id, galpon_id])
   // Consulta frecuente: "dispositivos del galpón X". (Galpon no necesita esto:
   // su @@unique([granja_id, codigo]) ya indexa granja_id como prefijo.)
   @@index([galpon_id])
   @@map("dispositivos")
 }
 
+// ── Firmware de los controladores (actualización por Wi-Fi) ─────────────────
+model FirmwareVersion {
+  id             Int      @id @default(autoincrement())
+  version        String   @unique
+  sha256         String
+  tamano         Int
+  binario        Bytes
+  notas          String?
+  vigente        Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+
+  @@map("firmware_versiones")
+}
+
 // ---------------------------------------------------------------------------
 // Sensores (miden una variable ambiental y reportan via un dispositivo)
 // ---------------------------------------------------------------------------
 
+enum EstadoSensor {
+  activo
+  inactivo
+  mantenimiento
+  falla
+  retirado
+}
+
 model Sensor {
-  id                  Int       @id @default(autoincrement())
+  id                  Int          @id @default(autoincrement())
   galpon_id           Int
   dispositivo_id      Int
   zona_id             Int?
-  codigo              String    @unique
+  codigo              String       @unique
   tipo                String
+  // Identidad física dentro del controlador: "gpio:<n>" (DHT22) o
+  // "rele:k1".."rele:k4" (relés). null conserva el contrato legacy por código.
+  canal               String?
   unidad_medida       String
   modelo              String?
   fabricante          String?
   coordenada_x        Float?
   coordenada_y        Float?
   altura_metros       Float?
-  fecha_instalacion   DateTime? @db.Date
-  ultima_calibracion  DateTime? @db.Date
-  proxima_calibracion DateTime? @db.Date
-  estado              String    @default("activo")
+  fecha_instalacion   DateTime?    @db.Date
+  ultima_calibracion  DateTime?    @db.Date
+  proxima_calibracion DateTime?    @db.Date
+  estado              EstadoSensor @default(activo)
 
   mediciones  Medicion[]
+  ordenes     OrdenActuador[]
+  estado_actuador EstadoActuador?
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
-  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  dispositivo Dispositivo @relation(fields: [dispositivo_id, galpon_id], references: [id, galpon_id])
   zona        ZonaGalpon? @relation(fields: [zona_id], references: [id])
   alertas     Alerta[]
 
   // Consultas frecuentes: "sensores del galpón X" y "sensores del nodo Y".
   @@index([galpon_id])
   @@index([dispositivo_id])
+  @@unique([dispositivo_id, tipo, canal])
+  // Además, en la migración (SQL manual, partialIndexes sigue en preview):
+  // índice único parcial "sensores_rele_canal_unico" sobre (dispositivo_id,
+  // canal) para canal LIKE 'rele:%' -- un solo relé por canal en cada ESP32,
+  // sin importar su nombre (tipo).
   @@map("sensores")
 }
 
@@ -265,6 +345,51 @@ model Medicion {
   // La consulta reina será "lecturas del sensor X entre dos fechas".
   @@index([sensor_id, fecha_hora])
   @@map("mediciones")
+}
+
+// Registra cada lote recibido para deduplicar reintentos de los nodos IoT y
+// conservar trazabilidad incluso si alguna lectura trae un código desconocido.
+model IngestaDispositivo {
+  id                  BigInt    @id @default(autoincrement())
+  dispositivo_id      Int
+  clave_idempotencia  String
+  fecha_dispositivo   DateTime?
+  fecha_recepcion     DateTime  @default(now())
+  ip_origen           String?
+  cantidad_recibida   Int
+  cantidad_registrada Int
+  codigos_ignorados   String[]  @default([])
+
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+
+  @@unique([dispositivo_id, clave_idempotencia])
+  @@index([dispositivo_id, fecha_recepcion])
+  @@map("ingestas_dispositivos")
+}
+
+enum EstadoEjecucionJob {
+  ejecutando
+  completado
+  fallido
+}
+
+// Bloqueo distribuido y bitácora de los cron jobs. Evita que dos réplicas de
+// la API ejecuten la misma ventana de trabajo al mismo tiempo.
+model EjecucionJob {
+  id            BigInt             @id @default(autoincrement())
+  nombre        String
+  clave_ventana String
+  propietario   String
+  estado        EstadoEjecucionJob @default(ejecutando)
+  intentos      Int                @default(1)
+  iniciada_en   DateTime           @default(now())
+  expira_en     DateTime
+  finalizada_en DateTime?
+  error         String?
+
+  @@unique([nombre, clave_ventana])
+  @@index([estado, expira_en])
+  @@map("ejecuciones_jobs")
 }
 
 // ---------------------------------------------------------------------------
@@ -294,54 +419,30 @@ model UmbralAmbiental {
 }
 
 // ---------------------------------------------------------------------------
-// Proveedores (entidad global: quien suministra insumos, pollitos, etc.)
-// ---------------------------------------------------------------------------
-
-model Proveedor {
-  id               Int      @id @default(autoincrement())
-  nombre           String
-  nit              String   @unique
-  tipo_proveedor   String?
-  contacto_persona String?
-  telefono         String?
-  email            String?
-  direccion        String?
-  activo           Boolean  @default(true)
-  fecha_creacion   DateTime @default(now())
-
-  insumos                 InventarioInsumo[]
-  lotes                   Lote[]
-  ordenes_compra          OrdenCompra[]
-  movimientos_financieros MovimientoFinanciero[]
-
-  @@map("proveedores")
-}
-
-// ---------------------------------------------------------------------------
 // Inventario de insumos (stock de alimento, medicamentos, vacunas…)
 // ---------------------------------------------------------------------------
 
 model InventarioInsumo {
   id                    Int       @id @default(autoincrement())
+  granja_id             Int
   nombre                String
   tipo                  String?
   unidad_medida         String
-  stock_actual          Float     @default(0)
-  stock_minimo          Float     @default(0)
-  precio_unitario_cop   Float?
-  proveedor_habitual_id Int?
+  stock_actual          Decimal   @default(0) @db.Decimal(14, 3)
+  stock_minimo          Decimal   @default(0) @db.Decimal(14, 3)
+  precio_unitario_cop   Decimal?  @db.Decimal(14, 2)
   ubicacion_almacen     String?
   fecha_vencimiento     DateTime? @db.Date
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
-  proveedor_habitual       Proveedor?              @relation(fields: [proveedor_habitual_id], references: [id])
+  granja                   Granja                  @relation(fields: [granja_id], references: [id])
   eventos_sanitarios       EventoSanitario[]
   registros_plagas         RegistroPlaga[]
   movimientos_inventario   MovimientoInventario[]
   mantenimientos_repuestos MantenimientoRepuesto[]
 
-  @@index([proveedor_habitual_id])
+  @@index([granja_id])
   @@map("inventario_insumos")
 }
 
@@ -349,24 +450,39 @@ model InventarioInsumo {
 // Lotes (grupo de aves que entra junto y se cria como una unidad)
 // ---------------------------------------------------------------------------
 
+enum EstadoLote {
+  activo
+  finalizado
+  inactivo
+}
+
 model Lote {
-  id                     Int       @id @default(autoincrement())
+  id                     Int        @id @default(autoincrement())
   galpon_id              Int
-  proveedor_id           Int
-  codigo                 String    @unique
-  fecha_ingreso          DateTime  @db.Date
+  codigo                 String     @unique
+  fecha_ingreso          DateTime   @db.Date
   cantidad_inicial       Int
   raza                   String?
   sexo                   String?
   marca_alimento         String?
-  costo_pollito_unitario Float?
-  presupuesto_total_cop  Float?
-  fecha_salida_estimada  DateTime? @db.Date
-  fecha_salida_real      DateTime? @db.Date
-  estado                 String    @default("activo")
+  costo_pollito_unitario Decimal?   @db.Decimal(14, 2)
+  presupuesto_total_cop  Decimal?   @db.Decimal(14, 2)
+  fecha_salida_estimada          DateTime?  @db.Date
+  fecha_salida_real              DateTime?  @db.Date
+  cantidad_aves_vendidas         Int?
+  peso_promedio_final_g          Float?
+  valor_venta_total_cop          Decimal?   @db.Decimal(14, 2)
+  precio_venta_kg_cop            Decimal?   @db.Decimal(14, 2)
+  mortalidad_acumulada_final_pct Float?
+  fcr_final                      Float?
+  cerrado_por_id                 Int?
+  fecha_cierre                   DateTime?
+  estado                         EstadoLote @default(activo)
+  linea_genetica_id              Int?
 
-  galpon    Galpon    @relation(fields: [galpon_id], references: [id])
-  proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
+  galpon         Galpon         @relation(fields: [galpon_id], references: [id])
+  linea_genetica LineaGenetica? @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
+  cerrado_por    Usuario?       @relation("LoteCerradoPor", fields: [cerrado_por_id], references: [id], onDelete: Restrict)
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]
@@ -374,7 +490,6 @@ model Lote {
   consumos_diarios        ConsumoDiario[]
   registros_plagas        RegistroPlaga[]
   alertas                 Alerta[]
-  ordenes_compra          OrdenCompra[]
   movimientos_financieros MovimientoFinanciero[]
   movimientos_inventario  MovimientoInventario[]
   predicciones            Prediccion[]
@@ -382,8 +497,10 @@ model Lote {
   indicadores             IndicadorLote[]
   analisis_bioacustico    AnalisisBioacustico[]
   analisis_vision         AnalisisVision[]
+  planes                  PlanLote[]
 
   @@index([galpon_id, estado])
+  @@index([cerrado_por_id])
   @@map("lotes")
 }
 
@@ -402,7 +519,8 @@ model TipoAlimento {
   consumo_total_esperado_g Float?
   activo                   Boolean @default(true)
 
-  consumos_diarios ConsumoDiario[]
+  consumos_diarios              ConsumoDiario[]
+  renglones_estimacion_alimento RenglonEstimacionAlimento[]
 
   @@map("tipos_alimento")
 }
@@ -448,6 +566,8 @@ model RegistroMortalidad {
   usuario_id       Int
   metodo_registro  String?
   observaciones    String?
+  foto             Bytes?
+  foto_mime_type   String?
   fecha_registro   DateTime @default(now())
 
   lote    Lote    @relation(fields: [lote_id], references: [id])
@@ -507,7 +627,7 @@ model ConsumoDiario {
   fecha_registro   DateTime @default(now())
 
   lote          Lote          @relation(fields: [lote_id], references: [id])
-  tipo_alimento TipoAlimento? @relation(fields: [tipo_alimento_id], references: [id])
+  tipo_alimento TipoAlimento? @relation(fields: [tipo_alimento_id], references: [id], onDelete: Restrict)
   usuario       Usuario       @relation(fields: [usuario_id], references: [id])
 
   @@index([lote_id])
@@ -564,19 +684,33 @@ model BitacoraAuditoria {
 }
 
 // ---------------------------------------------------------------------------
-// Recuperaciones de password (tokens para restablecer la contrasena)
+// Recuperacion asistida: el usuario solicita y un administrador decide.
 // ---------------------------------------------------------------------------
+enum EstadoRecuperacionPassword {
+  pendiente
+  aprobada
+  rechazada
+  completada
+}
+
 model RecuperacionPassword {
-  id             Int      @id @default(autoincrement())
-  usuario_id     Int
-  token_hash     String
-  expira_en      DateTime
-  usado          Boolean  @default(false)
-  fecha_creacion DateTime @default(now())
+  id              Int                        @id @default(autoincrement())
+  usuario_id      Int
+  estado          EstadoRecuperacionPassword @default(pendiente)
+  motivo          String?
+  ip_solicitud    String?
+  atendida_por_id Int?
+  atendida_en     DateTime?
+  observacion     String?
+  expira_en       DateTime?
+  usado           Boolean                    @default(false)
+  fecha_creacion  DateTime                   @default(now())
 
-  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  usuario      Usuario  @relation("RecuperacionSolicitante", fields: [usuario_id], references: [id])
+  atendida_por Usuario? @relation("RecuperacionAdministrador", fields: [atendida_por_id], references: [id])
 
-  @@index([usuario_id])
+  @@index([usuario_id, estado])
+  @@index([atendida_por_id])
   @@map("recuperaciones_password")
 }
 
@@ -594,13 +728,41 @@ model UsuarioGalpon {
   usuario Usuario @relation(fields: [usuario_id], references: [id])
   galpon  Galpon  @relation(fields: [galpon_id], references: [id])
 
-  @@index([usuario_id])
+  @@unique([usuario_id, galpon_id])
   @@index([galpon_id])
+  @@index([galpon_id, usuario_id, activa])
   @@map("usuarios_galpones")
 }
 
 // ---------------------------------------------------------------------------
-// Chatbot de cotizacion (matriz de calificacion, prospectos y cotizaciones)
+// Preguntas del chatbot (el flujo vive en datos: agregar o reordenar una
+// pregunta NO requiere desplegar, es una fila)
+// ---------------------------------------------------------------------------
+model PreguntaChatbot {
+  id              Int      @id @default(autoincrement())
+  codigo          String   @unique
+  bloque          String
+  orden           Int
+  texto           String
+  tipo            String
+  opciones        Json?
+  campo_prospecto String?
+  puntua          Boolean  @default(false)
+  obligatoria     Boolean  @default(true)
+  omitir_si_canal String?
+  siguiente       String?
+  saltos          Json?
+  activa          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
+
+  respuestas RespuestaChatbot[]
+
+  @@index([bloque, orden])
+  @@map("preguntas_chatbot")
+}
+
+// ---------------------------------------------------------------------------
+// Matriz de calificacion (puntaje que suma cada opcion de respuesta)
 // ---------------------------------------------------------------------------
 model MatrizCalificacion {
   id               Int      @id @default(autoincrement())
@@ -612,44 +774,177 @@ model MatrizCalificacion {
   activa           Boolean  @default(true)
   fecha_creacion   DateTime @default(now())
 
-  respuestas RespuestaChatbot[]
-
+  @@unique([codigo_pregunta, opcion_respuesta])
   @@map("matriz_calificacion")
 }
 
+// ---------------------------------------------------------------------------
+// Prospectos (quien pide cotizacion: su ciclo de vida y calificacion).
+// El estado es un enum: la restriccion vive en PostgreSQL, no en la aplicacion
+// ---------------------------------------------------------------------------
+enum EstadoProspecto {
+  nuevo
+  en_proceso
+  calificado
+  asignado
+  cerrado
+  abandonado
+  cancelado
+  pqrs
+  consulta_atendida
+  sin_consentimiento
+}
+
 model Prospecto {
-  id                         Int       @id @default(autoincrement())
-  sesion_id                  String    @unique
+  id                         Int             @id @default(autoincrement())
+  sesion_id                  String          @unique
   nombre                     String?
+  nombre_granja              String?
+  tipo_documento             String?
+  documento                  String?
   municipio                  String?
+  departamento               String?
+  numero_galpones            Int?
+  area_granja_m2             Float?
+  area_galpon_m2             Float?
   rol_prospecto              String?
   tipo_produccion            String?
   telefono                   String?
+  whatsapp_id                String?
   email                      String?
   canal_origen               String?
   contacto_decisor           String?
   fecha_callback             DateTime?
-  estado                     String    @default("nuevo")
+  puntaje_total              Int?
+  clasificacion              String?
+  accion_siguiente           String?
+  senal_caliente             Boolean         @default(false)
+  conectividad_limitada      Boolean         @default(false)
+  viabilidad_tecnica         String?
+  intencion_comercial        String?
+  plazo_comercial            String?
+  conectividad_comercial     String?
+  energia_comercial          String?
+  estado                     EstadoProspecto @default(nuevo)
+  pregunta_actual            String?
+  ultima_pregunta            String?
   asesor_asignado_id         Int?
+  usuario_convertido_id      Int?
+  resultado_cierre           String?
+  motivo_cierre              String?
   ip_origen                  String?
   user_agent                 String?
-  consentimiento_habeas_data Boolean   @default(false)
-  fecha_inicio               DateTime  @default(now())
+  consentimiento_habeas_data Boolean         @default(false)
+  fecha_inicio               DateTime        @default(now())
+  ultima_actividad           DateTime        @default(now()) @updatedAt
   fecha_finalizacion         DateTime?
 
-  asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
+  asesor        Usuario?             @relation("AsesorDelProspecto", fields: [asesor_asignado_id], references: [id])
+  usuario_convertido Usuario?        @relation("ProspectoConvertido", fields: [usuario_convertido_id], references: [id])
   respuestas    RespuestaChatbot[]
   cotizaciones  Cotizacion[]
   interacciones InteraccionChatbot[]
+  solicitudes   SolicitudPqrs[]
+  conversacionesComerciales ConversacionComercial[]
+  galponesComerciales GalponComercial[]
+  autorizacionesComerciales AutorizacionComercial[]
 
   @@index([asesor_asignado_id])
+  @@index([usuario_convertido_id])
+  @@index([whatsapp_id])
   @@map("prospectos")
 }
 
+// Conversaciones y datos comerciales ya creados por la migración histórica
+// de AVIA. Se conservan aquí para que el esquema represente la base existente.
+model ConversacionComercial {
+  id                    Int       @id @default(autoincrement())
+  session_id            String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospecto_id          Int?
+  canal                 String    @default("web")
+  estado                String    @default("abierta")
+  resumen               String?
+  objetivo_pendiente    String?
+  version_estado        Int       @default(1)
+  ultima_actividad      DateTime  @default(now())
+  expira_en             DateTime
+  fecha_creacion        DateTime  @default(now())
+  prospecto             Prospecto? @relation(fields: [prospecto_id], references: [id])
+  mensajes              MensajeComercial[]
+  autorizaciones       AutorizacionComercial[]
+
+  @@index([prospecto_id, ultima_actividad])
+  @@index([expira_en])
+  @@map("conversaciones_comerciales")
+}
+
+model MensajeComercial {
+  id                    Int       @id @default(autoincrement())
+  conversacion_id       Int
+  remitente             String
+  contenido             String
+  client_message_id     String?
+  proveedor_message_id  String?
+  estado                String    @default("confirmado")
+  fecha_creacion        DateTime  @default(now())
+  conversacion          ConversacionComercial @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversacion_id, client_message_id])
+  @@index([conversacion_id, fecha_creacion])
+  @@map("mensajes_comerciales")
+}
+
+model AutorizacionComercial {
+  id                Int       @id @default(autoincrement())
+  prospecto_id      Int
+  conversacion_id   Int
+  proposito         String
+  version_texto     String
+  estado            String
+  canal             String
+  fecha_respuesta   DateTime  @default(now())
+  prospecto         Prospecto @relation(fields: [prospecto_id], references: [id])
+  conversacion      ConversacionComercial @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+
+  @@index([prospecto_id, proposito])
+  @@map("autorizaciones_comerciales")
+}
+
+model GalponComercial {
+  id              Int       @id @default(autoincrement())
+  prospecto_id    Int
+  numero          Int
+  superficie_m2   Float?
+  estado_dato     String    @default("pendiente")
+  evidencia       String?
+  prospecto       Prospecto @relation(fields: [prospecto_id], references: [id], onDelete: Cascade)
+
+  @@unique([prospecto_id, numero])
+  @@map("galpones_comerciales")
+}
+
+model ConocimientoComercial {
+  id               Int      @id @default(autoincrement())
+  codigo           String   @unique
+  tema             String
+  contenido        String
+  estado_revision  String   @default("borrador")
+  estado_capacidad String   @default("desconocido")
+  version          Int      @default(1)
+  vigente          Boolean  @default(false)
+  actualizado_en   DateTime @updatedAt
+
+  @@index([estado_revision, vigente, tema])
+  @@map("conocimiento_comercial")
+}
+
+// ---------------------------------------------------------------------------
+// Respuestas del chatbot (lo que contesto el prospecto, con su puntaje)
+// ---------------------------------------------------------------------------
 model RespuestaChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
-  matriz_id        Int?
+  pregunta_id      Int?
   bloque           String?
   codigo_pregunta  String?
   pregunta_texto   String?
@@ -658,12 +953,15 @@ model RespuestaChatbot {
   fecha_respuesta  DateTime @default(now())
 
   prospecto Prospecto           @relation(fields: [prospecto_id], references: [id])
-  matriz    MatrizCalificacion? @relation(fields: [matriz_id], references: [id])
+  pregunta  PreguntaChatbot?    @relation(fields: [pregunta_id], references: [id])
 
   @@index([prospecto_id])
   @@map("respuestas_chatbot")
 }
 
+// ---------------------------------------------------------------------------
+// Cotizaciones (propuesta generada al calificar, con su detalle de sensores)
+// ---------------------------------------------------------------------------
 model Cotizacion {
   id               Int       @id @default(autoincrement())
   prospecto_id     Int
@@ -671,16 +969,20 @@ model Cotizacion {
   plan_recomendado String?
   numero_galpones  Int?
   numero_aves      Int?
-  valor_total_cop  Float?
+  valor_total_cop  Decimal?  @db.Decimal(14, 2)
   url_pdf          String?
   canal_envio      String?
   estado           String    @default("generada")
+  version          Int       @default(1)
+  snapshot_precios Json?
+  idempotency_key String?   @unique
   fecha_generacion DateTime  @default(now())
   fecha_envio      DateTime?
 
   prospecto Prospecto          @relation(fields: [prospecto_id], references: [id])
   sensores  CotizacionSensor[]
 
+  @@unique([prospecto_id, version])
   @@index([prospecto_id])
   @@map("cotizaciones")
 }
@@ -697,6 +999,9 @@ model CotizacionSensor {
   @@map("cotizaciones_sensores")
 }
 
+// ---------------------------------------------------------------------------
+// Interacciones del chatbot (traza de la conversacion mensaje a mensaje)
+// ---------------------------------------------------------------------------
 model InteraccionChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
@@ -710,6 +1015,31 @@ model InteraccionChatbot {
 
   @@index([prospecto_id])
   @@map("interacciones_chatbot")
+}
+
+// ---------------------------------------------------------------------------
+// Solicitudes PQRS (bloque B: peticiones, quejas, reclamos, sugerencias)
+// ---------------------------------------------------------------------------
+model SolicitudPqrs {
+  id              Int       @id @default(autoincrement())
+  prospecto_id    Int
+  categoria       String
+  codigo_pregunta String?
+  asunto          String?
+  mensaje         String?
+  respuesta       String?
+  estado          String    @default("abierta")
+  responsable_id  Int?
+  fecha_creacion  DateTime  @default(now())
+  fecha_limite    DateTime?
+  fecha_cierre    DateTime?
+
+  prospecto   Prospecto @relation(fields: [prospecto_id], references: [id])
+  responsable Usuario?  @relation(fields: [responsable_id], references: [id])
+
+  @@index([prospecto_id])
+  @@index([responsable_id])
+  @@map("solicitudes_pqrs")
 }
 
 // ---------------------------------------------------------------------------
@@ -727,10 +1057,13 @@ model ComandoVoz {
   modo_conexion          String?
   sincronizado           Boolean  @default(true)
   fecha_ejecucion        DateTime @default(now())
+  fecha_recepcion        DateTime @default(now())
+  id_sincronizacion      String?
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
   galpon  Galpon  @relation(fields: [galpon_id], references: [id])
 
+  @@unique([usuario_id, id_sincronizacion])
   @@index([usuario_id])
   @@index([galpon_id])
   @@map("comandos_voz")
@@ -742,6 +1075,7 @@ model ComandoVoz {
 model CurvaObjetivo {
   id                  Int     @id @default(autoincrement())
   marca               String  @default("italcol")
+  origen              String  @default("manual")
   fuente              String?
   sexo                String
   dia                 Int
@@ -758,17 +1092,237 @@ model CurvaObjetivo {
 }
 
 // ---------------------------------------------------------------------------
+// Referencia genetica (Fase 0)
+//
+// La curva de peso/consumo/FCR es de la LINEA GENETICA (Ross, Cobb), no de la
+// marca de alimento: todas las marcas reproducen el estandar del genetista.
+// CurvaObjetivo sigue intacta sirviendo a indicadores y predicciones; esto es
+// una referencia nueva y aparte, que nace vacia.
+// ---------------------------------------------------------------------------
+model LineaGenetica {
+  id        Int   @id @default(autoincrement())
+  codigo String @unique
+  nombre String
+  descripcion String?
+  activo Boolean @default(true)
+  fecha_actualizacion DateTime @updatedAt
+
+  curvas               CurvaGeneticaVersion[]
+  lotes                Lote[]
+  planes_como_snapshot PlanLote[]
+
+  @@map("lineas_geneticas")
+}
+
+enum SexoCurva {
+  macho
+  hembra
+  mixto
+}
+
+enum EstadoCurvaVersion {
+  borrador
+  publicada
+}
+
+// La version es del CONJUNTO, no de la fila: versionar por punto permitiria
+// mezclar el dia 7 de una version con el dia 14 de otra y construir una curva
+// que nunca existio.
+
+model CurvaGeneticaVersion {
+  id                Int                @id @default(autoincrement())
+  linea_genetica_id Int
+  sexo              SexoCurva
+  version           Int
+  estado            EstadoCurvaVersion @default(borrador)
+  vigente           Boolean            @default(false)
+  fuente            String
+  fecha_publicacion DateTime?
+  publicada_por_id  Int?
+  fecha_creacion    DateTime           @default(now())
+
+  linea_genetica LineaGenetica        @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
+  publicada_por  Usuario?             @relation(fields: [publicada_por_id], references: [id], onDelete: Restrict)
+  puntos         PuntoCurvaGenetica[]
+  planes         PlanLote[]
+  estimaciones_como_snapshot EstimacionAlimentoPlan[]
+
+  @@unique([linea_genetica_id, sexo, version])
+  @@index([linea_genetica_id, sexo])
+  @@map("curvas_geneticas_version")
+}
+
+model PuntoCurvaGenetica {
+  id                  Int      @id @default(autoincrement())
+  curva_version_id    Int
+  dia                 Int
+  peso_esperado_g     Decimal  @db.Decimal(10, 2)
+  consumo_diario_g    Decimal? @db.Decimal(10, 2)
+  consumo_acumulado_g Decimal? @db.Decimal(12, 2)
+  fcr_objetivo        Decimal? @db.Decimal(6, 3)
+
+  curva_version CurvaGeneticaVersion @relation(fields: [curva_version_id], references: [id], onDelete: Cascade)
+
+  @@unique([curva_version_id, dia])
+  @@map("puntos_curva_genetica")
+}
+
+// ---------------------------------------------------------------------------
+// Plan de produccion del lote (Fase 1)
+// ---------------------------------------------------------------------------
+enum EstadoCalculoPlan {
+  calculado
+  sin_curva
+  fuera_de_rango
+  datos_insuficientes
+}
+
+// La version es del plan completo, igual que CurvaGeneticaVersion: cambiar el
+// objetivo o recalcular crea una version nueva, nunca edita la vigente.
+model PlanLote {
+  id                         Int               @id @default(autoincrement())
+  lote_id                    Int
+  version                    Int
+  vigente                    Boolean           @default(true)
+  peso_objetivo_g            Decimal           @db.Decimal(10, 2)
+  estado_dia                 EstadoCalculoPlan
+  curva_version_id           Int?
+  linea_genetica_id_snapshot Int?
+  sexo_curva_snapshot        SexoCurva
+  fecha_ingreso_snapshot     DateTime          @db.Date
+  dia_objetivo               Int?
+  dia_objetivo_interpolado   Decimal?          @db.Decimal(9, 6)
+  fecha_salida_calculada     DateTime?         @db.Date
+  motivo                     String?
+  creado_por_id              Int
+  fecha_creacion             DateTime          @default(now())
+
+  lote                    Lote                  @relation(fields: [lote_id], references: [id], onDelete: Restrict)
+  curva_version           CurvaGeneticaVersion? @relation(fields: [curva_version_id], references: [id], onDelete: Restrict)
+  linea_genetica_snapshot LineaGenetica?        @relation(fields: [linea_genetica_id_snapshot], references: [id], onDelete: Restrict)
+  creado_por              Usuario               @relation(fields: [creado_por_id], references: [id], onDelete: Restrict)
+  estimaciones_alimento   EstimacionAlimentoPlan[]
+
+  @@unique([lote_id, version])
+  @@index([lote_id])
+  @@map("planes_lote")
+}
+
+// ---------------------------------------------------------------------------
+// Estimacion de alimento del plan (Fase 2A)
+//
+// Hija de PlanLote y versionada por su cuenta: sus disparadores de recalculo
+// (pasa el tiempo, se registra mortalidad, cambia el algoritmo) son ajenos a
+// los de PlanLote y no deben forzar una version nueva de plan ni reescribir
+// su matriz de estados. El FK a planes_lote.id congela todo el lado del plan:
+// esas filas nunca se editan, solo se voltea su bandera vigente.
+//
+// Cada fila es "una estimacion hecha en una fecha concreta", no el plan del
+// dia cero: usa mortalidad real hasta dia_corte y la congela hacia adelante
+// (convencion fin del dia: N(d) = inicial - M(min(d-1, dia_corte))).
+// ---------------------------------------------------------------------------
+
+enum EstadoCalculoAlimento {
+  calculado
+  plan_sin_dia_objetivo
+  sin_consumo_en_curva
+  consumo_insuficiente
+  consumo_fuera_de_rango
+}
+
+enum EstadoDesgloseAlimento {
+  legado_sin_desglose
+  lote_sin_marca_alimento
+  marca_sin_catalogo
+  catalogo_invalido
+  catalogo_ambiguo
+  catalogo_incompleto
+  calculado
+}
+
+model EstimacionAlimentoPlan {
+  id           Int     @id @default(autoincrement())
+  plan_lote_id Int
+  version      Int
+  vigente      Boolean @default(true)
+
+  estado_alimento EstadoCalculoAlimento
+
+  // Cubre interpolacion + diferenciacion diaria + convencion de mortalidad +
+  // disciplina de redondeo. Si cualquiera cambia, se bumpea esta constante.
+  version_algoritmo String
+  cantidad_inicial_snapshot Int
+  dia_corte                 Int
+  mortalidad_snapshot       Json?
+  muertes_al_corte          Int?
+  aves_vivas_al_corte       Int?
+  dia_objetivo_snapshot     Int?
+  curva_version_id_snapshot Int?
+
+  consumo_por_ave_g Decimal? @db.Decimal(12, 2)
+  consumo_total_kg  Decimal? @db.Decimal(14, 3)
+
+  estado_desglose         EstadoDesgloseAlimento?
+  version_desglose        String?
+  marca_alimento_snapshot String?
+  marca_alimento_lote_snapshot String?
+
+  motivo         String?
+  creado_por_id  Int
+  fecha_creacion DateTime @default(now())
+
+  plan                   PlanLote                    @relation(fields: [plan_lote_id], references: [id], onDelete: Restrict)
+  curva_version_snapshot CurvaGeneticaVersion?       @relation(fields: [curva_version_id_snapshot], references: [id], onDelete: Restrict)
+  creado_por             Usuario                     @relation(fields: [creado_por_id], references: [id], onDelete: Restrict)
+  renglones_alimento     RenglonEstimacionAlimento[]
+
+  @@unique([plan_lote_id, version])
+  @@index([plan_lote_id])
+  @@map("estimaciones_alimento_plan")
+}
+
+model RenglonEstimacionAlimento {
+  id            Int @id @default(autoincrement())
+  estimacion_id Int
+  orden         Int
+
+  tipo_alimento_id              Int?
+  tipo_alimento_nombre_snapshot String?
+  etapa_snapshot                String?
+
+  dia_inicio                   Int
+  dia_fin                      Int
+  extendido_hasta_dia_objetivo Boolean @default(false)
+
+  consumo_por_ave_g Decimal @db.Decimal(12, 2)
+  consumo_total_kg  Decimal @db.Decimal(14, 3)
+
+  estimacion    EstimacionAlimentoPlan @relation(fields: [estimacion_id], references: [id], onDelete: Cascade)
+  tipo_alimento TipoAlimento?          @relation(fields: [tipo_alimento_id], references: [id], onDelete: Restrict)
+
+  @@unique([estimacion_id, orden])
+  @@index([estimacion_id])
+  @@index([tipo_alimento_id])
+  @@map("renglones_estimacion_alimento")
+}
+
+// ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
 // ---------------------------------------------------------------------------
+enum EstadoAccionamiento {
+  encendido
+  apagado
+}
+
 model AccionamientoEquipo {
-  id            Int       @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   equipo_id     Int
   alerta_id     Int?
   origen        String?
-  estado        String?
+  estado        EstadoAccionamiento?
   valor_disparo Float?
   usuario_id    Int?
-  fecha_inicio  DateTime  @default(now())
+  fecha_inicio  DateTime             @default(now())
   fecha_fin     DateTime?
 
   equipo  Equipo   @relation(fields: [equipo_id], references: [id])
@@ -780,40 +1334,125 @@ model AccionamientoEquipo {
 }
 
 // ---------------------------------------------------------------------------
+// Órdenes remotas sobre los relés del ESP32 (encender/apagar desde la web)
+// ---------------------------------------------------------------------------
+// El backend no acciona nada: guarda la orden, la entrega en la respuesta de
+// POST /ingest y espera a que el ESP32 la confirme en el ciclo siguiente. El
+// ESP32 decide si la aplica (sus protecciones locales mandan), así que
+// "aplicada" solo existe cuando él lo dice.
+enum AccionOrdenActuador {
+  encender
+  apagar
+  automatico // devuelve el relé a la lógica automática del ESP32
+}
+
+enum EstadoOrdenActuador {
+  pendiente // creada; el ESP32 todavía no la recogió
+  enviada   // viajó en la respuesta de /ingest; falta la confirmación
+  aplicada  // el ESP32 la ejecutó; estado_real es la salida que ordenó
+  rechazada // el ESP32 la negó por una protección (ver motivo)
+  revertida // estuvo aplicada y el ESP32 devolvió el relé a automático
+  expirada  // nadie la confirmó dentro de la vigencia
+  incierta  // el ESP32 se reinició sin confirmarla: no se sabe si se aplicó
+}
+
+model OrdenActuador {
+  id              Int                 @id @default(autoincrement())
+  dispositivo_id  Int
+  galpon_id       Int
+  // El sensor de estado del relé. Al entregarla, el backend la dirige al
+  // canal del sensor ("rele:k1".."rele:k4") y, por compatibilidad, también
+  // manda su código (firmware anterior).
+  sensor_id       Int
+  accion          AccionOrdenActuador
+  estado          EstadoOrdenActuador @default(pendiente)
+  // Salida que el ESP32 ordenó al pin del relé. No hay realimentación física:
+  // no confirma que el relé conmutó ni que la carga funciona.
+  estado_real     Boolean?
+  motivo          String?
+  // Sesión de arranque del ESP32 que recibió la orden. Solo esa sesión puede
+  // confirmarla: tras un reinicio no se acepta como propia.
+  arranque_entrega String?
+  // Nulo si el usuario se eliminó: la orden sigue en el historial del relé.
+  usuario_id      Int?
+  fecha_creacion  DateTime            @default(now())
+  fecha_envio     DateTime?
+  fecha_resultado DateTime?
+  // Versión de la fila: la web la usa para no pisar un estado nuevo con una
+  // respuesta vieja que llegó tarde.
+  actualizada_en  DateTime            @default(now()) @updatedAt
+
+  dispositivo Dispositivo @relation(fields: [dispositivo_id, galpon_id], references: [id, galpon_id])
+  sensor      Sensor      @relation(fields: [sensor_id], references: [id])
+  usuario     Usuario?    @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  // Consultas reinas: "órdenes por entregar a este dispositivo" y "última
+  // orden de este relé".
+  //
+  // Además, en la migración (SQL manual, partialIndexes sigue en preview en
+  // Prisma 7.8): índice único parcial "ordenes_actuadores_una_en_curso" sobre
+  // sensor_id para estado pendiente/enviada -- nunca dos órdenes en curso
+  // sobre el mismo relé, aunque lleguen dos peticiones a la vez.
+  @@index([dispositivo_id, estado])
+  @@index([sensor_id, fecha_creacion])
+  @@map("ordenes_actuadores")
+}
+
+enum ModoActuador {
+  automatico    // lo decide la lógica del ESP32
+  manual_remoto // fijado por una orden de la web (ver orden_id)
+  manual_local  // fijado por el monitor serie en el propio ESP32
+}
+
+// Lo que el ESP32 informó del relé en su último /ingest. Se pisa en cada
+// envío: es el estado actual, no historial (el historial son las órdenes).
+// Una orden "aplicada" dice qué pasó en su momento; esto dice qué hay ahora.
+model EstadoActuador {
+  sensor_id    Int          @id
+  modo         ModoActuador
+  // Salida ordenada al pin, no estado físico: no hay realimentación.
+  encendido    Boolean
+  // Orden que mantiene el relé en manual remoto. Sin llave foránea: es un
+  // dato informado por el dispositivo, se valida al usarlo.
+  orden_id     Int?
+  reportado_en DateTime
+
+  sensor Sensor @relation(fields: [sensor_id], references: [id], onDelete: Cascade)
+
+  @@map("estados_actuadores")
+}
+
+// ---------------------------------------------------------------------------
 // Alertas (deteccion de condiciones fuera de umbral y su seguimiento)
 // ---------------------------------------------------------------------------
-model PoliticaAlerta {
-  id                       Int      @id @default(autoincrement())
-  granja_id                Int
-  criticidad               String
-  nivel_escalamiento       Int?
-  canal                    String?
-  tiempo_max_respuesta_seg Int?
-  verificado               Boolean  @default(false)
-  activa                   Boolean  @default(true)
-  fecha_actualizacion      DateTime @default(now()) @updatedAt
+enum EstadoAlerta {
+  abierta
+  en_proceso
+  cerrada
+}
 
-  granja Granja @relation(fields: [granja_id], references: [id])
-
-  @@index([granja_id])
-  @@map("politicas_alerta")
+enum OrigenAlerta {
+  automatica
+  manual
+  desconocido
 }
 
 model Alerta {
-  id                Int       @id @default(autoincrement())
+  id                Int          @id @default(autoincrement())
   galpon_id         Int
   lote_id           Int?
   sensor_id         Int?
   tipo              String
+  origen            OrigenAlerta @default(desconocido)
   criticidad        String
   valor_detectado   Float?
   valor_umbral      Float?
   mensaje           String?
-  estado            String    @default("abierta")
+  estado            EstadoAlerta @default(abierta)
   responsable_id    Int?
   escalado_a_id     Int?
   accion_correctiva String?
-  fecha_creacion    DateTime  @default(now())
+  fecha_creacion    DateTime     @default(now())
   fecha_aceptacion  DateTime?
   fecha_cierre      DateTime?
 
@@ -822,7 +1461,6 @@ model Alerta {
   sensor         Sensor?               @relation(fields: [sensor_id], references: [id])
   responsable    Usuario?              @relation("AlertaResponsable", fields: [responsable_id], references: [id])
   escalado_a     Usuario?              @relation("AlertaEscalado", fields: [escalado_a_id], references: [id])
-  canales        AlertaCanal[]
   evidencias     EvidenciaAlerta[]
   accionamientos AccionamientoEquipo[]
 
@@ -831,24 +1469,13 @@ model Alerta {
   @@map("alertas")
 }
 
-model AlertaCanal {
-  id           Int       @id @default(autoincrement())
-  alerta_id    Int
-  canal        String?
-  estado_envio String?
-  fecha_envio  DateTime?
-
-  alerta Alerta @relation(fields: [alerta_id], references: [id])
-
-  @@index([alerta_id])
-  @@map("alertas_canales")
-}
-
 model EvidenciaAlerta {
   id             Int      @id @default(autoincrement())
   alerta_id      Int
   tipo_evidencia String?
   archivo_url    String?
+  imagen         Bytes?
+  mime_type      String?
   comentario     String?
   usuario_id     Int?
   tamano_bytes   Int?
@@ -862,31 +1489,8 @@ model EvidenciaAlerta {
 }
 
 // ---------------------------------------------------------------------------
-// Compras y finanzas (ordenes de compra, categorias y movimientos)
+// Finanzas (categorias y movimientos)
 // ---------------------------------------------------------------------------
-model OrdenCompra {
-  id                        Int       @id @default(autoincrement())
-  proveedor_id              Int
-  lote_id                   Int?
-  codigo                    String    @unique
-  fecha_pedido              DateTime? @db.Date
-  fecha_entrega_estimada    DateTime? @db.Date
-  fecha_entrega_real        DateTime? @db.Date
-  valor_total_cop           Float?
-  estado                    String    @default("pendiente")
-  calificacion_cumplimiento Float?
-  calificacion_calidad      Float?
-  calificacion_tiempo       Float?
-  usuario_id                Int
-  fecha_registro            DateTime  @default(now())
-
-  proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
-  lote      Lote?     @relation(fields: [lote_id], references: [id])
-  usuario   Usuario   @relation(fields: [usuario_id], references: [id])
-
-  @@index([proveedor_id])
-  @@map("ordenes_compra")
-}
 
 model CategoriaFinanciera {
   id          Int     @id @default(autoincrement())
@@ -902,11 +1506,11 @@ model CategoriaFinanciera {
 
 model MovimientoFinanciero {
   id              Int      @id @default(autoincrement())
+  granja_id       Int
   lote_id         Int?
   categoria_id    Int
-  proveedor_id    Int?
   tipo            String?
-  valor_cop       Float
+  valor_cop       Decimal  @db.Decimal(14, 2)
   fecha           DateTime @db.Date
   descripcion     String?
   numero_factura  String?
@@ -915,32 +1519,41 @@ model MovimientoFinanciero {
   usuario_id      Int
   fecha_registro  DateTime @default(now())
 
+  granja    Granja              @relation(fields: [granja_id], references: [id])
   lote      Lote?               @relation(fields: [lote_id], references: [id])
   categoria CategoriaFinanciera @relation(fields: [categoria_id], references: [id])
-  proveedor Proveedor?          @relation(fields: [proveedor_id], references: [id])
   usuario   Usuario             @relation(fields: [usuario_id], references: [id])
 
+  @@index([granja_id])
   @@index([lote_id])
   @@index([categoria_id])
   @@map("movimientos_financieros")
 }
 
+enum TipoMovimientoInventario {
+  entrada
+  salida
+  ajuste
+}
+
 model MovimientoInventario {
-  id               Int      @id @default(autoincrement())
+  id               Int                      @id @default(autoincrement())
   insumo_id        Int
   lote_id          Int?
-  tipo_movimiento  String?
-  cantidad         Float
+  tipo_movimiento  TipoMovimientoInventario
+  cantidad         Decimal                  @db.Decimal(14, 3)
   unidad_medida    String?
   motivo           String?
   comprobante_url  String?
-  stock_resultante Float?
+  stock_resultante Decimal?                 @db.Decimal(14, 3)
   usuario_id       Int
-  fecha_movimiento DateTime @default(now())
+  fecha_movimiento DateTime                 @default(now())
 
-  insumo  InventarioInsumo @relation(fields: [insumo_id], references: [id])
-  lote    Lote?            @relation(fields: [lote_id], references: [id])
-  usuario Usuario          @relation(fields: [usuario_id], references: [id])
+  insumo             InventarioInsumo       @relation(fields: [insumo_id], references: [id])
+  lote               Lote?                  @relation(fields: [lote_id], references: [id])
+  usuario            Usuario                @relation(fields: [usuario_id], references: [id])
+  repuesto_salida    MantenimientoRepuesto? @relation("RepuestoSalida")
+  repuesto_reversion MantenimientoRepuesto? @relation("RepuestoReversion")
 
   @@index([insumo_id])
   @@index([lote_id])
@@ -990,7 +1603,7 @@ model Equipo {
   modo_operacion    String?
   coordenada_x      Float?
   coordenada_y      Float?
-  costo_cop         Float?
+  costo_cop         Decimal?  @db.Decimal(14, 2)
 
   galpon         Galpon                @relation(fields: [galpon_id], references: [id])
   zona           ZonaGalpon?           @relation(fields: [zona_id], references: [id])
@@ -1011,7 +1624,7 @@ model Mantenimiento {
   tecnico_responsable   String?
   tecnico_id            Int?
   descripcion           String?
-  costo_cop             Float?
+  costo_cop             Decimal?  @db.Decimal(14, 2)
   causa_falla           String?
   tiempo_inactivo_horas Float?
   estado                String    @default("programado")
@@ -1028,17 +1641,27 @@ model Mantenimiento {
 }
 
 model MantenimientoRepuesto {
-  id               Int     @id @default(autoincrement())
-  mantenimiento_id Int
-  insumo_id        Int
-  descripcion      String?
-  cantidad         Float?
-  costo_cop        Float?
+  id                      Int      @id @default(autoincrement())
+  mantenimiento_id        Int
+  insumo_id               Int
+  descripcion             String?
+  cantidad                Decimal  @db.Decimal(14, 3)
+  unidad_medida           String
+  costo_cop               Decimal? @db.Decimal(14, 2)
+  clave_idempotencia      String
+  movimiento_salida_id    Int?     @unique(map: "mant_repuesto_salida_key")
+  movimiento_reversion_id Int?     @unique(map: "mant_repuesto_reversion_key")
+  revertido               Boolean  @default(false)
+  fecha_registro          DateTime @default(now())
 
-  mantenimiento Mantenimiento    @relation(fields: [mantenimiento_id], references: [id])
-  insumo        InventarioInsumo @relation(fields: [insumo_id], references: [id])
+  mantenimiento        Mantenimiento         @relation(fields: [mantenimiento_id], references: [id])
+  insumo               InventarioInsumo      @relation(fields: [insumo_id], references: [id])
+  movimiento_salida    MovimientoInventario? @relation("RepuestoSalida", fields: [movimiento_salida_id], references: [id])
+  movimiento_reversion MovimientoInventario? @relation("RepuestoReversion", fields: [movimiento_reversion_id], references: [id])
 
+  @@unique([mantenimiento_id, clave_idempotencia], map: "mant_repuesto_clave_key")
   @@index([mantenimiento_id])
+  @@index([insumo_id])
   @@map("mantenimientos_repuestos")
 }
 
@@ -1054,6 +1677,7 @@ model Organizacion {
   fecha_creacion DateTime @default(now())
 
   usuarios Usuario[]
+  granjas  Granja[]
 
   @@map("organizaciones")
 }
@@ -1061,6 +1685,19 @@ model Organizacion {
 // ---------------------------------------------------------------------------
 // Indicadores del lote (KPIs historicos: FCR, EPEF, uniformidad por fecha)
 // ---------------------------------------------------------------------------
+
+enum EstadoCalculoIndicador {
+  legado_sin_verificar
+  calculado
+  mortalidad_incoherente
+}
+
+enum EstadoPesoIndicador {
+  disponible
+  pesaje_fecha_futura
+  sin_pesaje
+}
+
 model IndicadorLote {
   id                       Int      @id @default(autoincrement())
   lote_id                  Int
@@ -1073,6 +1710,11 @@ model IndicadorLote {
   mortalidad_acumulada_pct Float?
   consumo_acumulado_g      Float?
   calculado_en             DateTime @default(now())
+  estado_calculo           EstadoCalculoIndicador @default(legado_sin_verificar)
+  estado_peso              EstadoPesoIndicador?
+  pesaje_id_snapshot       Int?
+  pesaje_fecha_snapshot    DateTime?              @db.Date
+  revision_calculo         Int                    @default(0)
 
   lote Lote @relation(fields: [lote_id], references: [id])
 
@@ -1100,6 +1742,7 @@ model ModeloMl {
   analisis_bioacustico AnalisisBioacustico[]
   analisis_vision      AnalisisVision[]
 
+  @@unique([nombre, version])
   @@map("modelos_ml")
 }
 
@@ -1130,8 +1773,13 @@ model Prediccion {
 // ---------------------------------------------------------------------------
 // Recomendaciones (lo que la IA sugiere hacer, con su estado)
 // ---------------------------------------------------------------------------
+enum EstadoRecomendacion {
+  pendiente
+  resuelta
+}
+
 model Recomendacion {
-  id               Int       @id @default(autoincrement())
+  id               Int                 @id @default(autoincrement())
   lote_id          Int?
   galpon_id        Int?
   prediccion_id    Int?
@@ -1139,10 +1787,10 @@ model Recomendacion {
   titulo           String
   descripcion      String?
   accion_sugerida  String?
-  prioridad        String    @default("media")
-  estado           String    @default("pendiente")
+  prioridad        String              @default("media")
+  estado           EstadoRecomendacion @default(pendiente)
   usuario_id       Int?
-  fecha_generacion DateTime  @default(now())
+  fecha_generacion DateTime            @default(now())
   fecha_resolucion DateTime?
 
   lote       Lote?       @relation(fields: [lote_id], references: [id])
@@ -1220,10 +1868,34 @@ model AnalisisVision {
 
   galpon Galpon    @relation(fields: [galpon_id], references: [id])
   lote   Lote?     @relation(fields: [lote_id], references: [id])
-  modelo ModeloMl? @relation(fields: [modelo_id], references: [id])
+  modelo  ModeloMl?      @relation(fields: [modelo_id], references: [id])
+  captura CapturaVision?
 
   @@index([galpon_id])
   @@map("analisis_vision")
+}
+
+// Foto (JPEG) de la ESP32-CAM que originó un análisis de detección de pollos.
+// Va aparte de analisis_vision para no cargar los bytes en cada listado, y se
+// poda: quedan las últimas VISION_MAX_CAPTURAS por galpón más las que
+// dispararon alerta (con_alerta).
+model CapturaVision {
+  id             Int      @id @default(autoincrement())
+  analisis_id    Int      @unique
+  galpon_id      Int
+  dispositivo_id Int?
+  imagen         Bytes
+  tamano         Int
+  con_alerta     Boolean  @default(false)
+  fecha_hora     DateTime @default(now())
+
+  analisis    AnalisisVision @relation(fields: [analisis_id], references: [id], onDelete: Cascade)
+  galpon      Galpon         @relation(fields: [galpon_id], references: [id])
+  // Retirar la cámara no borra sus fotos: solo pierden el vínculo.
+  dispositivo Dispositivo?   @relation(fields: [dispositivo_id], references: [id], onDelete: SetNull)
+
+  @@index([galpon_id, fecha_hora])
+  @@map("capturas_vision")
 }
 
 // ---------------------------------------------------------------------------
@@ -1243,4 +1915,59 @@ model Clima {
 
   @@index([granja_id])
   @@map("clima")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogo de sensores (precios y cobertura para cotizar; los precios viven en
+// datos para poder actualizarlos sin desplegar)
+// ---------------------------------------------------------------------------
+model CatalogoSensor {
+  id                  Int      @id @default(autoincrement())
+  tipo_sensor         String   @unique
+  nombre              String
+  descripcion         String?
+  precio_unitario_cop Decimal  @db.Decimal(14, 2)
+  cobertura_m2        Float?
+  obligatorio         Boolean  @default(true)
+  activo              Boolean  @default(true)
+  estado_revision    String   @default("provisional")
+  fecha_actualizacion DateTime @updatedAt
+
+  @@map("catalogo_sensores")
+}
+
+model TarifaComercial {
+  id                  Int      @id @default(autoincrement())
+  codigo              String
+  nombre              String
+  precio_unitario_cop Decimal  @db.Decimal(14, 2)
+  estado_revision     String   @default("provisional")
+  version             Int      @default(1)
+  vigente             Boolean  @default(false)
+  actualizado_en      DateTime @updatedAt
+
+  @@unique([codigo, version])
+  @@index([codigo, estado_revision, vigente, version])
+  @@map("tarifas_comerciales")
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones internas (buzón para admin/propietario)
+// ---------------------------------------------------------------------------
+model Notificacion {
+  id              Int      @id @default(autoincrement())
+  usuario_id      Int
+  tipo            String
+  titulo          String
+  mensaje         String
+  leida           Boolean  @default(false)
+  referencia_tipo String?
+  referencia_id   Int?
+  fecha_creacion  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([leida])
+  @@map("notificaciones")
 }

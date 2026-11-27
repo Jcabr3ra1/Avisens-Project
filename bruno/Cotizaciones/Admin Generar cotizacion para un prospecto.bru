@@ -1,0 +1,52 @@
+meta {
+  name: [Admin]  Generar cotizacion para un prospecto
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/cotizaciones/prospecto/14
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "numero_galpones": 3,
+    "incluir_opcionales": true
+  }
+}
+
+docs {
+  Dimensiona e importa una cotizacion a partir de lo que el prospecto respondio.
+
+  Los dos campos del body son OPCIONALES:
+    numero_galpones      si no viene, se estima: area_granja / area_galpon (minimo 1)
+    incluir_opcionales   false por defecto (solo el paquete obligatorio)
+
+  Como se calcula:
+    galpones   <- del body, o estimado con las areas
+    aves       <- del rango que respondio en A8 (es de TODA la operacion, no por galpon)
+    plan       <- por numero de aves: Basico <=5000 · Profesional <=20000 · Empresarial
+    sensores   <- los que tienen cobertura_m2 escalan con el area del galpon
+                  (con 5% de tolerancia para no cobrar un sensor por sobrar medio metro);
+                  los que no tienen cobertura van 1 por galpon
+    total      <- suma de sensores + instalacion por galpon
+
+  !!! LOS PRECIOS SON PROVISIONALES !!! Estan en la tabla `catalogo_sensores`, se
+  cambian editando CATALOGO_SENSORES en seed.ts y re-corriendo el seed. No hay que
+  desplegar para subir precios.
+
+  400 si el prospecto no termino el cuestionario (estado nuevo o en_proceso).
+
+  Se pueden generar varias cotizaciones al mismo prospecto para comparar escenarios;
+  todas quedan guardadas.
+}
