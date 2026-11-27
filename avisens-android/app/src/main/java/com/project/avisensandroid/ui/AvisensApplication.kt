@@ -25,7 +25,9 @@ class AvisensApplication : Application() {
     private fun ajustarContraste(activity: Activity) {
         if (activity is SplashActivity) return
 
-        val temaClaro = !oscuro(activity)
+        val temaClaro = (activity.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) !=
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
         WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = temaClaro
             isAppearanceLightNavigationBars = temaClaro

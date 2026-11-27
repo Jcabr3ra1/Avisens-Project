@@ -20,10 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="24dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
 
             <!-- ============================================== -->
             <!-- ENCABEZADO -->

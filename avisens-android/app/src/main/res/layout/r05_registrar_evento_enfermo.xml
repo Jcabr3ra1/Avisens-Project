@@ -302,7 +302,8 @@
                 android:layout_marginEnd="3dp"
                 app:cornerRadius="9dp"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="0dp" />
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/cancel_stroke" />
 
             <!-- GUARDAR -->
 

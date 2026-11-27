@@ -63,6 +63,16 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    @GET("v1/predicciones/lote/{id}/curva-crecimiento")
+    suspend fun curvaCrecimiento(@Path("id") id: Int): Response<JsonObject>
+
+    @GET("v1/predicciones/lote/{id}/simulacion")
+    suspend fun simularSalida(@Path("id") id: Int, @Query("dia_faena") dia: Int): Response<JsonObject>
+
+    @GET("v1/indicadores/comparar-lotes")
+    suspend fun compararLotesGuia(@Query("lote1Id") primero: Int, @Query("lote2Id") segundo: Int): Response<JsonObject>
+
+
     // =========================================================
     // PERFIL
     // =========================================================
@@ -293,6 +303,19 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<PesajeResponse>>
+
+    @POST("v1/pesajes")
+    suspend fun crearPesaje(@Body request: com.project.avisensandroid.model.PesajeRequest): Response<PesajeResponse>
+
+    @PATCH("v1/pesajes/{id}")
+    suspend fun editarPesaje(@Path("id") id: Int, @Body request: com.project.avisensandroid.model.PesajeRequest): Response<PesajeResponse>
+
+    @DELETE("v1/pesajes/{id}")
+    suspend fun eliminarPesaje(@Path("id") id: Int): Response<okhttp3.ResponseBody>
+
+    @GET("v1/curvas-objetivo")
+    suspend fun curvaObjetivo(@Query("marca") marca: String, @Query("sexo") sexo: String,
+                              @Query("page") page: Int = 1, @Query("limit") limit: Int = 100): Response<PaginatedResponse<com.project.avisensandroid.model.PuntoPesoObjetivo>>
 
     @POST("v1/consumos-diarios")
     suspend fun crearConsumoDiario(

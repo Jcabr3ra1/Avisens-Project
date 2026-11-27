@@ -4,8 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F6F4">
-
+    android:background="@color/bg_app">
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollGuiaPeso"
         android:layout_width="0dp"
@@ -17,16 +16,14 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="18dp">
-
+            android:paddingBottom="18dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="24dp">
             <!-- Encabezado inspirado en la versión web -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -34,23 +31,21 @@
                 android:orientation="vertical"
                 android:padding="14dp"
                 android:background="@drawable/bg_guia_card">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="● PANEL DE ADMINISTRACIÓN"
-                        android:textColor="#236B4E"
+                        android:textColor="@color/guia_236b4e"
                         android:textSize="11sp"
-                        android:letterSpacing="0.07"
-                        android:textStyle="bold" />
-
+                        android:letterSpacing="0"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
                     <TextView
                         android:id="@+id/btnVolverGuia"
                         android:layout_width="wrap_content"
@@ -58,36 +53,33 @@
                         android:gravity="center"
                         android:paddingStart="10dp"
                         android:paddingEnd="10dp"
-                        android:background="@drawable/bg_guia_outline_button"
+                        android:background="@drawable/bg_btn_atras"
                         android:text="‹ Volver"
-                        android:textColor="#40564C"
+                        android:textColor="@color/text_primary"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:clickable="true"
                         android:focusable="true" />
                 </LinearLayout>
-
                 <TextView
                     android:id="@+id/txtTituloGuiaPeso"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
-                    android:text="Guía de peso"
-                    android:textColor="#1B3028"
+                    android:text="Guía de crecimiento"
+                    android:textColor="@color/guia_1b3028"
                     android:textSize="22sp"
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:ellipsize="end" />
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Referencia de crecimiento y planificación del lote."
-                    android:textColor="#64736B"
-                    android:fontFamily="sans-serif-medium"
-                    android:textSize="12sp" />
-
+                    android:textColor="@color/guia_64736b"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
                 <TextView
                     android:id="@+id/txtBreadcrumbGuia"
                     android:layout_width="wrap_content"
@@ -98,155 +90,198 @@
                     android:paddingTop="5dp"
                     android:paddingBottom="5dp"
                     android:background="@drawable/bg_guia_breadcrumb"
-                    android:text="Lotes  ›  Guía de peso"
-                    android:textColor="#28664E"
-                    android:fontFamily="sans-serif-medium"
+                    android:text="Lotes  ›  Guía de crecimiento"
+                    android:textColor="@color/guia_28664e"
                     android:textSize="11sp"
                     android:maxLines="1"
-                    android:ellipsize="end" />
-
+                    android:ellipsize="end"
+                    android:visibility="gone" />
                 <TextView
                     android:id="@+id/txtEstadoCargaGuia"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
                     android:text="Cargando datos…"
-                    android:textColor="#718078"
-                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/guia_718078"
                     android:textSize="11sp"
                     android:maxLines="1"
                     android:ellipsize="end" />
             </LinearLayout>
-
             <!-- Indicadores principales: dos columnas, adaptadas a móvil -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:orientation="horizontal">
-
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="10dp"
-                    android:background="@drawable/bg_guia_card">
+                    android:background="@drawable/bg_guia_card"
+                    android:minHeight="64dp">
                     <TextView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:gravity="center"
                         android:background="@drawable/bg_guia_badge_blue"
                         android:text="D"
-                        android:textColor="#426BC0"
+                        android:textColor="@color/guia_426bc0"
                         android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:visibility="gone">
                         <TextView
                             android:id="@+id/txtDiaVidaGuia"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#1D2D26"
+                            android:textColor="@color/guia_1d2d26"
                             android:textSize="19sp"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="DÍA ACTUAL"
-                            android:textColor="#728078"
+                            android:textColor="@color/guia_728078"
                             android:textSize="10sp"
                             android:textStyle="bold"
-                            android:letterSpacing="0.03" />
+                            android:letterSpacing="0" />
                     </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Avance del ciclo"
+                        android:textColor="@color/guia_64736b"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+                    <TextView
+                        android:id="@+id/resumenDia"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
-
-                <View android:layout_width="8dp" android:layout_height="1dp" />
-
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="10dp"
-                    android:background="@drawable/bg_guia_card">
+                    android:background="@drawable/bg_guia_card"
+                    android:minHeight="64dp">
                     <TextView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:gravity="center"
                         android:background="@drawable/bg_guia_badge_green"
                         android:text="A"
-                        android:textColor="#287C5A"
+                        android:textColor="@color/guia_287c5a"
                         android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:visibility="gone">
                         <TextView
                             android:id="@+id/txtAvesAlojadasGuia"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="—"
-                            android:textColor="#1D2D26"
+                            android:textColor="@color/guia_1d2d26"
                             android:textSize="19sp"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="AVES ALOJADAS"
-                            android:textColor="#728078"
+                            android:textColor="@color/guia_728078"
                             android:textSize="10sp"
                             android:textStyle="bold"
-                            android:letterSpacing="0.03" />
+                            android:letterSpacing="0" />
                     </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Último peso"
+                        android:textColor="@color/guia_64736b"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+                    <TextView
+                        android:id="@+id/resumenPeso"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:orientation="horizontal">
-
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="10dp"
-                    android:background="@drawable/bg_guia_card">
+                    android:background="@drawable/bg_guia_card"
+                    android:minHeight="64dp">
                     <TextView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:gravity="center"
                         android:background="@drawable/bg_guia_badge_orange"
                         android:text="G"
-                        android:textColor="#B97718"
+                        android:textColor="@color/guia_b97718"
                         android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:visibility="gone">
                         <TextView
                             android:id="@+id/txtLineaGeneticaGuia"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Sin asignar"
-                            android:textColor="#1D2D26"
+                            android:textColor="@color/guia_1d2d26"
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:maxLines="1"
@@ -255,58 +290,100 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="LÍNEA GENÉTICA"
-                            android:textColor="#728078"
+                            android:textColor="@color/guia_728078"
                             android:textSize="10sp"
                             android:textStyle="bold"
-                            android:letterSpacing="0.03" />
+                            android:letterSpacing="0" />
                     </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Meta de salida"
+                        android:textColor="@color/guia_64736b"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+                    <TextView
+                        android:id="@+id/resumenMeta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
-
-                <View android:layout_width="8dp" android:layout_height="1dp" />
-
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
                 <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="70dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="10dp"
-                    android:background="@drawable/bg_guia_card">
+                    android:background="@drawable/bg_guia_card"
+                    android:minHeight="64dp">
                     <TextView
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:gravity="center"
                         android:background="@drawable/bg_guia_badge_yellow"
                         android:text="C"
-                        android:textColor="#A77A18"
+                        android:textColor="@color/guia_a77a18"
                         android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:visibility="gone">
                         <TextView
                             android:id="@+id/txtPuntosCurvaGuia"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="0"
-                            android:textColor="#1D2D26"
+                            android:textColor="@color/guia_1d2d26"
                             android:textSize="19sp"
                             android:textStyle="bold" />
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="PUNTOS DE CURVA"
-                            android:textColor="#728078"
+                            android:textColor="@color/guia_728078"
                             android:textSize="10sp"
                             android:textStyle="bold"
-                            android:letterSpacing="0.03" />
+                            android:letterSpacing="0" />
                     </LinearLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Aves vivas"
+                        android:textColor="@color/guia_64736b"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+                    <TextView
+                        android:id="@+id/resumenAves"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
             </LinearLayout>
-
             <!-- Información del lote -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -314,12 +391,13 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:padding="13dp"
-                android:background="@drawable/bg_guia_card">
+                android:background="@drawable/bg_guia_card"
+                android:visibility="gone">
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Lote"
-                    android:textColor="#263B31"
+                    android:textColor="@color/guia_263b31"
                     android:textSize="15sp"
                     android:textStyle="bold" />
                 <Spinner
@@ -340,10 +418,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="LOT-—"
-                    android:textColor="#1E3027"
+                    android:textColor="@color/guia_1e3027"
                     android:textSize="16sp"
                     android:textStyle="bold" />
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -355,21 +432,56 @@
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:paddingEnd="8dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Galpón" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtGalponGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="—" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Galpón"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtGalponGuia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="—"
+                            android:textColor="@color/guia_24372e"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
                     </LinearLayout>
-                    <View android:layout_width="1dp" android:layout_height="34dp" android:background="#E1E8E4" />
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="34dp"
+                        android:background="@color/adaptive_surface_dee7e2" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:paddingStart="10dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sexo" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtSexoGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="—" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Sexo"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtSexoGuia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="—"
+                            android:textColor="@color/guia_24372e"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="9dp" android:background="#E1E8E4" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="9dp"
+                    android:background="@color/adaptive_surface_dee7e2" />
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -381,23 +493,58 @@
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:paddingEnd="8dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Línea genética" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtLineaGeneticaDetalleGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Sin asignar" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Línea genética"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtLineaGeneticaDetalleGuia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Sin asignar"
+                            android:textColor="@color/guia_24372e"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
                     </LinearLayout>
-                    <View android:layout_width="1dp" android:layout_height="34dp" android:background="#E1E8E4" />
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="34dp"
+                        android:background="@color/adaptive_surface_dee7e2" />
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:paddingStart="10dp">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Día de vida" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtDiaVidaDetalleGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="—" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Día de vida"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtDiaVidaDetalleGuia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="—"
+                            android:textColor="@color/guia_24372e"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
-                <TextView android:id="@+id/txtAvesVivasActuales" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
+                <TextView
+                    android:id="@+id/txtAvesVivasActuales"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
             </LinearLayout>
-
             <!-- Seguimiento -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -405,28 +552,168 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:padding="13dp"
-                android:background="@drawable/bg_guia_card">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SEGUIMIENTO" android:textColor="#2A7757" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.09" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Situación real del lote" android:textColor="#20342A" android:textSize="16sp" android:textStyle="bold" />
-
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Día actual" android:textColor="#718078" android:fontFamily="sans-serif-medium" android:textSize="13sp" />
-                    <TextView android:id="@+id/txtDiaActualSeguimientoGuia" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" />
+                android:background="@drawable/bg_guia_card"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SEGUIMIENTO"
+                    android:textColor="@color/guia_2a7757"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Situación real del lote"
+                    android:textColor="@color/guia_20342a"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Día actual"
+                        android:textColor="@color/guia_718078"
+                        android:textSize="13sp" />
+                    <TextView
+                        android:id="@+id/txtDiaActualSeguimientoGuia"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/guia_24372e"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="7dp" android:background="#E1E8E4" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Último peso verificado" android:textColor="#718078" android:fontFamily="sans-serif-medium" android:textSize="13sp" />
-                    <TextView android:id="@+id/txtUltimoPesoReal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sin peso verificado" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="7dp"
+                    android:background="@color/adaptive_surface_dee7e2" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Último peso verificado"
+                        android:textColor="@color/guia_718078"
+                        android:textSize="13sp" />
+                    <TextView
+                        android:id="@+id/txtUltimoPesoReal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sin peso verificado"
+                        android:textColor="@color/guia_24372e"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
-                <TextView android:id="@+id/txtFechaUltimoPesaje" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="7dp" android:background="#E1E8E4" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Peso esperado hoy" android:textColor="#718078" android:fontFamily="sans-serif-medium" android:textSize="13sp" />
-                    <TextView android:id="@+id/txtPesoEsperadoHoy" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—" android:textColor="#24372E" android:textSize="13sp" android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/txtFechaUltimoPesaje"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="7dp"
+                    android:background="@color/adaptive_surface_dee7e2" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Peso esperado hoy"
+                        android:textColor="@color/guia_718078"
+                        android:textSize="13sp" />
+                    <TextView
+                        android:id="@+id/txtPesoEsperadoHoy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="—"
+                        android:textColor="@color/guia_24372e"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
-                <TextView android:id="@+id/txtDesvioPeso" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
+                <TextView
+                    android:id="@+id/txtDesvioPeso"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
             </LinearLayout>
-
+            <TextView
+                android:id="@+id/resumenCiclo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:padding="12dp"
+                android:background="@drawable/bg_guia_card"
+                android:text="Ciclo de crianza"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_bitacora_tabs"
+                android:padding="4dp">
+                <TextView
+                    android:id="@+id/guiaTab0"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_bitacora_tab_selected"
+                    android:gravity="center"
+                    android:text="Plan de salida"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:textColor="@color/text_primary" />
+                <TextView
+                    android:id="@+id/guiaTab1"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="Curva y métricas"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:textColor="@color/text_primary" />
+                <TextView
+                    android:id="@+id/guiaTab2"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="Reportes"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:textColor="@color/text_primary" />
+            </LinearLayout>
             <!-- Plan productivo / objetivo -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -434,80 +721,305 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:padding="13dp"
-                android:background="@drawable/bg_guia_card">
-
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="PLAN PRODUCTIVO" android:textColor="#2A7757" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.09" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Objetivo del lote" android:textColor="#20342A" android:textSize="16sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/btnRecalcularPlanGuia" android:layout_width="wrap_content" android:layout_height="32dp" android:gravity="center" android:paddingStart="10dp" android:paddingEnd="10dp" android:background="@drawable/bg_guia_outline_button" android:text="Recalcular plan" android:textColor="#40564C" android:textSize="11sp" android:textStyle="bold" android:clickable="true" android:focusable="true" />
-                </LinearLayout>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:text="Peso objetivo (libras)" android:textColor="#65746B" android:fontFamily="sans-serif-medium" android:textSize="12sp" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:gravity="center_vertical" android:orientation="horizontal">
-                    <EditText
-                        android:id="@+id/edtPesoObjetivoLb"
+                android:background="@drawable/bg_guia_card"
+                android:id="@+id/guiaPlan"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="PLAN PRODUCTIVO"
+                    android:textColor="@color/guia_2a7757"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0"
+                    android:visibility="gone" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <TextView
                         android:layout_width="0dp"
-                        android:layout_height="42dp"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_guia_input"
-                        android:hint="Ej. 6.00"
-                        android:inputType="numberDecimal"
+                        android:text="Meta de venta"
+                        android:textColor="@color/guia_20342a"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/btnRecalcularPlanGuia"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:gravity="center"
                         android:paddingStart="10dp"
                         android:paddingEnd="10dp"
-                        android:singleLine="true"
-                        android:textColor="#20342A"
-                        android:textColorHint="#95A19A"
-                        android:textSize="15sp" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="lb" android:textColor="#43564B" android:textSize="13sp" android:textStyle="bold" />
+                        android:background="@drawable/bg_guia_recalcular"
+                        android:text="Recalcular"
+                        android:drawableStart="@drawable/ic_guia_recalcular"
+                        android:drawablePadding="6dp"
+                        android:textColor="@color/guia_accion_verde"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:clickable="true"
+                        android:focusable="true" />
                 </LinearLayout>
-                <TextView android:id="@+id/txtPesoConvertidoG" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="≈ — g" android:textColor="#728078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCalcularProyeccion"
-                    android:layout_width="wrap_content"
-                    android:layout_height="38dp"
+                <LinearLayout
+                    android:id="@+id/formObjetivoGuia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:text="Peso objetivo (libras)"
+                        android:textColor="@color/guia_65746b"
+                        android:textSize="12sp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <EditText
+                            android:id="@+id/edtPesoObjetivoLb"
+                            android:layout_width="0dp"
+                            android:layout_height="42dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_guia_input"
+                            android:hint="Ej. 6.00"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="10dp"
+                            android:paddingEnd="10dp"
+                            android:singleLine="true"
+                            android:textColor="@color/guia_20342a"
+                            android:textColorHint="@color/guia_95a19a"
+                            android:textSize="15sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="lb"
+                            android:textColor="@color/guia_43564b"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtPesoConvertidoG"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="≈ — g"
+                        android:textColor="@color/guia_728078"
+                        android:textSize="11sp" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:orientation="horizontal">
+                        <TextView
+                            android:id="@+id/btnCancelarObjetivoGuia"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/bg_cancelar_neutro"
+                            android:gravity="center"
+                            android:text="Cancelar edición"
+                            android:textColor="@color/cancel_text"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:focusable="true" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCalcularProyeccion"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="44dp"
+                            android:text="Calcular objetivo"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="@color/green_button"
+                            app:cornerRadius="9dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="Cambiar objetivo"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:fontFamily="sans-serif"
+                    android:id="@+id/btnCambiarObjetivoGuia"
+                    android:background="@drawable/bg_boton_verde"
+                    android:gravity="center"
+                    android:padding="0dp"
+                    android:layout_marginTop="8dp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="9dp"
+                    android:orientation="horizontal">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:padding="9dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Peso objetivo"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/txtPesoObjetivoResumen"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="— lb"
+                            android:textColor="@color/guia_20342a"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="1dp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:padding="9dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Día objetivo"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/txtDiaObjetivoPlan"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="—"
+                            android:textColor="@color/guia_20342a"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="7dp"
-                    android:text="Calcular objetivo"
-                    android:textAllCaps="false"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    app:backgroundTint="#216B4C"
-                    app:cornerRadius="7dp"
-                    />
-
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:padding="9dp" android:orientation="vertical" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Peso objetivo" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="10sp" />
-                        <TextView android:id="@+id/txtPesoObjetivoResumen" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="— lb" android:textColor="#20342A" android:textSize="14sp" android:textStyle="bold" />
+                    android:orientation="horizontal">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:padding="9dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Salida calculada"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/txtFechaEstimadaSalida"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="—"
+                            android:textColor="@color/guia_20342a"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
-                    <View android:layout_width="7dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:padding="9dp" android:orientation="vertical" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Día objetivo" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="10sp" />
-                        <TextView android:id="@+id/txtDiaObjetivoPlan" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="—" android:textColor="#20342A" android:textSize="14sp" android:textStyle="bold" />
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="1dp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:padding="9dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Estado"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="10sp" />
+                        <TextView
+                            android:id="@+id/txtEstadoPlanGuia"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Sin curva de referencia"
+                            android:textColor="@color/guia_216b4c"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:maxLines="2"
+                            android:ellipsize="end" />
                     </LinearLayout>
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:padding="9dp" android:orientation="vertical" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Salida calculada" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="10sp" />
-                        <TextView android:id="@+id/txtFechaEstimadaSalida" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="—" android:textColor="#20342A" android:textSize="13sp" android:textStyle="bold" />
-                    </LinearLayout>
-                    <View android:layout_width="7dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:padding="9dp" android:orientation="vertical" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Estado" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="10sp" />
-                        <TextView android:id="@+id/txtEstadoPlanGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Sin curva de referencia" android:textColor="#216B4C" android:textSize="12sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <TextView android:id="@+id/txtAdvertenciaProyeccion" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:padding="9dp" android:background="@drawable/bg_badge_regular" android:text="" android:textColor="#765213" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:maxLines="2" android:ellipsize="end" android:visibility="gone" />
-
+                <TextView
+                    android:id="@+id/txtAdvertenciaProyeccion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:padding="9dp"
+                    android:background="@drawable/bg_guia_aviso"
+                    android:text=""
+                    android:textColor="@color/guia_765213"
+                    android:textSize="11sp"
+                    android:gravity="center_vertical"
+                    android:drawableStart="@drawable/ic_guia_aviso"
+                    android:drawablePadding="8dp"
+                    android:visibility="gone" />
                 <!-- Campos internos conservados por compatibilidad; la vista web no los muestra como bloques aparte. -->
-                <TextView android:id="@+id/txtDiasRestantesSalida" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <TextView android:id="@+id/txtRangoFechasSalida" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <TextView android:id="@+id/txtMetodoProyeccion" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <TextView android:id="@+id/txtPesoFaltante" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <TextView android:id="@+id/txtGananciaNecesaria" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
+                <TextView
+                    android:id="@+id/txtDiasRestantesSalida"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <TextView
+                    android:id="@+id/txtRangoFechasSalida"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <TextView
+                    android:id="@+id/txtMetodoProyeccion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <TextView
+                    android:id="@+id/txtPesoFaltante"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <TextView
+                    android:id="@+id/txtGananciaNecesaria"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
             </LinearLayout>
-
             <!-- Alimento proyectado -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -515,25 +1027,173 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:padding="13dp"
-                android:background="@drawable/bg_guia_card">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ALIMENTO PROYECTADO" android:textColor="#2A7757" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.09" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Consumo del ciclo" android:textColor="#20342A" android:textSize="16sp" android:textStyle="bold" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="10dp" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Por ave" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtConsumoProyectadoPorAve" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="—" android:textColor="#20342A" android:textSize="14sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
+                android:background="@drawable/bg_guia_card"
+                android:id="@+id/guiaAlimento"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="ALIMENTO PROYECTADO"
+                    android:textColor="@color/guia_2a7757"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0"
+                    android:visibility="gone" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Alimentación recomendada"
+                    android:textColor="@color/guia_20342a"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Consumo por ave"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtConsumoProyectadoPorAve"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="—"
+                            android:textColor="@color/guia_20342a"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:maxLines="2"
+                            android:ellipsize="end" />
                     </LinearLayout>
-                    <View android:layout_width="7dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:padding="10dp" android:background="@drawable/bg_guia_card">
-                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Total del lote" android:textColor="#758078" android:fontFamily="sans-serif-medium" android:textSize="11sp" />
-                        <TextView android:id="@+id/txtAlimentoTotalLote" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="— kg" android:textColor="#20342A" android:textSize="14sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
+                    <View
+                        android:layout_width="7dp"
+                        android:layout_height="1dp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="10dp"
+                        android:background="@drawable/bg_guia_card">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Total del lote"
+                            android:textColor="@color/guia_758078"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/txtAlimentoTotalLote"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="— kg"
+                            android:textColor="@color/guia_20342a"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:maxLines="2"
+                            android:ellipsize="end" />
                     </LinearLayout>
                 </LinearLayout>
-                <TextView android:id="@+id/txtAlimentoPendienteHoy" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:padding="9dp" android:background="@drawable/bg_badge_regular" android:text="Sin estimación de alimento" android:textColor="#765213" android:fontFamily="sans-serif-medium" android:textSize="11sp" android:maxLines="2" android:ellipsize="end" />
-                <TextView android:id="@+id/txtConsumoRealPorAve" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
-                <TextView android:id="@+id/txtFcrProyectado" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" android:text="—" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="10dp">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Aves vivas"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_primary" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textSize="18sp"
+                            android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium"
+                            android:id="@+id/avesPlanGuia" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Bultos de 40 kg"
+                            android:textSize="12sp"
+                            android:textColor="@color/text_primary" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="—"
+                            android:textSize="18sp"
+                            android:textColor="@color/text_primary"
+                            android:fontFamily="sans-serif-medium"
+                            android:id="@+id/bultosPlanGuia" />
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Alimento por etapa"
+                    android:textSize="15sp"
+                    android:textColor="@color/text_primary"
+                    android:fontFamily="sans-serif-medium" />
+                <LinearLayout
+                    android:id="@+id/listaEtapasGuia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+                <TextView
+                    android:id="@+id/txtAlimentoPendienteHoy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:padding="9dp"
+                    android:background="@drawable/bg_badge_regular"
+                    android:text="Sin estimación de alimento"
+                    android:textColor="@color/guia_765213"
+                    android:textSize="11sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/txtConsumoRealPorAve"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
+                <TextView
+                    android:id="@+id/txtFcrProyectado"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:text="—" />
             </LinearLayout>
-
+            <include
+                android:id="@+id/panelCrecimiento"
+                layout="@layout/panel_crecimiento" />
             <!-- Referencia de curva -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -541,12 +1201,35 @@
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
                 android:padding="13dp"
-                android:background="@drawable/bg_guia_card">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="REFERENCIA DE LA CURVA" android:textColor="#2A7757" android:textSize="10sp" android:textStyle="bold" android:letterSpacing="0.09" />
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Referencia para el día actual" android:textColor="#20342A" android:textSize="16sp" android:textStyle="bold" />
-                <TextView android:id="@+id/txtFuenteCurvaGuia" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="No hay datos de curva para el día actual." android:textColor="#718078" android:fontFamily="sans-serif-medium" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" />
+                android:background="@drawable/bg_guia_card"
+                android:visibility="gone">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="REFERENCIA DE LA CURVA"
+                    android:textColor="@color/guia_2a7757"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Referencia para el día actual"
+                    android:textColor="@color/guia_20342a"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/txtFuenteCurvaGuia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="No hay datos de curva para el día actual."
+                    android:textColor="@color/guia_718078"
+                    android:textSize="12sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
             </LinearLayout>
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -265,7 +265,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
                 setOnClickListener {
                     AlertDialog.Builder(activity).setMessage("¿Eliminar esta notificación?")
                         .setNegativeButton("Cancelar", null)
-                        .setPositiveButton("Eliminar") { _, _ -> modificar({ RetrofitClient.api.eliminarMiNotificacion(n.id).isSuccessful }) }.show()
+                        .setPositiveButton("Eliminar") { _, _ -> modificar({ RetrofitClient.api.eliminarMiNotificacion(n.id).isSuccessful }) }.show().estiloCancelar()
                 }
             }
             lista.addView(tarjeta, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })

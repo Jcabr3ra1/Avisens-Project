@@ -81,6 +81,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
         configurarBottomNav(R.id.nav_bitacora)
         animarPestanaBitacora(binding.tabsBitacora, 1)
+        binding.tabPesajes.setOnClickListener { abrirPestanaBitacora(BitacoraPesajesFragment(), 1) }
 
         parentFragmentManager.setFragmentResultListener(
             "seguimiento_demo_guardado",

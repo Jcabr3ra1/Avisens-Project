@@ -1,7 +1,9 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.estiloCancelar
+
 import com.project.avisensandroid.ui.ColoresAdaptativos
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
@@ -51,7 +53,9 @@ class AlertasFragment : BaseBottomNavFragment() {
 
     private var alertas: List<AlertaResponse> = emptyList()
     private var alertasStock: List<InsumoResponse> = emptyList()
+
     private enum class Pestana { ACTIVAS, HISTORIAL, ESCALADAS }
+
     private var pestanaActual = Pestana.ACTIVAS
     private var lotesActivos: List<LoteResponse> = emptyList()
 
@@ -83,7 +87,10 @@ class AlertasFragment : BaseBottomNavFragment() {
             cambiarPestana(Pestana.ESCALADAS)
         }
         binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
-        selectorAnimado = SelectorAnimado(binding.tabActivas.parent as android.view.ViewGroup, R.drawable.bg_tab_selected)
+        selectorAnimado = SelectorAnimado(
+            binding.tabActivas.parent as android.view.ViewGroup,
+            R.drawable.bg_tab_selected
+        )
         pintarTabs()
 
         // La carga se hace en onResume, también al regresar de Inicio.
@@ -107,81 +114,86 @@ class AlertasFragment : BaseBottomNavFragment() {
     private var ultimaPintura = 0L
     private var alcanceCarga: Pair<Int?, Int?>? = null
 
-    private suspend fun consultarAlertas(api: ApiService, granjaId: Int?, galponId: Int?) = coroutineScope {
-        val consultaAlertas = async { if (galponId != null) {
-            val todas = mutableListOf<AlertaResponse>()
-            var paginaAlertas = 1
-            var hayMasAlertas = true
-            while (hayMasAlertas) {
-                val response = api.listarAlertasDeGalpon(
-                    galponId = galponId, page = paginaAlertas, limit = 100
-                )
-                if (!response.isSuccessful) {
-                    throw IllegalStateException("Código ${response.code()}")
-                }
-                val cuerpo = response.body()
-                    ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
-                todas.addAll(cuerpo.data)
-                hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
-                paginaAlertas++
+    private suspend fun consultarAlertas(api: ApiService, granjaId: Int?, galponId: Int?) =
+        coroutineScope {
+            val consultaAlertas = async {
+                if (galponId != null) {
+                    val todas = mutableListOf<AlertaResponse>()
+                    var paginaAlertas = 1
+                    var hayMasAlertas = true
+                    while (hayMasAlertas) {
+                        val response = api.listarAlertasDeGalpon(
+                            galponId = galponId, page = paginaAlertas, limit = 100
+                        )
+                        if (!response.isSuccessful) {
+                            throw IllegalStateException("Código ${response.code()}")
+                        }
+                        val cuerpo = response.body()
+                            ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
+                        todas.addAll(cuerpo.data)
+                        hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
+                        paginaAlertas++
+                    }
+                    todas
+                } else emptyList()
             }
-            todas
-        } else emptyList() }
-        // Los insumos pertenecen a granjas, NO a galpones. Se consultan
-        // con el filtro de acceso que ya aplica el backend por rol.
-        val consultaStock = async {
-            val stockBajo = mutableListOf<InsumoResponse>()
-            var pagina = 1
-            var continuar = true
-            while (continuar) {
-                val insumosResponse = api.listarInsumos(page = pagina, limit = 100)
-                if (!insumosResponse.isSuccessful) {
-                    throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
+            // Los insumos pertenecen a granjas, NO a galpones. Se consultan
+            // con el filtro de acceso que ya aplica el backend por rol.
+            val consultaStock = async {
+                val stockBajo = mutableListOf<InsumoResponse>()
+                var pagina = 1
+                var continuar = true
+                while (continuar) {
+                    val insumosResponse = api.listarInsumos(page = pagina, limit = 100)
+                    if (!insumosResponse.isSuccessful) {
+                        throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
+                    }
+                    val cuerpo = insumosResponse.body()
+                        ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
+                    stockBajo.addAll(cuerpo.data.filter { insumo ->
+                        insumo.activo &&
+                                (granjaId == null || insumo.granja_id == granjaId) &&
+                                (insumo.stock_minimo ?: 0.0) > 0.0 &&
+                                (insumo.stock_actual
+                                    ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
+                    })
+                    continuar = pagina < cuerpo.meta.totalPages
+                    pagina++
                 }
-                val cuerpo = insumosResponse.body()
-                    ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
-                stockBajo.addAll(cuerpo.data.filter { insumo ->
-                    insumo.activo &&
-                            (granjaId == null || insumo.granja_id == granjaId) &&
-                            (insumo.stock_minimo ?: 0.0) > 0.0 &&
-                            (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
-                })
-                continuar = pagina < cuerpo.meta.totalPages
-                pagina++
+                stockBajo
             }
-            stockBajo
-        }
-        // El inventario pertenece a la granja. Consultamos los lotes
-        // exclusivamente para identificar el código real cuando no
-        // exista ambigüedad; un error aquí no oculta las alertas.
-        val consultaLotes = async { try {
-            val lotes = mutableListOf<LoteResponse>()
-            var paginaLotes = 1
-            var hayMas = true
-            while (hayMas) {
-                val respuesta = api.listarLotesCompletos(
-                    page = paginaLotes, limit = 100
-                )
-                if (!respuesta.isSuccessful) {
-                    throw IllegalStateException("No se pudieron consultar los lotes")
+            // El inventario pertenece a la granja. Consultamos los lotes
+            // exclusivamente para identificar el código real cuando no
+            // exista ambigüedad; un error aquí no oculta las alertas.
+            val consultaLotes = async {
+                try {
+                    val lotes = mutableListOf<LoteResponse>()
+                    var paginaLotes = 1
+                    var hayMas = true
+                    while (hayMas) {
+                        val respuesta = api.listarLotesCompletos(
+                            page = paginaLotes, limit = 100
+                        )
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException("No se pudieron consultar los lotes")
+                        }
+                        val cuerpo = respuesta.body()
+                            ?: throw IllegalStateException("Respuesta vacía de lotes")
+                        lotes.addAll(cuerpo.data.filter {
+                            it.estado.equals("activo", ignoreCase = true)
+                        })
+                        hayMas = paginaLotes < cuerpo.meta.totalPages
+                        paginaLotes++
+                    }
+                    lotes
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
                 }
-                val cuerpo = respuesta.body()
-                    ?: throw IllegalStateException("Respuesta vacía de lotes")
-                lotes.addAll(cuerpo.data.filter {
-                    it.estado.equals("activo", ignoreCase = true)
-                })
-                hayMas = paginaLotes < cuerpo.meta.totalPages
-                paginaLotes++
             }
-            lotes
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            emptyList()
+            Triple(consultaAlertas.await(), consultaStock.await(), consultaLotes.await())
         }
-        }
-        Triple(consultaAlertas.await(), consultaStock.await(), consultaLotes.await())
-    }
 
     private fun cargarAlertas(silenciosa: Boolean = false) {
         val main = activity as? MainActivity ?: return
@@ -218,18 +230,22 @@ class AlertasFragment : BaseBottomNavFragment() {
                 listaPintada = true
                 ultimaPintura = android.os.SystemClock.elapsedRealtime()
             }
+
             var cacheMostrada = false
             try {
                 if (!silenciosa) {
                     try {
                         pintar(consultarAlertas(RetrofitClient.apiCache, granjaId, galponId))
                         cacheMostrada = true
-                    } catch (e: CancellationException) { throw e }
-                    catch (_: Exception) { }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
                 pintar(consultarAlertas(RetrofitClient.api, granjaId, galponId))
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 if (!silenciosa && !cacheMostrada && _binding != null) {
                     binding.tvResumenAlertas.text = "No se pudieron cargar las alertas"
                 }
@@ -246,12 +262,15 @@ class AlertasFragment : BaseBottomNavFragment() {
         val advertencias = (activas - criticas).coerceAtLeast(0)
 
         binding.tvBadgeActivas.text = activas.toString()
-        binding.tvBadgeActivas.visibility = View.GONE // Al abrir Alertas, el indicador de lectura desaparece
+        binding.tvBadgeActivas.visibility =
+            View.GONE // Al abrir Alertas, el indicador de lectura desaparece
         val escaladas = alertas.count { it.escalado_a_id != null }
         binding.tvBadgeEscaladas.text = escaladas.toString()
-        binding.tvBadgeEscaladas.visibility = View.GONE // Se mantienen las alertas escaladas en su pestaña
+        binding.tvBadgeEscaladas.visibility =
+            View.GONE // Se mantienen las alertas escaladas en su pestaña
         binding.tvBadgeHistorial.text = historial.toString()
-        binding.tvBadgeHistorial.visibility = View.GONE // Historial disponible, sin indicador de no leído
+        binding.tvBadgeHistorial.visibility =
+            View.GONE // Historial disponible, sin indicador de no leído
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
         actualizarTextoResumen()
@@ -270,6 +289,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             Pestana.ACTIVAS -> if (activas == 1)
                 "1 alerta activa en el galpón o la granja seleccionada"
             else "$activas alertas activas en el galpón o la granja seleccionada"
+
             Pestana.HISTORIAL -> "Alertas cerradas del galpón seleccionado"
             Pestana.ESCALADAS -> "Alertas escaladas del galpón seleccionado"
         }
@@ -302,11 +322,13 @@ class AlertasFragment : BaseBottomNavFragment() {
         val mostrarContadores = pestanaActual == Pestana.ACTIVAS
         binding.tvCriticas.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
         binding.tvAdvertencias.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
-        selectorAnimado?.seleccionar(when (pestanaActual) {
-            Pestana.ACTIVAS -> binding.tabActivas
-            Pestana.HISTORIAL -> binding.tabHistorial
-            Pestana.ESCALADAS -> binding.tabEscaladas
-        })
+        selectorAnimado?.seleccionar(
+            when (pestanaActual) {
+                Pestana.ACTIVAS -> binding.tabActivas
+                Pestana.HISTORIAL -> binding.tabHistorial
+                Pestana.ESCALADAS -> binding.tabEscaladas
+            }
+        )
         // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
         val colorSeleccionado = ColoresAdaptativos.texto(requireContext(), "#111111")
         val colorNoSeleccionado = ColoresAdaptativos.texto(requireContext(), "#808A85")
@@ -376,14 +398,26 @@ class AlertasFragment : BaseBottomNavFragment() {
         )
         var fechaAnterior: String? = null
         ordenadas.forEach { alerta ->
-            val fechaAgrupacion = if (agruparPorCierre) alerta.fecha_cierre else alerta.fecha_creacion
+            val fechaAgrupacion =
+                if (agruparPorCierre) alerta.fecha_cierre else alerta.fecha_creacion
             val fechaActual = if (agruparPorCierre && fechaAgrupacion.isNullOrBlank())
                 "SIN FECHA DE CIERRE" else fechaEncabezado(fechaAgrupacion)
             if (fechaActual != fechaAnterior) {
-                binding.containerAlertas.addView(texto(fechaActual, 13f, "#52675C", true, 18).apply {
-                    setPadding(dp(4), dp(2), dp(4), dp(8))
-                })
-                entradaTarjetas.mostrar(binding.containerAlertas.getChildAt(binding.containerAlertas.childCount - 1), "fecha:${pestanaActual}:$fechaActual", true)
+                binding.containerAlertas.addView(
+                    texto(
+                        fechaActual,
+                        13f,
+                        "#52675C",
+                        true,
+                        18
+                    ).apply {
+                        setPadding(dp(4), dp(2), dp(4), dp(8))
+                    })
+                entradaTarjetas.mostrar(
+                    binding.containerAlertas.getChildAt(binding.containerAlertas.childCount - 1),
+                    "fecha:${pestanaActual}:$fechaActual",
+                    true
+                )
                 fechaAnterior = fechaActual
             }
             val tarjeta = if (pestanaActual == Pestana.ESCALADAS) crearTarjetaEscalada(alerta)
@@ -391,7 +425,8 @@ class AlertasFragment : BaseBottomNavFragment() {
             binding.containerAlertas.addView(tarjeta)
             entradaTarjetas.mostrar(tarjeta, "alerta:${pestanaActual}:${alerta.id}")
             binding.containerAlertas.addView(View(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
+                layoutParams =
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
             })
         }
     }
@@ -402,7 +437,8 @@ class AlertasFragment : BaseBottomNavFragment() {
         val tarjeta = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             background = resources.getDrawable(
-                if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning, null
+                if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning,
+                null
             )
             elevation = dp(2).toFloat()
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -411,46 +447,80 @@ class AlertasFragment : BaseBottomNavFragment() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        encabezado.addView(texto(
-            "●  ${alerta.galpon?.nombre ?: "Galpón ${alerta.galpon_id}"}",
-            12f, "#111111", true
-        ).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
+        encabezado.addView(
+            texto(
+                "●  ${alerta.galpon?.nombre ?: "Galpón ${alerta.galpon_id}"}",
+                12f, "#111111", true
+            ).apply {
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
         encabezado.addView(crearBadgeEstadoAlerta(alerta.estado))
         tarjeta.addView(encabezado)
         tarjeta.addView(texto(etiquetaTipoAlerta(alerta.tipo), 16f, "#111111", true, 8))
-        tarjeta.addView(texto(
-            "Escalada a: ${alerta.escalado_a?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Usuario no disponible"}",
+        tarjeta.addView(
+            texto(
+                "Escalada a: ${alerta.escalado_a?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Usuario no disponible"}",
             12f, "#111111", true, 6
         ))
-        tarjeta.addView(texto(
-            "Responsable que aceptó: ${alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Sin aceptación registrada"}",
+        tarjeta.addView(
+            texto(
+                "Responsable que aceptó: ${alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Sin aceptación registrada"}",
             12f, "#111111", false, 5
         ))
         alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
-            tarjeta.addView(texto("Generada: ${formatearFechaAlerta(it)}", 12f, "#111111", false, 5))
+            tarjeta.addView(
+                texto(
+                    "Generada: ${formatearFechaAlerta(it)}",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
         }
         val aceptacion = alerta.fecha_aceptacion
         if (!aceptacion.isNullOrBlank()) {
-            tarjeta.addView(texto("Aceptada: ${formatearFechaAlerta(aceptacion)}", 12f, "#111111", false, 5))
+            tarjeta.addView(
+                texto(
+                    "Aceptada: ${formatearFechaAlerta(aceptacion)}",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
             val minutos = calcularMinutosRespuesta(alerta.fecha_creacion, aceptacion)
-            if (minutos != null) tarjeta.addView(texto(
-                "Tiempo hasta aceptación: ${formatearDuracion(minutos)}",
-                12f, "#111111", true, 5
-            ))
+            if (minutos != null) tarjeta.addView(
+                texto(
+                    "Tiempo hasta aceptación: ${formatearDuracion(minutos)}",
+                    12f, "#111111", true, 5
+                )
+            )
         } else {
-            tarjeta.addView(texto("Tiempo hasta aceptación: No disponible", 12f, "#111111", false, 5))
+            tarjeta.addView(
+                texto(
+                    "Tiempo hasta aceptación: No disponible",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
         }
         // No se atribuye al responsable que aceptó el papel de operario original:
         // ese dato y la fecha del escalamiento no existen en la respuesta del API.
-        tarjeta.addView(texto(
-            "Estado actual: ${when (alerta.estado.lowercase(Locale.ROOT)) {
-                "cerrada" -> "Cerrada"
-                "en_proceso" -> "En proceso"
-                else -> "Abierta"
-            }}", 12f, "#111111", true, 6
-        ))
+        tarjeta.addView(
+            texto(
+                "Estado actual: ${
+                    when (alerta.estado.lowercase(Locale.ROOT)) {
+                        "cerrada" -> "Cerrada"
+                        "en_proceso" -> "En proceso"
+                        else -> "Abierta"
+                    }
+                }", 12f, "#111111", true, 6
+            )
+        )
         alerta.mensaje?.takeIf { it.isNotBlank() }?.let {
             tarjeta.addView(texto(it, 12f, "#111111", false, 7))
         }
@@ -468,7 +538,9 @@ class AlertasFragment : BaseBottomNavFragment() {
             val inicio = java.time.Instant.parse(creacion)
             val fin = java.time.Instant.parse(aceptacion)
             java.time.Duration.between(inicio, fin).toMinutes().takeIf { it >= 0 }
-        } catch (_: Exception) { null }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun formatearDuracion(minutos: Long): String =
@@ -496,18 +568,30 @@ class AlertasFragment : BaseBottomNavFragment() {
             ?: "Inventario de granja"
         tarjeta.addView(texto("●  Bodega · $ubicacion", 12f, "#5D6862", true))
         tarjeta.addView(texto("Stock bajo: ${insumo.nombre}", 16f, "#183C2E", true, 7))
-        tarjeta.addView(texto(
-            "Disponible: ${formatearValor(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida} · " +
-                    "Mínimo: ${formatearValor(insumo.stock_minimo ?: 0.0)} ${insumo.unidad_medida}",
-            12f, "#C62828", true, 5
-        ))
-        tarjeta.addView(texto("Repón este insumo desde Bodega para resolver la alerta.", 12f, "#78847E", false, 4))
+        tarjeta.addView(
+            texto(
+                "Disponible: ${formatearValor(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida} · " +
+                        "Mínimo: ${formatearValor(insumo.stock_minimo ?: 0.0)} ${insumo.unidad_medida}",
+                12f, "#C62828", true, 5
+            )
+        )
+        tarjeta.addView(
+            texto(
+                "Repón este insumo desde Bodega para resolver la alerta.",
+                12f,
+                "#78847E",
+                false,
+                4
+            )
+        )
         return tarjeta
     }
 
     private fun crearTarjetaAlerta(alerta: AlertaResponse): View {
-        val critica = alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)
-        val fondo = if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning
+        val critica =
+            alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)
+        val fondo =
+            if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning
 
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
@@ -541,7 +625,8 @@ class AlertasFragment : BaseBottomNavFragment() {
                 "#111111",
                 true
             ).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
         )
         fila.addView(crearBadgeEstadoAlerta(alerta.estado))
@@ -580,20 +665,24 @@ class AlertasFragment : BaseBottomNavFragment() {
         }
         card.addView(texto(detalle ?: "", 12f, "#111111", false, 6))
         if (umbral != null && alerta.valor_detectado != null) {
-            card.addView(texto(
-                "Valor detectado: ${formatearValor(alerta.valor_detectado)} · Umbral: $umbral",
-                11f, if (critica) "#E53935" else "#A56B12", true, 5
-            ))
+            card.addView(
+                texto(
+                    "Valor detectado: ${formatearValor(alerta.valor_detectado)} · Umbral: $umbral",
+                    11f, if (critica) "#E53935" else "#A56B12", true, 5
+                )
+            )
         }
 
         if (alerta.estado.equals("cerrada", ignoreCase = true)) {
             alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
                 card.addView(View(requireContext()).apply {
                     setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E5ECE7"))
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)).apply {
-                        topMargin = dp(12)
-                        bottomMargin = dp(9)
-                    }
+                    layoutParams =
+                        LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
+                            .apply {
+                                topMargin = dp(12)
+                                bottomMargin = dp(9)
+                            }
                 })
                 card.addView(texto("Acción correctiva", 12f, "#111111", true))
                 card.addView(texto(it, 12f, "#111111", false, 4))
@@ -612,8 +701,18 @@ class AlertasFragment : BaseBottomNavFragment() {
                     text = "Escalar"
                     isAllCaps = false
                     textSize = 13f
-                    setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_6d4c1d))
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFF0D8"))
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_6d4c1d
+                        )
+                    )
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        ColoresAdaptativos.superficie(
+                            requireContext(),
+                            "#FFF0D8"
+                        )
+                    )
                     cornerRadius = dp(9)
                     minWidth = 0
                     minHeight = 0
@@ -632,7 +731,8 @@ class AlertasFragment : BaseBottomNavFragment() {
                 isAllCaps = false
                 textSize = 13f
                 setTextColor(Color.WHITE)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10A86B"))
+                backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#10A86B"))
                 cornerRadius = dp(9)
                 minWidth = 0
                 minHeight = 0
@@ -648,11 +748,13 @@ class AlertasFragment : BaseBottomNavFragment() {
             card.addView(botones)
             if (confirmada) {
                 val responsable = alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() }
-                card.addView(texto(
-                    if (responsable != null) "Lectura confirmada por: $responsable"
-                    else "Lectura confirmada · En proceso",
-                    11f, "#176747", false, 6
-                ))
+                card.addView(
+                    texto(
+                        if (responsable != null) "Lectura confirmada por: $responsable"
+                        else "Lectura confirmada · En proceso",
+                        11f, "#176747", false, 6
+                    )
+                )
             }
         }
 
@@ -674,7 +776,10 @@ class AlertasFragment : BaseBottomNavFragment() {
     private fun formatearFechaAlerta(fecha: String): String {
         return try {
             val instante = java.time.Instant.parse(fecha)
-            val formato = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
+            val formato = java.time.format.DateTimeFormatter.ofPattern(
+                "dd/MM/yyyy HH:mm",
+                Locale.getDefault()
+            )
             formato.withZone(java.time.ZoneId.systemDefault()).format(instante)
         } catch (_: Exception) {
             fecha.take(16).replace('T', ' ')
@@ -700,11 +805,19 @@ class AlertasFragment : BaseBottomNavFragment() {
                     actualizarResumen()
                     mostrarLista()
                 }
-                if (isAdded) Toast.makeText(requireContext(), "Lectura confirmada. Ya puedes cerrar la alerta.", Toast.LENGTH_SHORT).show()
+                if (isAdded) Toast.makeText(
+                    requireContext(),
+                    "Lectura confirmada. Ya puedes cerrar la alerta.",
+                    Toast.LENGTH_SHORT
+                ).show()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (isAdded) Toast.makeText(requireContext(), "No se pudo confirmar: ${e.message}", Toast.LENGTH_LONG).show()
+                if (isAdded) Toast.makeText(
+                    requireContext(),
+                    "No se pudo confirmar: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             } finally {
                 boton.isEnabled = true
                 boton.text = "Confirmar lectura"
@@ -732,13 +845,18 @@ class AlertasFragment : BaseBottomNavFragment() {
         val fondo = if (cerrado) "#E2F2E8" else "#FDE8E7"
         val color = if (cerrado) "#1F5C42" else "#C62828"
         return TextView(requireContext()).apply {
-            text = if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
+            text =
+                if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
             setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             textSize = 12f
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(10), dp(5), dp(10), dp(5))
-            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), fondo), Color.TRANSPARENT, 20)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), fondo),
+                Color.TRANSPARENT,
+                20
+            )
         }
     }
 
@@ -747,7 +865,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         val tarjeta = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(20), dp(20), dp(18))
-            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#D8E7DE"), 20)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#D8E7DE"),
+                20
+            )
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -777,10 +899,19 @@ class AlertasFragment : BaseBottomNavFragment() {
             maxLines = 5
             gravity = Gravity.TOP or Gravity.START
             textSize = 15f
-            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e))
+            setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.adaptive_text_183c2e
+                )
+            )
             setHintTextColor(ColoresAdaptativos.texto(requireContext(), "#8A9890"))
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#BFD6C7"), 10)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#BFD6C7"),
+                10
+            )
         }
         tarjeta.addView(
             input,
@@ -799,8 +930,19 @@ class AlertasFragment : BaseBottomNavFragment() {
             isAllCaps = false
             textSize = 14f
             setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
-            backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
-            strokeWidth = 0
+            backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_background
+                )
+            )
+            strokeWidth = dp(1)
+            strokeColor = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_stroke
+                )
+            )
             cornerRadius = dp(10)
             minWidth = 0
             minHeight = 0
@@ -813,7 +955,8 @@ class AlertasFragment : BaseBottomNavFragment() {
             isAllCaps = false
             textSize = 14f
             setTextColor(Color.WHITE)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
+            backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
             cornerRadius = dp(10)
             minWidth = 0
             minHeight = 0
@@ -944,26 +1087,31 @@ class AlertasFragment : BaseBottomNavFragment() {
                 val usuarios = response.body()?.data.orEmpty().filter { it.activo }
 
                 if (usuarios.isEmpty()) {
-                    Toast.makeText(requireContext(), "No hay usuarios disponibles para escalar", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "No hay usuarios disponibles para escalar",
+                        Toast.LENGTH_LONG
+                    ).show()
                     return@launch
                 }
 
-                val nombres = usuarios.map { "${it.nombre_completo} · ${it.rol.nombre}" }.toTypedArray()
+                val nombres =
+                    usuarios.map { "${it.nombre_completo} · ${it.rol.nombre}" }.toTypedArray()
                 AlertDialog.Builder(requireContext())
                     .setTitle("Escalar alerta")
                     .setItems(nombres) { _, which ->
                         ejecutarEscalar(alerta.id, usuarios[which].id)
                     }
                     .setNegativeButton("Cancelar", null)
-                    .show().getButton(AlertDialog.BUTTON_NEGATIVE).apply {
-                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
-                        backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
-                        background = roundedBackground(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background), androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background), 10)
-                    }
+                    .show().estiloCancelar()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "No se pudo cargar los usuarios: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo cargar los usuarios: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -973,12 +1121,20 @@ class AlertasFragment : BaseBottomNavFragment() {
             try {
                 val response = RetrofitClient.api.escalarAlerta(alertaId, usuarioId)
                 if (!response.isSuccessful) throw IllegalStateException("Código ${response.code()}")
-                Toast.makeText(requireContext(), "Alerta escalada correctamente", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Alerta escalada correctamente",
+                    Toast.LENGTH_SHORT
+                ).show()
                 cargarAlertas()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "No se pudo escalar la alerta: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo escalar la alerta: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -992,7 +1148,8 @@ class AlertasFragment : BaseBottomNavFragment() {
     ): TextView = TextView(requireContext()).apply {
         text = contenido
         textSize = if (tamano < 16f) tamano + 1f else tamano
-        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        typeface =
+            android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
         setTextColor(ColoresAdaptativos.texto(requireContext(), color))
         if (negrita) setTypeface(typeface, Typeface.BOLD)
         layoutParams = LinearLayout.LayoutParams(
@@ -1001,7 +1158,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         ).apply { topMargin = dp(marginTop) }
     }
 
-    private fun roundedBackground(fillColor: Int, strokeColor: Int, radiusDp: Int): GradientDrawable =
+    private fun roundedBackground(
+        fillColor: Int,
+        strokeColor: Int,
+        radiusDp: Int
+    ): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(fillColor)
@@ -1010,7 +1171,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         }
 
     private fun formatearValor(valor: Double): String {
-        return if (valor % 1.0 == 0.0) valor.toInt().toString() else String.format(Locale.US, "%.1f", valor)
+        return if (valor % 1.0 == 0.0) valor.toInt().toString() else String.format(
+            Locale.US,
+            "%.1f",
+            valor
+        )
     }
 
     private fun dp(value: Int): Int =

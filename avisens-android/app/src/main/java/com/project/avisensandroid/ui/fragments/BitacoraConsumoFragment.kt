@@ -34,6 +34,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     private val binding get() = _binding!!
 
     private var cargaJob: Job? = null
+    private var primeraCarga = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,10 +48,12 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         entradaTarjetas.reiniciar()
+        primeraCarga = true
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bitacora)
-        animarPestanaBitacora(binding.tabsBitacora, 2)
+        animarPestanaBitacora(binding.tabsBitacora, 3)
+        binding.tabPesajes.setOnClickListener { abrirPestanaBitacora(BitacoraPesajesFragment(), 3) }
 
         binding.btnRegistrarConsumo.setOnClickListener { registrarConsumo(activity) }
         com.project.avisensandroid.controller.Hu56OfflineQueue.programar(requireContext())
@@ -63,11 +66,11 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
             }
         }
         binding.btnMortalidad.setOnClickListener {
-            abrirPestanaBitacora(BitacoraFragment(), 2)
+            abrirPestanaBitacora(BitacoraFragment(), 3)
         }
 
         binding.btnEnfermo.setOnClickListener {
-            abrirPestanaBitacora(BitacoraEnfermoFragment(), 2)
+            abrirPestanaBitacora(BitacoraEnfermoFragment(), 3)
         }
     }
 
@@ -147,8 +150,10 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     }
 
     private fun cargarConsumos() {
-        cargaJob?.cancel()
+        if (cargaJob?.isActive == true) return
         cargaJob = viewLifecycleOwner.lifecycleScope.launch {
+            // Evita reconstruir las tarjetas durante la transición del selector.
+            if (primeraCarga) { primeraCarga = false; kotlinx.coroutines.delay(280L) }
             try {
                 val activity = requireActivity() as MainActivity
                 val galponId = activity.obtenerGalponSeleccionadoId()

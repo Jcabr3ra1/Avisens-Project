@@ -148,19 +148,8 @@ class InicioFragment : BaseBottomNavFragment() {
             activity.mostrarAsistenteVoz()
         }
 
-        // La Guía de peso no está disponible para el rol Operario.
-        binding.btnGuiaPeso.visibility =
-            if (activity.obtenerRolActual() == UserRole.OPERARIO) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
-
-        binding.btnGuiaPeso.setOnClickListener {
-            if (activity.obtenerRolActual() != UserRole.OPERARIO) {
-                activity.mostrarGuiaPeso()
-            }
-        }
+        binding.btnGuiaPeso.visibility = if (activity.obtenerRolActual() == UserRole.OPERARIO) View.GONE else View.VISIBLE
+        binding.btnGuiaPeso.setOnClickListener { activity.mostrarGuiaPeso() }
 
         entradaAnimada = false
         if (esPropietario()) binding.filaNivelAguaInicio.visibility = View.VISIBLE

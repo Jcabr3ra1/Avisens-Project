@@ -187,9 +187,11 @@
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
+            android:textStyle="bold"
             android:textSize="15sp"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="0dp" />
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/cancel_stroke" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardarMovimiento"

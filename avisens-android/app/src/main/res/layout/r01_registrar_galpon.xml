@@ -174,7 +174,8 @@
             android:textStyle="bold"
             app:cornerRadius="10dp"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="0dp" />
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/cancel_stroke" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCrearLote"

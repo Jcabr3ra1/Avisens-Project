@@ -151,6 +151,7 @@ class Hu56SyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 val response = when (item.getString("tipo")) {
                     "mortalidad" -> RetrofitClient.api.crearRegistroMortalidad(gson.fromJson(payload, RegistroMortalidadRequest::class.java))
                     "sanitario" -> RetrofitClient.api.crearEventoSanitario(gson.fromJson(payload, EventoSanitarioRequest::class.java))
+                    "pesaje" -> RetrofitClient.api.crearPesaje(gson.fromJson(payload, PesajeRequest::class.java))
                     "consumo" -> RetrofitClient.api.crearConsumoDiario(gson.fromJson(payload, CreateConsumoDiarioRequest::class.java))
                     else -> null
                 }

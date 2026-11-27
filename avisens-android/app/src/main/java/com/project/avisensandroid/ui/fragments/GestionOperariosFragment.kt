@@ -1,5 +1,7 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.estiloCancelar
+
 
 import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
@@ -766,7 +768,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         "Cancelar",
                         null
                     )
-                    .show()
+                    .show().estiloCancelar()
 
             } catch (e: Exception) {
 
@@ -920,7 +922,12 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 insetBottom = 0
                 layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f)
             }
-        val cancelar = boton("Cancelar", "#EEF4F0", "#176747")
+        val cancelar = boton("Cancelar", "#EEF4F0", "#176747").apply {
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
+            backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
+            strokeWidth = dp(1)
+            strokeColor = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_stroke))
+        }
         val quitar = boton("Quitar", "#176747", "#FFFFFF")
         (quitar.layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
         botones.addView(cancelar)

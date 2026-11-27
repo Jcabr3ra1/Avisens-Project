@@ -91,6 +91,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
         configurarBottomNav(R.id.nav_bitacora)
         animarPestanaBitacora(binding.tabsBitacora, 0)
+        binding.tabPesajes.setOnClickListener { abrirPestanaBitacora(BitacoraPesajesFragment(), 0) }
 
         binding.tbnConsumo.setOnClickListener {
             abrirPestanaBitacora(BitacoraConsumoFragment(), 0)

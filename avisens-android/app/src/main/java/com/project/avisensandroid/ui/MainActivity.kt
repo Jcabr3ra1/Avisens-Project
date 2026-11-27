@@ -370,6 +370,7 @@ class MainActivity : AperturaReanudableActivity() {
             // Bodega ya tiene su propio progressInsumos para la carga inicial.
             // En reconexión se usa únicamente el indicador superior común.
             is BodegaFragment -> visible.actualizarSilenciosamente()
+            is com.project.avisensandroid.ui.fragments.BitacoraPesajesFragment -> visible.actualizarSilenciosamente()
             is com.project.avisensandroid.ui.fragments.BitacoraConsumoFragment -> visible.actualizarSilenciosamente()
             is BitacoraFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
             is GestionOperariosFragment -> visible.actualizarSilenciosamente()
@@ -414,10 +415,37 @@ class MainActivity : AperturaReanudableActivity() {
     fun esOperario(): Boolean =
         rolActual == UserRole.OPERARIO
 
+    // Un único propietario de los insets para todas las pantallas de MainActivity.
+    @Suppress("DEPRECATION")
+    private fun configurarMargenesSistema() {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+        val contenido = findViewById<View>(android.R.id.content)
+        contenido.setBackgroundResource(R.color.bg_app)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(contenido) { v, insets ->
+            val barras = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                        androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            )
+            val teclado = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            v.setPadding(barras.left, barras.top, barras.right, maxOf(barras.bottom, teclado.bottom))
+            // Evita que los fragments y BottomNavigationView sumen otra vez los márgenes.
+            androidx.core.view.WindowInsetsCompat.CONSUMED
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(contenido)
+    }
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
         super.onCreate(if (savedInstanceState?.getBoolean("configuracion_abierta") == true) null else savedInstanceState)
+
+        configurarMargenesSistema()
 
         granjaSeleccionadaId = savedInstanceState?.getInt(STATE_GRANJA_ID)?.takeIf { it != 0 }
             ?: preferenciasSeleccion().getInt(claveSeleccion("granja"), 0).takeIf { it > 0 }
@@ -1429,7 +1457,7 @@ class MainActivity : AperturaReanudableActivity() {
                                 b.imgFotoPerfil.visibility = View.GONE
                                 b.txtInicialPerfil.visibility = View.VISIBLE
                             }
-                        }.show()
+                        }.show().estiloCancelar()
                     else -> elegirFotoPerfil.launch("image/*")
                 }
             }.show()

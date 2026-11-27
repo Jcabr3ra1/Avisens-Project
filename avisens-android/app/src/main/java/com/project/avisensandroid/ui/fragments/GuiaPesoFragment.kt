@@ -12,6 +12,9 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.FragmentGuiaPesoBinding
@@ -50,6 +53,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     private var _binding: FragmentGuiaPesoBinding? = null
     private val binding get() = _binding!!
 
+    private var panel: PanelCrecimiento? = null
     private var galponId: Int? = null
     private var lotesActivos: List<LoteResponse> = emptyList()
     private var loteSeleccionado: LoteResponse? = null
@@ -86,7 +90,15 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        selectorGuia = null
+        pestanaGuia = -1
         configurarBottomNav(R.id.nav_inicio)
+        panel = PanelCrecimiento(this, view.findViewById(R.id.panelCrecimiento))
+
+        listOf(R.id.guiaTab0, R.id.guiaTab1, R.id.guiaTab2).forEachIndexed { i, id ->
+            view.findViewById<View>(id).setOnClickListener { mostrarPestanaGuia(i) }
+        }
+        mostrarPestanaGuia(0)
 
         binding.btnVolverGuia.setOnClickListener {
             val manager = parentFragmentManager
@@ -94,6 +106,28 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             else (requireActivity() as MainActivity).mostrarFragment(InicioFragment())
         }
 
+        binding.btnCambiarObjetivoGuia.visibility = if (puedeEditarPlan) View.VISIBLE else View.GONE
+        binding.btnCambiarObjetivoGuia.setOnClickListener {
+            binding.formObjetivoGuia.visibility = View.VISIBLE
+            binding.btnCambiarObjetivoGuia.visibility = View.GONE
+        }
+        binding.btnCancelarObjetivoGuia.setOnClickListener {
+            binding.formObjetivoGuia.visibility = View.GONE
+            binding.btnCambiarObjetivoGuia.visibility =
+                if (puedeEditarPlan) View.VISIBLE else View.GONE
+            planActual?.peso_objetivo_g?.let {
+                programarTextoObjetivo(
+                    String.format(
+                        Locale.US,
+                        "%.4f",
+                        it / GRAMOS_POR_LIBRA
+                    )
+                )
+            }
+                ?: programarTextoObjetivo("")
+            ocultarTeclado()
+            actualizarResumen()
+        }
         binding.edtPesoObjetivoLb.isEnabled = puedeEditarPlan
         binding.btnCalcularProyeccion.visibility = if (puedeEditarPlan) View.VISIBLE else View.GONE
         binding.btnRecalcularPlanGuia.visibility = if (puedeEditarPlan) View.VISIBLE else View.GONE
@@ -110,15 +144,18 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             }
         }
         binding.edtPesoObjetivoLb.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) =
+                Unit
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (programandoObjetivo) return
                 val libras = leerLibras()
-                binding.txtPesoConvertidoG.text = if (libras != null && libras > 0 && libras.isFinite()) {
-                    "≈ ${formatoEntero.format(libras * GRAMOS_POR_LIBRA)} g"
-                } else {
-                    "≈ — g"
-                }
+                binding.txtPesoConvertidoG.text =
+                    if (libras != null && libras > 0 && libras.isFinite()) {
+                        "≈ ${formatoEntero.format(libras * GRAMOS_POR_LIBRA)} g"
+                    } else {
+                        "≈ — g"
+                    }
                 loteSeleccionado?.let { lote ->
                     val edad = planActual?.tiempo?.dia_actual ?: diaVida(lote)
                     val ultimo = pesajesDeLote(lote.id).lastOrNull()
@@ -128,28 +165,100 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     actualizarAlimentoEstimado(planActual)
                 }
             }
+
             override fun afterTextChanged(s: Editable?) = Unit
         })
 
         galponId = (requireActivity() as MainActivity).obtenerGalponSeleccionadoId()
         cargarDatos()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(15000)
+                    actualizarRegistrosGuia()
+                }
+            }
+        }
+    }
+
+
+    private suspend fun actualizarRegistrosGuia() {
+        val lote = loteSeleccionado ?: return
+        if (!datosListos || !com.project.avisensandroid.controller.OfflineCache.hayInternet(
+                requireContext()
+            )
+        ) return
+        val fuentes = supervisorScope {
+            val p = async {
+                cargarOpcional("pesajes") {
+                    cargarPaginas {
+                        RetrofitClient.api.listarPesajes(
+                            it,
+                            100
+                        )
+                    }
+                }
+            }
+            val c = async {
+                cargarOpcional("consumo") {
+                    cargarPaginas {
+                        RetrofitClient.api.listarConsumosDiarios(
+                            it,
+                            100
+                        )
+                    }
+                }
+            }
+            val m = async {
+                cargarOpcional("mortalidad") {
+                    cargarPaginas {
+                        RetrofitClient.api.listarRegistrosMortalidad(
+                            it,
+                            100
+                        )
+                    }
+                }
+            }
+            Triple(p.await(), c.await(), m.await())
+        }
+        if (_binding == null || loteSeleccionado?.id != lote.id) return
+        val nuevosPesajes = if (fuentes.first.error == null) fuentes.first.datos else pesajes
+        val nuevosConsumos = if (fuentes.second.error == null) fuentes.second.datos else consumos
+        val nuevasMuertes = if (fuentes.third.error == null) fuentes.third.datos else mortalidades
+        if (pesajes.toSet() == nuevosPesajes.toSet() && consumos.toSet() == nuevosConsumos.toSet() && mortalidades.toSet() == nuevasMuertes.toSet()) return
+        pesajes = nuevosPesajes
+        consumos = nuevosConsumos
+        mortalidades = nuevasMuertes
+        actualizarContextoLote(lote)
+        actualizarResumen()
     }
 
     private fun cargarDatos() {
         viewLifecycleOwner.lifecycleScope.launch {
             val galponSeleccionado = galponId
             if (galponSeleccionado == null) {
-                binding.txtEstadoCargaGuia.text = "Primero selecciona un galpón en Inicio para consultar su lote activo."
-                binding.txtEstadoPlanGuia.text = "No se puede consultar el plan sin un galpón seleccionado."
+                binding.txtEstadoCargaGuia.text =
+                    "Primero selecciona un galpón en Inicio para consultar su lote activo."
+                binding.txtEstadoPlanGuia.text =
+                    "No se puede consultar el plan sin un galpón seleccionado."
                 binding.btnCalcularProyeccion.isEnabled = false
+                binding.btnCancelarObjetivoGuia.isEnabled = false
                 return@launch
             }
 
-            binding.txtEstadoCargaGuia.text = "Consultando lote, pesajes, alimento y curva genética..."
+            binding.txtEstadoCargaGuia.text =
+                "Consultando lote, pesajes, alimento y curva genética..."
             binding.btnCalcularProyeccion.isEnabled = false
+            binding.btnCancelarObjetivoGuia.isEnabled = false
             try {
                 val todosLosLotes = cargarPaginas { pagina ->
-                    RetrofitClient.api.listarLotesCompletos(page = pagina, limit = 100)
+                    (if (com.project.avisensandroid.controller.OfflineCache.hayInternet(
+                            requireContext()
+                        )
+                    ) RetrofitClient.api else RetrofitClient.apiCache).listarLotesCompletos(
+                        page = pagina,
+                        limit = 100
+                    )
                 }
                 lotesActivos = todosLosLotes
                     .filter {
@@ -159,9 +268,11 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     .sortedByDescending { parseFecha(it.fecha_ingreso)?.time ?: 0L }
 
                 if (lotesActivos.isEmpty()) {
-                    binding.txtEstadoCargaGuia.text = "No hay un lote activo en el galpón seleccionado."
+                    binding.txtEstadoCargaGuia.text =
+                        "No hay un lote activo en el galpón seleccionado."
                     binding.txtCodigoLote.text = "Lote activo: no encontrado"
-                    binding.txtEstadoPlanGuia.text = "No se encontró un lote al que consultar o asignar un objetivo."
+                    binding.txtEstadoPlanGuia.text =
+                        "No se encontró un lote al que consultar o asignar un objetivo."
                     mostrarProyeccionNoDisponible("No hay un lote activo en el galpón seleccionado.")
                     return@launch
                 }
@@ -169,20 +280,42 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 val fuentes = supervisorScope {
                     val pesajesDeferred = async {
                         cargarOpcional("pesajes") {
-                            cargarPaginas { p -> RetrofitClient.api.listarPesajes(page = p, limit = 100) }
+                            cargarPaginas { p ->
+                                (if (com.project.avisensandroid.controller.OfflineCache.hayInternet(
+                                        requireContext()
+                                    )
+                                ) RetrofitClient.api else RetrofitClient.apiCache).listarPesajes(
+                                    page = p,
+                                    limit = 100
+                                )
+                            }
                         }
                     }
                     val consumosDeferred = async {
                         cargarOpcional("consumo") {
-                            cargarPaginas { p -> RetrofitClient.api.listarConsumosDiarios(page = p, limit = 100) }
+                            cargarPaginas { p ->
+                                RetrofitClient.api.listarConsumosDiarios(
+                                    page = p,
+                                    limit = 100
+                                )
+                            }
                         }
                     }
                     val mortalidadDeferred = async {
                         cargarOpcional("mortalidad") {
-                            cargarPaginas { p -> RetrofitClient.api.listarRegistrosMortalidad(page = p, limit = 100) }
+                            cargarPaginas { p ->
+                                RetrofitClient.api.listarRegistrosMortalidad(
+                                    page = p,
+                                    limit = 100
+                                )
+                            }
                         }
                     }
-                    Triple(pesajesDeferred.await(), consumosDeferred.await(), mortalidadDeferred.await())
+                    Triple(
+                        pesajesDeferred.await(),
+                        consumosDeferred.await(),
+                        mortalidadDeferred.await()
+                    )
                 }
                 pesajes = fuentes.first.datos
                 consumos = fuentes.second.datos
@@ -190,6 +323,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 datosListos = true
                 configurarSpinnerLotes()
                 binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
+                binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
                 val fallos = listOfNotNull(
                     fuentes.first.error,
                     fuentes.second.error,
@@ -203,8 +337,10 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             } catch (cancelacion: CancellationException) {
                 throw cancelacion
             } catch (e: Exception) {
-                binding.txtEstadoCargaGuia.text = "No se pudo cargar el lote: ${e.message ?: "error de conexión"}"
+                binding.txtEstadoCargaGuia.text =
+                    "No se pudo cargar el lote: ${e.message ?: "error de conexión"}"
                 binding.btnCalcularProyeccion.isEnabled = false
+                binding.btnCancelarObjetivoGuia.isEnabled = false
             }
         }
     }
@@ -221,31 +357,67 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     }
 
     private fun configurarSpinnerLotes() {
-        val labels = lotesActivos.map { lote ->
-            val ingreso = parseFecha(lote.fecha_ingreso)?.let { formatoFecha.format(it) } ?: "fecha sin dato"
-            "${lote.codigo} · ingreso $ingreso"
+        binding.spinnerLotesActivos.visibility = View.GONE
+        seleccionarLote(lotesActivos.first())
+    }
+
+    private var selectorGuia: SelectorAnimado? = null
+    private var pestanaGuia = -1
+
+    private fun mostrarPestanaGuia(indice: Int) {
+        val ids = listOf(R.id.guiaTab0, R.id.guiaTab1, R.id.guiaTab2)
+        val barra = binding.root.findViewById<View>(ids[0]).parent as ViewGroup
+        val selector = selectorGuia ?: SelectorAnimado(
+            barra,
+            R.drawable.bg_bitacora_tab_selected
+        ).also { selectorGuia = it }
+        val anterior = pestanaGuia
+        if (anterior == indice) return
+        pestanaGuia = indice
+        selector.seleccionar(binding.root.findViewById<View>(ids[indice]))
+        ids.forEachIndexed { i, id ->
+            val tab = binding.root.findViewById<android.widget.TextView>(id)
+            tab.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    requireContext(),
+                    if (i == indice) R.color.text_primary else R.color.text_secondary
+                )
+            )
         }
-        binding.spinnerLotesActivos.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, labels
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        binding.spinnerLotesActivos.visibility = if (lotesActivos.size > 1) View.VISIBLE else View.GONE
-        binding.spinnerLotesActivos.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!configurandoSpinnerLotes && position in lotesActivos.indices) {
-                    seleccionarLote(lotesActivos[position])
-                }
+        listOf(R.id.guiaPlan, R.id.guiaAlimento).forEach { id ->
+            binding.root.findViewById<View>(id).visibility =
+                if (indice == 0) View.VISIBLE else View.GONE
+        }
+        listOf(
+            R.id.guiaSimPanel,
+            R.id.guiaCurvaPanel,
+            R.id.guiaReportPanel
+        ).forEachIndexed { i, id ->
+            binding.root.findViewById<View>(id).visibility =
+                if (i == indice) View.VISIBLE else View.GONE
+        }
+        if (anterior >= 0 && anterior != indice) {
+            val visibles = listOf(
+                R.id.guiaPlan,
+                R.id.guiaAlimento,
+                R.id.guiaSimPanel,
+                R.id.guiaCurvaPanel,
+                R.id.guiaReportPanel
+            )
+            visibles.map { binding.root.findViewById<View>(it) }
+                .filter { it.visibility == View.VISIBLE }.forEach { v ->
+                animarContenidoHorizontal(
+                    v, if (indice > anterior) 1 else -1,
+                    barra.width.toFloat().takeIf { it > 0 }
+                        ?: resources.displayMetrics.widthPixels.toFloat())
             }
         }
-        configurandoSpinnerLotes = true
-        binding.spinnerLotesActivos.setSelection(0, false)
-        configurandoSpinnerLotes = false
-        seleccionarLote(lotesActivos.first())
     }
 
     private fun seleccionarLote(lote: LoteResponse) {
         if (loteSeleccionado?.id == lote.id && planActual != null) return
         loteSeleccionado = lote
+        panel?.limpiar()
         planActual = null
         curvaActual = null
         alimentoActual = null
@@ -259,7 +431,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 throw cancelacion
             } catch (error: Exception) {
                 if (loteSeleccionado?.id == lote.id) {
-                    binding.txtEstadoPlanGuia.text = error.message ?: "No se pudo consultar el plan del lote."
+                    binding.txtEstadoPlanGuia.text =
+                        error.message ?: "No se pudo consultar el plan del lote."
                 }
             }
         }
@@ -274,8 +447,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             ?.lowercase(Locale.ROOT)
             ?.replaceFirstChar { it.titlecase(Locale("es", "CO")) }
             ?: "—"
-        binding.txtTituloGuiaPeso.text = "Guía de peso · ${lote.codigo}"
-        binding.txtBreadcrumbGuia.text = "Lotes  ›  ${lote.codigo}  ›  Guía de peso"
+        binding.txtTituloGuiaPeso.text = "Guía de crecimiento"
+        binding.txtBreadcrumbGuia.text = "Lotes  ›  ${lote.codigo}  ›  Guía de crecimiento"
         binding.txtCodigoLote.text = lote.codigo
         binding.txtGalponGuia.text = lote.galpon.nombre
         binding.txtDiaVidaGuia.text = edad?.toString() ?: "—"
@@ -283,12 +456,16 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         binding.txtDiaVidaDetalleGuia.text = edad?.toString() ?: "—"
         binding.txtAvesAlojadasGuia.text = formatoEntero.format(lote.cantidad_inicial)
         binding.txtAvesVivasActuales.text = formatoEntero.format(vivas)
+        binding.avesPlanGuia.text = formatoEntero.format(vivas)
         binding.txtSexoGuia.text = sexo
         binding.txtLineaGeneticaGuia.text = lineaGenetica
         binding.txtLineaGeneticaDetalleGuia.text = lineaGenetica
     }
 
-    private suspend fun cargarPlanCurvaYAlimento(lote: LoteResponse, conservarObjetivoActual: Boolean) {
+    private suspend fun cargarPlanCurvaYAlimento(
+        lote: LoteResponse,
+        conservarObjetivoActual: Boolean
+    ) {
         binding.txtEstadoPlanGuia.text = "Consultando el plan vigente..."
         val response = RetrofitClient.api.obtenerPlanLote(lote.id)
         if (loteSeleccionado?.id != lote.id) return
@@ -316,7 +493,15 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         planActual = response.body()
         val plan = planActual ?: return
         if (!conservarObjetivoActual) {
-            plan.peso_objetivo_g?.let { programarTextoObjetivo(String.format(Locale.US, "%.2f", it / GRAMOS_POR_LIBRA).trimEnd('0').trimEnd('.')) }
+            plan.peso_objetivo_g?.let {
+                programarTextoObjetivo(
+                    String.format(
+                        Locale.US,
+                        "%.2f",
+                        it / GRAMOS_POR_LIBRA
+                    ).trimEnd('0').trimEnd('.')
+                )
+            }
         }
 
         curvaActual = cargarCurvaDelPlan(plan) ?: cargarCurvaVigenteLote(lote)
@@ -326,6 +511,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         if (loteSeleccionado?.id != lote.id) return
 
         binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
+        binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
         if (plan.desactualizado) {
             binding.txtEstadoPlanGuia.text = "Requiere recálculo"
             mostrarAdvertencia("La configuración del lote cambió. Recalcula el plan.")
@@ -381,14 +567,15 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         }
     }
 
-    private suspend fun cargarEstimacionAlimentoSiDisponible(loteId: Int): EstimacionAlimentoApiResponse? = try {
-        val response = RetrofitClient.api.obtenerEstimacionAlimento(loteId)
-        if (response.isSuccessful) response.body() else null
-    } catch (cancelacion: CancellationException) {
-        throw cancelacion
-    } catch (_: Exception) {
-        null
-    }
+    private suspend fun cargarEstimacionAlimentoSiDisponible(loteId: Int): EstimacionAlimentoApiResponse? =
+        try {
+            val response = RetrofitClient.api.obtenerEstimacionAlimento(loteId)
+            if (response.isSuccessful) response.body() else null
+        } catch (cancelacion: CancellationException) {
+            throw cancelacion
+        } catch (_: Exception) {
+            null
+        }
 
     private suspend fun guardarObjetivoYCalcular() {
         val lote = loteSeleccionado
@@ -397,17 +584,26 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             return
         }
         if (!puedeEditarPlan) {
-            Toast.makeText(requireContext(), "Solo el propietario puede cambiar el objetivo.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                "Solo el propietario puede cambiar el objetivo.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         val libras = leerLibras()
         if (libras == null || libras <= 0.0 || !libras.isFinite()) {
-            Toast.makeText(requireContext(), "Escribe un peso objetivo válido en lb.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                "Escribe un peso objetivo válido en lb.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
         val objetivoG = libras * GRAMOS_POR_LIBRA
         binding.btnCalcularProyeccion.isEnabled = false
+        binding.btnCancelarObjetivoGuia.isEnabled = false
         binding.txtEstadoCargaGuia.text = "Guardando objetivo…"
         var avisoAlimento: String? = null
 
@@ -422,20 +618,26 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     lote.id,
                     CrearPlanLoteRequest(
                         peso_objetivo_g = objetivoG,
-                        motivo = "Objetivo actualizado desde Guía de peso"
+                        motivo = "Objetivo actualizado desde Guía de crecimiento"
                     )
                 )
+
                 planExistente.desactualizado -> RetrofitClient.api.recalcularPlanLote(
                     lote.id,
-                    RecalcularPlanLoteRequest("Recalculo desde Guía de peso")
+                    RecalcularPlanLoteRequest("Recalculo desde Guía de crecimiento")
                 )
+
                 else -> null
             }
 
             if (respuestaPlan != null) {
                 if (!respuestaPlan.isSuccessful || respuestaPlan.body() == null) {
                     throw IllegalStateException(
-                        "No se guardó el objetivo (HTTP ${respuestaPlan.code()}): ${detalleError(respuestaPlan)}"
+                        "No se guardó el objetivo (HTTP ${respuestaPlan.code()}): ${
+                            detalleError(
+                                respuestaPlan
+                            )
+                        }"
                     )
                 }
                 planActual = respuestaPlan.body()
@@ -464,7 +666,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 try {
                     val responseAlimento = RetrofitClient.api.crearEstimacionAlimento(
                         lote.id,
-                        CrearEstimacionAlimentoRequest("Estimación actualizada desde Guía de peso")
+                        CrearEstimacionAlimentoRequest("Estimación actualizada desde Guía de crecimiento")
                     )
                     if (responseAlimento.isSuccessful && responseAlimento.body() != null) {
                         alimentoActual = responseAlimento.body()
@@ -474,7 +676,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 } catch (cancelacion: CancellationException) {
                     throw cancelacion
                 } catch (error: Exception) {
-                    avisoAlimento = "Alimento no calculado: ${error.message?.take(90) ?: "error de conexión"}."
+                    avisoAlimento =
+                        "Alimento no calculado: ${error.message?.take(90) ?: "error de conexión"}."
                 }
             }
 
@@ -487,9 +690,17 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
             if (avisoAlimento != null) {
                 mostrarAdvertencia("La proyección de peso está actualizada, pero el alimento no: $avisoAlimento")
-                Toast.makeText(requireContext(), "Objetivo guardado; revisa el cálculo de alimento.", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Objetivo guardado; revisa el cálculo de alimento.",
+                    Toast.LENGTH_LONG
+                ).show()
             } else {
-                Toast.makeText(requireContext(), "Objetivo y proyección actualizados.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Objetivo y proyección actualizados.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
 
         } catch (cancelacion: CancellationException) {
@@ -501,6 +712,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             mostrarAdvertencia(e.message ?: "No se pudo actualizar el plan.")
         } finally {
             binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
+            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
         }
     }
 
@@ -526,12 +738,13 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
         binding.btnRecalcularPlanGuia.isEnabled = false
         binding.btnCalcularProyeccion.isEnabled = false
+        binding.btnCancelarObjetivoGuia.isEnabled = false
         binding.txtEstadoCargaGuia.text = "Recalculando plan…"
 
         try {
             val respuesta = RetrofitClient.api.recalcularPlanLote(
                 lote.id,
-                RecalcularPlanLoteRequest("Recalculo manual desde Guía de peso")
+                RecalcularPlanLoteRequest("Recalculo manual desde Guía de crecimiento")
             )
             if (!respuesta.isSuccessful || respuesta.body() == null) {
                 throw IllegalStateException(
@@ -546,7 +759,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
             val respuestaAlimento = RetrofitClient.api.crearEstimacionAlimento(
                 lote.id,
-                CrearEstimacionAlimentoRequest("Recalculo desde Guía de peso")
+                CrearEstimacionAlimentoRequest("Recalculo desde Guía de crecimiento")
             )
             if (respuestaAlimento.isSuccessful && respuestaAlimento.body() != null) {
                 alimentoActual = respuestaAlimento.body()
@@ -564,6 +777,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         } finally {
             binding.btnRecalcularPlanGuia.isEnabled = puedeEditarPlan
             binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
+            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
         }
     }
 
@@ -583,6 +797,14 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         } ?: "—"
     }
 
+    internal fun actualizarPesajesGuia(loteId: Int, nuevos: List<PesajeResponse>) {
+        if (_binding == null || loteSeleccionado?.id != loteId) return
+        val actualizados = pesajes.filter { it.lote_id != loteId } + nuevos
+        if (pesajes.toSet() == actualizados.toSet()) return
+        pesajes = actualizados
+        actualizarResumen()
+    }
+
     private fun actualizarResumen() {
         val lote = loteSeleccionado ?: return
         val plan = planActual
@@ -598,20 +820,25 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             puntos.valorCurvaEnDia(dia.toDouble()) { punto -> punto.peso_esperado_g }
         }
         val pesoEsperadoPorPesajes = estimarPesoHoyDesdePesajes(lote, diaActual, ultimoPesaje)
-        val pesoEsperadoExtrapolado = if (pesoEsperadoEnRango == null && pesoEsperadoPorPesajes == null) {
-            diaActual?.let { pesoCurvaExtrapoladoEnDia(it) }
-        } else null
-        val pesoEsperadoHoy = pesoEsperadoEnRango ?: pesoEsperadoPorPesajes ?: pesoEsperadoExtrapolado
+        val pesoEsperadoExtrapolado =
+            if (pesoEsperadoEnRango == null && pesoEsperadoPorPesajes == null) {
+                diaActual?.let { pesoCurvaExtrapoladoEnDia(it) }
+            } else null
+        val pesoEsperadoHoy =
+            pesoEsperadoEnRango ?: pesoEsperadoPorPesajes ?: pesoEsperadoExtrapolado
         val diaUltimoPesaje = ultimoPesaje?.let { edadEnFecha(lote, it.fecha) }
         val esperadoEnFechaPesaje = diaUltimoPesaje?.let { edad ->
             puntos.valorCurvaEnDia(edad.toDouble()) { punto -> punto.peso_esperado_g }
                 ?: pesoCurvaExtrapoladoEnDia(edad)
         }
-        val desvio = if (ultimoPesaje != null && esperadoEnFechaPesaje != null && esperadoEnFechaPesaje > 0.0) {
-            ((ultimoPesaje.peso_promedio_g - esperadoEnFechaPesaje) / esperadoEnFechaPesaje) * 100.0
-        } else null
+        val desvio =
+            if (ultimoPesaje != null && esperadoEnFechaPesaje != null && esperadoEnFechaPesaje > 0.0) {
+                ((ultimoPesaje.peso_promedio_g - esperadoEnFechaPesaje) / esperadoEnFechaPesaje) * 100.0
+            } else null
 
-        binding.txtUltimoPesoReal.text = ultimoPesaje?.let { "${formatoEntero.format(it.peso_promedio_g)} g" } ?: "Sin peso verificado"
+        binding.txtUltimoPesoReal.text =
+            ultimoPesaje?.let { "${formatoEntero.format(it.peso_promedio_g)} g" }
+                ?: "Sin peso verificado"
         binding.txtFechaUltimoPesaje.text = ultimoPesaje?.let {
             parseFecha(it.fecha)?.let { fecha -> formatoFecha.format(fecha) } ?: it.fecha.take(10)
         } ?: "Sin pesaje"
@@ -636,11 +863,35 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         actualizarAlimentoEstimado(plan)
         actualizarProyeccion(lote, plan, diaActual, ultimoPesaje)
         actualizarNecesidadParaObjetivo(lote, plan, diaActual, ultimoPesaje)
+        binding.resumenDia.text = "${diaActual ?: "—"} / ${plan?.resultado?.dia_objetivo ?: "—"}"
+        binding.resumenPeso.text = binding.txtUltimoPesoReal.text
+        binding.resumenMeta.text =
+            plan?.peso_objetivo_g?.let { "${formatoEntero.format(it)} g" } ?: "—"
+        binding.resumenAves.text = binding.txtAvesVivasActuales.text
+        binding.resumenCiclo.text = "Ciclo de crianza · Día ${diaActual ?: "—"}"
+        pintarEtapasGuia(alimentoActual)
+        panel?.actualizar(
+            lote,
+            plan,
+            alimentoActual,
+            pesajesLote,
+            consumosDelLote(lote.id),
+            mortalidadesDeLote(lote.id)
+        )
 
         when {
             plan?.desactualizado == true -> mostrarAdvertencia("Plan desactualizado. Guarda y recalcula.")
             plan?.estado_dia == "fuera_de_rango" -> mostrarAdvertencia("El objetivo supera los puntos de curva cargados. La fecha mostrada es orientativa; carga la curva completa para calcular oficialmente el plan y el alimento.")
-            desvio != null && desvio <= -10.0 -> mostrarAdvertencia("${formatoDecimal.format(abs(desvio))}% por debajo de la curva. Revisa el ritmo de crecimiento.")
+            desvio != null && desvio <= -10.0 -> mostrarAdvertencia(
+                "${
+                    formatoDecimal.format(
+                        abs(
+                            desvio
+                        )
+                    )
+                }% por debajo de la curva. Revisa el ritmo de crecimiento."
+            )
+
             desvio != null && desvio < -5.0 -> mostrarAdvertencia("Por debajo de la curva. Revisa pesajes, consumo y ambiente.")
             curva == null && plan?.estado_dia == "calculado" -> mostrarAdvertencia("No se pudo leer la curva. Verifica permisos y conexión.")
             else -> ocultarAdvertencia()
@@ -661,7 +912,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
         val puntos = curvaActual?.puntos.orEmpty()
         val diaObjetivo = diaObjetivoParaPeso(objetivoG, plan)
-        val elPlanCoincideConObjetivo = plan?.peso_objetivo_g?.let { abs(it - objetivoG) <= 0.5 } == true
+        val elPlanCoincideConObjetivo =
+            plan?.peso_objetivo_g?.let { abs(it - objetivoG) <= 0.5 } == true
 
         // Si hay al menos dos pesajes recientes, prioriza el ritmo observado.
         val tasa = tasaHistoricaReciente(lote, pesajesDeLote(lote.id), diaActual)
@@ -688,14 +940,18 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 return
             }
             val hoy = fechaActual()
-            val yaAlcanzoConPesaje = ultimoPesaje != null && ultimoPesaje.peso_promedio_g >= objetivoG
+            val yaAlcanzoConPesaje =
+                ultimoPesaje != null && ultimoPesaje.peso_promedio_g >= objetivoG
             val centro = if (dias == 0 && yaAlcanzoConPesaje) {
                 parseFecha(ultimoPesaje?.fecha) ?: hoy
             } else {
                 sumarDias(hoy, dias)
             }
             val banda = if (dias == 0) 0 else ceil(dias * PORCENTAJE_BANDA).toInt().coerceAtLeast(1)
-            val inicio = if (dias == 0 && yaAlcanzoConPesaje) centro else sumarDias(hoy, (dias - banda).coerceAtLeast(0))
+            val inicio = if (dias == 0 && yaAlcanzoConPesaje) centro else sumarDias(
+                hoy,
+                (dias - banda).coerceAtLeast(0)
+            )
             val fin = if (dias == 0 && yaAlcanzoConPesaje) centro else sumarDias(hoy, dias + banda)
             mostrarProyeccionConFechas(
                 centro,
@@ -731,7 +987,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             null
         }
         val diaObjetivoEntero = ceil(diaObjetivo).toInt()
-        val fechaIngreso = parseFecha(plan?.snapshot?.fecha_ingreso) ?: parseFecha(lote.fecha_ingreso)
+        val fechaIngreso =
+            parseFecha(plan?.snapshot?.fecha_ingreso) ?: parseFecha(lote.fecha_ingreso)
         val fechaPorCurva = fechaIngreso?.let { sumarDias(it, diaObjetivoEntero - 1) }
         val fechaObjetivo = fechaBackend ?: fechaPorCurva
         val diasRestantes = (if (elPlanCoincideConObjetivo) plan?.tiempo?.dias_restantes else null)
@@ -746,15 +1003,20 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             return
         }
         val objetivoFueraDelRangoPublicado = diaObjetivoEnCurva(objetivoG) == null
-        val fechaTeoricaPasada = fechaObjetivo.before(fechaActual()) && diaActual != null && diaObjetivo < diaActual.toDouble()
-        val banda = if (diasRestantes == 0) 0 else ceil(diasRestantes * PORCENTAJE_BANDA).toInt().coerceAtLeast(1)
+        val fechaTeoricaPasada =
+            fechaObjetivo.before(fechaActual()) && diaActual != null && diaObjetivo < diaActual.toDouble()
+        val banda = if (diasRestantes == 0) 0 else ceil(diasRestantes * PORCENTAJE_BANDA).toInt()
+            .coerceAtLeast(1)
         val metodo = when {
             objetivoFueraDelRangoPublicado && fechaTeoricaPasada ->
                 "Extrapolación fuera de la curva publicada; fecha teórica pasada. Confirma con un pesaje reciente."
+
             objetivoFueraDelRangoPublicado ->
                 "Extrapolación orientativa fuera de la curva publicada; amplía la curva para validar el resultado."
+
             fechaTeoricaPasada ->
                 "Fecha teórica calculada por curva, ya pasada; confirma con un pesaje reciente."
+
             else -> "Según la curva genética publicada"
         }
         mostrarProyeccionConFechas(
@@ -906,15 +1168,21 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         var diaBase = diaActual
 
         val pesoBase = when {
-            ultimoPesaje != null && esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g) &&
+            ultimoPesaje != null && esPesajePlausibleParaEdad(
+                diaActual,
+                ultimoPesaje.peso_promedio_g
+            ) &&
                     tasa != null && diasDesdePesaje != null && diasDesdePesaje <= MAX_DIAS_DESDE_PESAJE ->
                 ultimoPesaje.peso_promedio_g + tasa * diasDesdePesaje
+
             ultimoPesaje != null && diasDesdePesaje == 0 &&
                     esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g) ->
                 ultimoPesaje.peso_promedio_g
+
             diaActual != null -> {
-                val pesoCurva = curvaActual?.puntos?.valorCurvaEnDia(diaActual.toDouble()) { it.peso_esperado_g }
-                    ?: pesoCurvaExtrapoladoEnDia(diaActual)
+                val pesoCurva =
+                    curvaActual?.puntos?.valorCurvaEnDia(diaActual.toDouble()) { it.peso_esperado_g }
+                        ?: pesoCurvaExtrapoladoEnDia(diaActual)
                 if (pesoCurva != null) {
                     baseSegunCurva = true
                     pesoCurva
@@ -923,6 +1191,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     ultimoPesaje?.peso_promedio_g
                 }
             }
+
             else -> {
                 diaBase = edadPesaje
                 ultimoPesaje?.peso_promedio_g
@@ -948,7 +1217,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         }
 
         val diaObjetivo = diaObjetivoParaPeso(objetivoG, plan)
-        val planCoincideConObjetivo = plan?.peso_objetivo_g?.let { abs(it - objetivoG) <= 0.5 } == true
+        val planCoincideConObjetivo =
+            plan?.peso_objetivo_g?.let { abs(it - objetivoG) <= 0.5 } == true
         val dias = (if (planCoincideConObjetivo && (baseSegunCurva || diasDesdePesaje == 0)) {
             plan?.tiempo?.dias_restantes
         } else null) ?: if (diaObjetivo != null && diaBase != null) {
@@ -975,7 +1245,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         metodo: String
     ) {
         binding.txtFechaEstimadaSalida.text = formatoFecha.format(fechaEstimada)
-        binding.txtRangoFechasSalida.text = "Rango: ${formatoFecha.format(fechaInicio)} – ${formatoFecha.format(fechaFin)}"
+        binding.txtRangoFechasSalida.text =
+            "Rango: ${formatoFecha.format(fechaInicio)} – ${formatoFecha.format(fechaFin)}"
         binding.txtDiasRestantesSalida.text = when {
             fechaEstimada.before(fechaActual()) -> "Fecha teórica pasada · confirma con pesaje actual"
             diasRestantes <= 0 -> "Objetivo previsto para hoy"
@@ -986,13 +1257,95 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
     private fun actualizarConsumoRegistrado(lote: LoteResponse) {
         val registros = consumosDelLote(lote.id).filter { (it.alimento_kg ?: 0.0) > 0.0 }
-        val avesVivas = (lote.cantidad_inicial - mortalidadesDeLote(lote.id).sumOf { it.cantidad_aves }).coerceAtLeast(0)
+        val avesVivas =
+            (lote.cantidad_inicial - mortalidadesDeLote(lote.id).sumOf { it.cantidad_aves }).coerceAtLeast(
+                0
+            )
         if (registros.isEmpty() || avesVivas <= 0) {
             binding.txtConsumoRealPorAve.text = "Sin registros de alimento suficientes"
             return
         }
         val totalKg = registros.sumOf { it.alimento_kg ?: 0.0 }
-        binding.txtConsumoRealPorAve.text = "${formatoDecimal.format(totalKg / avesVivas)} kg/ave viva (${registros.size} registros)"
+        binding.txtConsumoRealPorAve.text =
+            "${formatoDecimal.format(totalKg / avesVivas)} kg/ave viva (${registros.size} registros)"
+    }
+
+    private var claveEtapasGuia: String? = null
+    private val animacionesGuia = AnimacionesTarjetas()
+
+    private fun pintarEtapasGuia(estimacion: EstimacionAlimentoApiResponse?) {
+        val filas = estimacion?.desglose?.renglones.orEmpty()
+        val clave = "${loteSeleccionado?.id}:$filas"
+        if (claveEtapasGuia == clave) return
+        claveEtapasGuia = clave
+        val lista = binding.listaEtapasGuia
+        lista.removeAllViews()
+        val completos = filas.isNotEmpty() && filas.all { it.consumo_total_kg != null }
+        binding.bultosPlanGuia.text = if (completos) formatoEntero.format(filas.sumOf {
+            ceil(
+                (it.consumo_total_kg ?: 0.0) / 40.0
+            ).toLong()
+        }) else "—"
+        fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
+        fun texto(valor: String, tam: Float, medio: Boolean = false) =
+            android.widget.TextView(requireContext()).apply {
+                text = valor; textSize = tam
+                typeface = android.graphics.Typeface.create(
+                    if (medio) "sans-serif-medium" else "sans-serif",
+                    0
+                )
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        requireContext(),
+                        if (medio) R.color.text_primary else R.color.text_secondary
+                    )
+                )
+            }
+        animacionesGuia.comenzar()
+        if (filas.isEmpty()) lista.addView(texto("Desglose no disponible", 13f))
+        filas.forEachIndexed { i, f ->
+            val fila = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(10), 0, dp(10))
+            }
+            val color = when {
+                f.etapa.orEmpty().contains("preinicio", true) -> 0xff10b981.toInt()
+                f.etapa.orEmpty().contains("inicio", true) -> 0xff5289ed.toInt()
+                f.etapa.orEmpty().contains("engorde", true) -> 0xfff5a623.toInt()
+                else -> 0xff8b5cf6.toInt()
+            }
+            fila.addView(
+                View(requireContext()).apply { setBackgroundColor(color) },
+                android.widget.LinearLayout.LayoutParams(dp(4), dp(56))
+            )
+            val izq = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL; setPadding(
+                dp(10),
+                0,
+                dp(8),
+                0
+            )
+            }
+            izq.addView(texto(f.etapa?.replaceFirstChar { it.uppercase() } ?: "Alimento",
+                14f,
+                true))
+            izq.addView(texto("Días ${f.dia_inicio}–${f.dia_fin}", 12f))
+            izq.addView(texto(f.tipo_alimento_nombre_snapshot ?: "Alimento", 12f))
+            fila.addView(izq, android.widget.LinearLayout.LayoutParams(0, -2, 1f))
+            val der = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL; gravity =
+                android.view.Gravity.END
+            }
+            der.addView(texto(f.consumo_total_kg?.let { "${formatoDecimal.format(it)} kg" } ?: "—",
+                14f,
+                true))
+            der.addView(texto(f.consumo_total_kg?.let { "${formatoEntero.format(ceil(it / 40.0))} bultos" }
+                ?: "—", 12f))
+            fila.addView(der)
+            lista.addView(fila)
+            animacionesGuia.mostrar(fila, "$clave:$i")
+        }
     }
 
     private fun actualizarAlimentoEstimado(plan: PlanLoteApiResponse?) {
@@ -1007,8 +1360,20 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         val estimacion = alimentoActual.takeIf { planCoincideConObjetivo }
         val gramosPorAve = estimacion?.resultado?.consumo_por_ave_g
         binding.txtConsumoProyectadoPorAve.text = when {
-            gramosPorAve != null && gramosPorAve > 0.0 -> "${formatoEntero.format(gramosPorAve)} g/ave"
-            consumoCurvaG != null && consumoCurvaG > 0.0 -> "${formatoEntero.format(consumoCurvaG)} g/ave"
+            gramosPorAve != null && gramosPorAve > 0.0 -> "${
+                DecimalFormat(
+                    "#,##0.000",
+                    DecimalFormatSymbols(Locale("es", "CO"))
+                ).format(gramosPorAve / 1000)
+            } kg"
+
+            consumoCurvaG != null && consumoCurvaG > 0.0 -> "${
+                DecimalFormat(
+                    "#,##0.000",
+                    DecimalFormatSymbols(Locale("es", "CO"))
+                ).format(consumoCurvaG / 1000)
+            } kg"
+
             estimacion?.estado_alimento == "plan_sin_dia_objetivo" -> "Sin día objetivo"
             else -> "Sin estimación"
         }
@@ -1042,13 +1407,14 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun motivoAlimento(alimento: AlimentoEstimadoApi): String = when (alimento.motivo_no_disponible) {
-        "estado_alimento_no_calculado" -> "el cálculo de alimento no se completó"
-        "algoritmo_distinto" -> "la estimación usa otra versión del algoritmo"
-        "curva_no_disponible" -> "la curva no dispone del consumo necesario"
-        "total_no_reproducible" -> "no se puede reproducir el total del snapshot"
-        else -> alimento.motivo_no_disponible ?: "sin detalle"
-    }
+    private fun motivoAlimento(alimento: AlimentoEstimadoApi): String =
+        when (alimento.motivo_no_disponible) {
+            "estado_alimento_no_calculado" -> "el cálculo de alimento no se completó"
+            "algoritmo_distinto" -> "la estimación usa otra versión del algoritmo"
+            "curva_no_disponible" -> "la curva no dispone del consumo necesario"
+            "total_no_reproducible" -> "no se puede reproducir el total del snapshot"
+            else -> alimento.motivo_no_disponible ?: "sin detalle"
+        }
 
     private fun tasaHistoricaReciente(
         lote: LoteResponse,
@@ -1058,7 +1424,11 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         if (diaActual == null) return null
         val puntos = historicos.mapNotNull { pesaje ->
             val edad = edadEnFecha(lote, pesaje.fecha) ?: return@mapNotNull null
-            if (edadFueraVentana(edad = edad, diaActual = diaActual) || pesaje.peso_promedio_g <= 0.0) null
+            if (edadFueraVentana(
+                    edad = edad,
+                    diaActual = diaActual
+                ) || pesaje.peso_promedio_g <= 0.0
+            ) null
             else edad to pesaje.peso_promedio_g
         }.distinctBy { it.first }.sortedBy { it.first }.takeLast(4)
         if (puntos.size < 2) return null
@@ -1111,9 +1481,10 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         it.lote_id == loteId && fechaNoPosteriorAHoy(it.fecha)
     }
 
-    private fun mortalidadesDeLote(loteId: Int): List<RegistroMortalidadResponse> = mortalidades.filter {
-        it.lote_id == loteId && fechaNoPosteriorAHoy(it.fecha)
-    }
+    private fun mortalidadesDeLote(loteId: Int): List<RegistroMortalidadResponse> =
+        mortalidades.filter {
+            it.lote_id == loteId && fechaNoPosteriorAHoy(it.fecha)
+        }
 
     private fun diaVida(lote: LoteResponse): Int? {
         val ingreso = parseFecha(lote.fecha_ingreso) ?: return null
@@ -1132,7 +1503,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         ?.trim()?.replace(',', '.')?.toDoubleOrNull()
 
     private fun ocultarTeclado() {
-        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val imm =
+            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.edtPesoObjetivoLb.windowToken, 0)
     }
 
@@ -1167,7 +1539,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         do {
             val response = request(pagina)
             if (!response.isSuccessful) throw IllegalStateException("La API respondió HTTP ${response.code()}.")
-            val body = response.body() ?: throw IllegalStateException("La API no devolvió contenido.")
+            val body =
+                response.body() ?: throw IllegalStateException("La API no devolvió contenido.")
             datos += body.data
             totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
             pagina++
@@ -1180,6 +1553,9 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     }.getOrDefault(response.message())
 
     override fun onDestroyView() {
+        panel = null
+        claveEtapasGuia = null
+        animacionesGuia.reiniciar()
         _binding = null
         super.onDestroyView()
     }

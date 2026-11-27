@@ -23,9 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="20dp">
+            android:paddingBottom="20dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
 
             <!-- ============================== -->
             <!-- CABECERA PRINCIPAL -->
@@ -37,7 +35,6 @@
                 android:text="Gestión de operarios"
                 android:textColor="@color/text_primary"
                 android:textSize="24sp"
-                android:layout_marginTop="20dp"
                 android:textStyle="bold" />
 
             <TextView
