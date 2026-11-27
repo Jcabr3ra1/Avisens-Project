@@ -3,15 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/bg_dialog_gestion_operario"
+    android:orientation="vertical"
     android:padding="20dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Editar operario"
-        android:textColor="#183C2E"
+        android:textColor="@color/adaptive_text_183c2e"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -20,8 +20,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textColor="#2F8B5E"
-        android:textSize="15sp"
+        android:textColor="@color/adaptive_text_2f8b5e"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <TextView
@@ -29,23 +29,112 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textColor="#78847E"
-        android:textSize="12sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/adaptive_text_78847e"
+        android:textSize="13sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Nombre completo"
+        android:textColor="@color/adaptive_text_183c2e"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_input_verde"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etNombreEditarOperario"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:inputType="textPersonName"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_183c2e"
+            android:textSize="15sp" />
+
+        <ImageButton
+            android:id="@+id/btnHabilitarNombreOperario"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Editar nombre completo"
+            android:padding="14dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/adaptive_text_2f8b5e" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Teléfono"
+        android:textColor="@color/adaptive_text_183c2e"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_input_verde"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etTelefonoEditarOperario"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:inputType="phone"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_183c2e"
+            android:textSize="15sp" />
+
+        <ImageButton
+            android:id="@+id/btnHabilitarTelefonoOperario"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Editar teléfono"
+            android:padding="14dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/adaptive_text_2f8b5e" />
+
+    </LinearLayout>
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="8dp"
-        android:background="#E7EEE9" />
+        android:background="@color/adaptive_surface_e7eee9" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchUsuarioActivo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Usuario activo"
-        android:textColor="#183C2E"
-        android:textSize="14sp"
+        android:textColor="@color/adaptive_text_183c2e"
+        android:textSize="15sp"
         android:textStyle="bold"
         app:useMaterialThemeColors="true" />
 
@@ -54,15 +143,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
         android:text="Granjas asignadas"
-        android:textColor="#1F5C42"
-        android:textSize="14sp"
+        android:textColor="@color/adaptive_text_1f5c42"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
         android:layout_marginTop="6dp"
+        android:layout_weight="1"
         android:fillViewport="true">
 
         <LinearLayout
@@ -77,8 +166,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="Asignar nueva granja"
-        android:textColor="#1F5C42"
-        android:textSize="14sp"
+        android:textColor="@color/adaptive_text_1f5c42"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
     <FrameLayout
@@ -110,37 +199,37 @@
             android:id="@+id/btnCancelarEditarOperario"
             android:layout_width="100dp"
             android:layout_height="40dp"
-            android:text="Cancelar"
-            android:textAllCaps="false"
-            android:textColor="#171D1A"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:background="@drawable/bg_boton_cancelar"
-            app:backgroundTint="@null"
-            app:cornerRadius="9dp"
-            app:rippleColor="#E8F3ED"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:text="Cancelar"
+            android:textAllCaps="false"
+            android:textColor="@color/cancel_text"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/cancel_background"
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/cancel_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardarEditarOperario"
             android:layout_width="100dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             android:text="Guardar"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             app:backgroundTint="#2F8B5E"
             app:cornerRadius="9dp"
-            app:rippleColor="#245F42"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            app:rippleColor="#245F42" />
     </LinearLayout>
 
 </LinearLayout>

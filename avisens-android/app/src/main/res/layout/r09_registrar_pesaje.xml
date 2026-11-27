@@ -1,0 +1,162 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/labelfechaPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Fecha del pesaje"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/fechaPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="date"
+            android:maxLength="16"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary" />
+
+        <TextView
+            android:id="@+id/labelpromedioPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Peso promedio (g)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/promedioPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="numberDecimal"
+            android:maxLength="16"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary" />
+
+        <TextView
+            android:id="@+id/labelmuestraPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Aves pesadas (opcional)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/muestraPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="number"
+            android:maxLength="16"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary" />
+
+        <TextView
+            android:id="@+id/labelminPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Peso mínimo (opcional)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/minPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="numberDecimal"
+            android:maxLength="16"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/labelmaxPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Peso máximo (opcional)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/maxPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="numberDecimal"
+            android:maxLength="16"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Peso objetivo (g) (opcional)"
+            android:textColor="@color/text_primary" />
+
+        <EditText
+            android:id="@+id/objetivoManual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="numberDecimal"
+            android:padding="12dp"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/labelobsPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Observaciones (opcional)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/obsPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_bitacora_input"
+            android:inputType="textMultiLine"
+            android:maxLength="500"
+            android:padding="12dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary" />
+
+        <TextView
+            android:id="@+id/previewPeso"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Peso objetivo: —"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

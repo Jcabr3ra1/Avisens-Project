@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+
+    <group
+        android:name="cabeza"
+        android:pivotX="153"
+        android:pivotY="145">
+
+        <path
+            android:fillColor="#F8F6EF"
+            android:pathData="M145,169 Q141,143 150,115 Q155,94 172,94 Q190,93 194,109 Q198,123 183,132 L174,159 Q165,175 145,169 Z" />
+
+        <path
+            android:fillColor="#D8D3C8"
+            android:pathData="M150,164 Q164,151 169,126 Q176,136 181,132 L174,159 Q165,175 150,164 Z" />
+
+        <path
+            android:fillColor="#B84037"
+            android:pathData="M157,99 Q151,91 155,85 L161,89 L165,79 L171,89 L177,81 L181,91 L189,87 L191,101 Z" />
+
+        <path
+            android:fillColor="#D58E40"
+            android:pathData="M192,108 L208,116 L192,122 L188,117 Z" />
+
+        <path
+            android:fillColor="#B84037"
+            android:pathData="M188,121 Q200,128 192,137 Q183,138 184,126 Z" />
+
+        <path
+            android:fillColor="#9C6740"
+            android:pathData="M178,108 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+
+        <path
+            android:fillColor="#252522"
+            android:pathData="M180,108 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M181,106 a1,1 0 1,0 2,0 a1,1 0 1,0 -2,0" />
+
+    </group>
+
+</vector>

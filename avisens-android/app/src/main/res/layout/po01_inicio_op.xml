@@ -11,10 +11,10 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:paddingBottom="16dp"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -28,7 +28,6 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -60,7 +59,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/txtNombreUsuario"
@@ -88,18 +87,51 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:textColor="@color/green_accent"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <FrameLayout
+                    android:id="@+id/btnCampana"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:clickable="true"
+                    android:contentDescription="Notificaciones"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/bg_campana_circular"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_notifications"
+                        android:tint="@color/adaptive_text_183c2e" />
+
+                    <TextView
+                        android:id="@+id/txtNoLeidas"
+                        android:layout_width="wrap_content"
+                        android:layout_height="20dp"
+                        android:layout_gravity="top|end"
+                        android:background="@drawable/bg_badge_alert_count"
+                        android:gravity="center"
+                        android:minWidth="20dp"
+                        android:paddingHorizontal="3dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </FrameLayout>
             </LinearLayout>
 
             <!-- TARJETA DE GRANJA: DATOS DESDE API -->
             <LinearLayout
+                android:id="@+id/tarjetaSeleccionGranja"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:id="@+id/tarjetaSeleccionGranja"
                 android:background="@drawable/bg_farm_card"
                 android:orientation="vertical"
                 android:padding="18dp">
@@ -110,21 +142,38 @@
                     android:letterSpacing="0.08"
                     android:text="SU GRANJA"
                     android:textColor="#B7D6C6"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
-                <Spinner
-                    android:id="@+id/spinnerGranjas"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_farm_spinner"
-                    android:dropDownWidth="match_parent"
-                    android:dropDownHorizontalOffset="0dp"
-                    android:paddingStart="0dp"
-                    android:paddingEnd="0dp"
-                    android:popupBackground="@drawable/bg_spinner_popup"
-                    android:spinnerMode="dropdown" />
+                    android:layout_marginTop="10dp">
+
+                    <Spinner
+                        android:id="@+id/spinnerGranjas"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_farm_spinner"
+                        android:dropDownWidth="match_parent"
+                        android:dropDownHorizontalOffset="0dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:popupBackground="@drawable/bg_spinner_popup"
+                        android:spinnerMode="dropdown" />
+
+                    <ImageView
+                        android:id="@+id/ivFlechaGranjas"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="12dp"
+                        android:clickable="false"
+                        android:contentDescription="Desplegar granjas"
+                        android:focusable="false"
+                        android:src="@drawable/ic_spinner_flecha_granja"
+                        android:visibility="gone" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:id="@+id/cabeceraGalponesInicio"
@@ -141,7 +190,7 @@
                         android:letterSpacing="0.08"
                         android:text="GALPONES"
                         android:textColor="#B7D6C6"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -149,7 +198,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="#B7D6C6"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -169,7 +218,6 @@
                 </HorizontalScrollView>
             </LinearLayout>
 
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAbrirLia"
                 android:layout_width="match_parent"
@@ -178,7 +226,7 @@
                 android:text="Hablar con Lía"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 app:backgroundTint="@color/green_accent"
                 app:cornerRadius="12dp"
@@ -190,10 +238,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="12dp"
-                android:text="Guía de peso del lote"
+                android:text="Guía de crecimiento"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 app:backgroundTint="@color/green_accent"
                 app:cornerRadius="12dp"
@@ -219,26 +267,18 @@
                         android:layout_weight="1"
                         android:text="Variables ambientales · en vivo"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/txtSensoresActivos"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
                         android:text="— sensores"
                         android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
+                        android:textSize="13sp" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtSubtituloSensoresInicio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Selecciona un galpón para ver sus últimas lecturas"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -251,7 +291,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -274,9 +314,11 @@
 
                             <TextView
                                 android:id="@+id/txtTemperaturaInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -287,9 +329,11 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:text="Temperatura"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/txtEstadoTemperaturaInicio"
@@ -297,13 +341,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
                             android:background="@drawable/bg_badge_green"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -316,7 +362,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -338,9 +384,11 @@
 
                             <TextView
                                 android:id="@+id/txtHumedadInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -351,9 +399,11 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:text="Humedad"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/txtEstadoHumedadInicio"
@@ -361,19 +411,20 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
                             android:background="@drawable/bg_badge_green"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Fila 2: Calidad del aire (MQ-135, ADC crudo) / Peso (HX711) para el
-                     Propietario. El MQ-135 no se calibra a ppm: no es CO₂ ni NH₃. -->
+                <!-- Fila 2: Calidad del aire / Luminosidad -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -385,7 +436,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -408,9 +459,11 @@
 
                             <TextView
                                 android:id="@+id/txtCalidadAireInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -422,9 +475,11 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:text="Calidad del aire"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/txtEstadoCalidadAireInicio"
@@ -432,13 +487,15 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
                             android:background="@drawable/bg_badge_regular"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -451,7 +508,85 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="14dp">
+
+                        <FrameLayout
+                            android:layout_width="88dp"
+                            android:layout_height="88dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription=""
+                                android:src="@drawable/bg_ring_track" />
+
+                            <com.project.avisensandroid.ui.views.SensorArcView
+                                android:id="@+id/arcLuminosidadInicio"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Indicador de luminosidad" />
+
+                            <TextView
+                                android:id="@+id/txtLuminosidadInicio"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:text="—"
+                                android:textColor="@color/text_primary"
+                                android:textSize="19sp"
+                                android:textStyle="bold" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/txtLabelLuminosidadInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
+                            android:text="Luminosidad"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/txtEstadoLuminosidadInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="7dp"
+                            android:background="@drawable/bg_badge_regular"
+                            android:gravity="center"
+                            android:minLines="2"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="Sin datos"
+                            android:textColor="@color/orange_badge_text"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Fila 3: Peso de alimento / Distancia al agua -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_card"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -474,9 +609,11 @@
 
                             <TextView
                                 android:id="@+id/txtPesoInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -488,9 +625,11 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:text="Peso de alimento"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/txtEstadoPesoInicio"
@@ -498,36 +637,33 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
                             android:background="@drawable/bg_badge_regular"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
-                </LinearLayout>
 
-                <!-- Fila 3: Nivel de agua (HC-SR04). Solo se muestra si el galpón
-                     tiene ese sensor registrado. -->
-                <LinearLayout
-                    android:id="@+id/filaNivelAguaInicio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="1dp" />
 
                     <LinearLayout
+                        android:id="@+id/filaNivelAguaInicio"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
-                        android:paddingBottom="14dp">
+                        android:paddingBottom="14dp"
+                        android:visibility="visible">
 
                         <FrameLayout
                             android:layout_width="88dp"
@@ -547,9 +683,11 @@
 
                             <TextView
                                 android:id="@+id/txtNivelAguaInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -561,9 +699,11 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:text="Distancia al agua"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/txtEstadoNivelAguaInicio"
@@ -571,38 +711,32 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
                             android:background="@drawable/bg_badge_regular"
+                            android:gravity="center"
+                            android:minLines="2"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
-
-                    <View
-                        android:layout_width="12dp"
-                        android:layout_height="1dp" />
-
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="1" />
                 </LinearLayout>
 
                 <!-- Sensores activos que no se pudieron asociar sin ambigüedad
-                     a una variable: se listan para corregirlos, sin valores. -->
+                         a una variable: se listan para corregirlos, sin valores. -->
                 <TextView
                     android:id="@+id/txtSensoresSinIdentificarInicio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_stat_card"
+                    android:fontFamily="sans-serif-medium"
                     android:padding="12dp"
                     android:textColor="@color/orange_badge_text"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:visibility="gone" />
                 <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
                      solo lectura. El backend actual no informa el modo ni admite órdenes. -->
@@ -612,16 +746,8 @@
                     android:layout_marginTop="22dp"
                     android:text="Actuadores · salida reportada"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Estado que envió el ESP32. No confirma que el equipo funcione. El modo automático/manual y el control remoto aún no están disponibles en el servidor."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:id="@+id/contenedorActuadoresInicio"
@@ -634,9 +760,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="No hay actuadores registrados en este galpón."
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -679,7 +806,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Aves"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -696,9 +823,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtDiaLote"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtDiaLote"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -710,12 +837,11 @@
                             android:layout_marginTop="2dp"
                             android:text="Día del lote"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
                 </LinearLayout>
-
 
                 <!-- ================================================= -->
                 <!-- FILA 2: AVES MUERTAS / ALERTAS -->
@@ -750,7 +876,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Aves Muertas"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -767,9 +893,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtAlertas"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtAlertas"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -781,12 +907,11 @@
                             android:layout_marginTop="2dp"
                             android:text="Alertas"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
                 </LinearLayout>
-
 
                 <!-- ================================================= -->
                 <!-- FILA 3: CALIDAD CRIANZA / RENDIMIENTO COMIDA -->
@@ -807,9 +932,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtCalidadCrianza"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtCalidadCrianza"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -827,7 +952,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Calidad Crianza"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="14sp" />
 
                             <View
                                 android:layout_width="7dp"
@@ -852,9 +977,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtRendComida"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtRendComida"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -872,7 +997,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Rend. Comida"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="14sp" />
 
                             <View
                                 android:layout_width="7dp"
@@ -885,7 +1010,6 @@
                     </LinearLayout>
 
                 </LinearLayout>
-
 
                 <!-- ================================================= -->
                 <!-- FILA 4: ALIMENTO / AGUA -->
@@ -906,9 +1030,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtAlimento"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtAlimento"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -920,7 +1044,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Alimento"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -937,9 +1061,9 @@
                         android:padding="18dp">
 
                         <TextView
+                            android:id="@+id/txtAgua"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtAgua"
                             android:text="—"
                             android:textColor="@color/text_primary"
                             android:textSize="22sp"
@@ -951,12 +1075,11 @@
                             android:layout_marginTop="2dp"
                             android:text="Agua"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
                 </LinearLayout>
-
 
                 <!-- ================================================= -->
                 <!-- SALUD DEL LOTE -->
@@ -984,10 +1107,11 @@
                             android:letterSpacing="0.05"
                             android:text="SALUD DEL LOTE"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
 
                         <TextView
+                            android:id="@+id/txtEstadoSalud"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:background="@drawable/bg_badge_regular"
@@ -995,14 +1119,12 @@
                             android:paddingTop="4dp"
                             android:paddingEnd="12dp"
                             android:paddingBottom="4dp"
-                            android:id="@+id/txtEstadoSalud"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
-
 
                     <!-- BARRA DE PROGRESO -->
 
@@ -1015,20 +1137,19 @@
                         android:weightSum="100">
 
                         <View
+                            android:id="@+id/progressSaludFill"
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
-                            android:id="@+id/progressSaludFill"
                             android:layout_weight="0"
                             android:background="@drawable/progress_fill_bg" />
 
                         <View
+                            android:id="@+id/progressSaludRest"
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
-                            android:id="@+id/progressSaludRest"
                             android:layout_weight="100" />
 
                     </LinearLayout>
-
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -1037,27 +1158,27 @@
                         android:orientation="horizontal">
 
                         <TextView
+                            android:id="@+id/txtSaludDetalle"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:id="@+id/txtSaludDetalle"
+                            android:fontFamily="sans-serif-medium"
                             android:text="Sin datos suficientes"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:textSize="13sp" />
 
                         <TextView
+                            android:id="@+id/txtSaludScore"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/txtSaludScore"
                             android:text="—"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
 
                 </LinearLayout>
-
 
             </LinearLayout>
 

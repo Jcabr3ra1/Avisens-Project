@@ -11,7 +11,7 @@
     <item
         android:id="@+id/nav_bodega"
         android:icon="@drawable/ic_nav_bodega"
-        android:title="Bodega"/>
+        android:title="Insumos"/>
     <item
         android:id="@+id/nav_alertas"
         android:icon="@drawable/ic_nav_alertas"

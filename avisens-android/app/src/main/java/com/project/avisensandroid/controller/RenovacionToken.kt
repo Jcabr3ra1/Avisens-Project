@@ -40,6 +40,7 @@ object RenovacionToken {
                 ResultadoRenovacion.Renovada(accessToken, refreshToken)
             }
         }
+
         codigo == 408 || codigo == 429 || codigo >= 500 -> ResultadoRenovacion.ErrorTransitorio
         // 400, 401, 403...: token inválido, expirado, ya usado o cuenta
         // desactivada. Reintentar no lo arregla.

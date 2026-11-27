@@ -1,5 +1,6 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -17,6 +18,8 @@ import com.project.avisensandroid.ui.MainActivity
 import androidx.core.os.bundleOf
 
 class BitacoraEnfermoFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po07BitacoraEnfermoOpBinding? = null
     private val binding get() = _binding!!
@@ -58,7 +61,12 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             diagnostico = "Decaimiento",
             seguimientos = listOf(
                 SeguimientoDemo("17/09", 5, "Pendiente", "Se detectaron aves con bajo consumo."),
-                SeguimientoDemo("18/09", 0, "Finalizado", "Caso cerrado tras la recuperación de las aves.")
+                SeguimientoDemo(
+                    "18/09",
+                    0,
+                    "Finalizado",
+                    "Caso cerrado tras la recuperación de las aves."
+                )
             )
         )
     )
@@ -74,8 +82,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
 
         configurarBottomNav(R.id.nav_bitacora)
+        animarPestanaBitacora(binding.tabsBitacora, 1)
+        binding.tabPesajes.setOnClickListener { abrirPestanaBitacora(BitacoraPesajesFragment(), 1) }
 
         parentFragmentManager.setFragmentResultListener(
             "seguimiento_demo_guardado",
@@ -93,7 +104,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
                 if (index >= 0) {
                     casosDemo[index] = casosDemo[index].copy(
                         seguimientos = casosDemo[index].seguimientos +
-                                SeguimientoDemo(fecha, aves, estado, observacion.ifBlank { "Sin observaciones." })
+                                SeguimientoDemo(
+                                    fecha,
+                                    aves,
+                                    estado,
+                                    observacion.ifBlank { "Sin observaciones." })
                     )
                     construirCasosDemo()
                 }
@@ -103,11 +118,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         construirCasosDemo()
 
         binding.tbnEnfermo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarFragment(BitacoraFragment())
+            abrirPestanaBitacora(BitacoraFragment(), 1)
         }
 
         binding.tbnConsumo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarFragment(BitacoraConsumoFragment())
+            abrirPestanaBitacora(BitacoraConsumoFragment(), 1)
         }
 
         binding.btnRegistrarEvento.setOnClickListener {
@@ -117,11 +132,13 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
     private fun construirCasosDemo() {
         val contenedor = binding.containerRegistros
+        entradaTarjetas.comenzar()
         contenedor.removeAllViews()
         contenedor.background = null
         contenedor.setPadding(0, 0, 0, 0)
 
-        val casosActivos = casosDemo.count { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
+        val casosActivos =
+            casosDemo.count { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
         val avesSeguimiento = casosDemo
             .filter { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
             .sumOf { it.seguimientos.last().aves }
@@ -129,7 +146,9 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         binding.tvAvesSeguimiento.text = avesSeguimiento.toString()
 
         casosDemo.forEachIndexed { index, caso ->
-            contenedor.addView(crearTarjetaCaso(caso))
+            val tarjeta = crearTarjetaCaso(caso)
+            contenedor.addView(tarjeta)
+            entradaTarjetas.mostrar(tarjeta, "caso:${caso.id}")
             if (index < casosDemo.lastIndex) {
                 val separador = View(requireContext()).apply {
                     layoutParams = LinearLayout.LayoutParams(
@@ -145,7 +164,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
     private fun crearTarjetaCaso(caso: CasoDemo): View {
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            background = roundedBackground(Color.WHITE, Color.parseColor("#E5EAE7"), 14)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#E5EAE7"),
+                14
+            )
             setPadding(dp(14), dp(14), dp(14), dp(14))
         }
 
@@ -159,7 +182,14 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
-        tituloContenedor.addView(texto("Caso sanitario #${String.format("%03d", caso.id)}", 16f, "#183C2E", true))
+        tituloContenedor.addView(
+            texto(
+                "Caso sanitario #${String.format("%03d", caso.id)}",
+                16f,
+                "#183C2E",
+                true
+            )
+        )
         tituloContenedor.addView(texto("${caso.lote} · ${caso.galpon}", 11f, "#78847E", false, 3))
 
         val ultimo = caso.seguimientos.last()
@@ -168,10 +198,18 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         card.addView(encabezado)
 
         card.addView(texto("Diagnóstico: ${caso.diagnostico}", 12f, "#4E5B55", false, 10))
-        card.addView(texto("Aves afectadas inicialmente: ${caso.avesIniciales}", 11f, "#78847E", false, 4))
+        card.addView(
+            texto(
+                "Aves afectadas inicialmente: ${caso.avesIniciales}",
+                11f,
+                "#78847E",
+                false,
+                4
+            )
+        )
 
         val separador = View(requireContext()).apply {
-            setBackgroundColor(Color.parseColor("#E7EEE9"))
+            setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E7EEE9"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(1)
@@ -190,10 +228,18 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
             val info = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
 
-            info.addView(texto("${seguimiento.fecha} · ${seguimiento.aves} aves", 12f, "#183C2E", true))
+            info.addView(
+                texto(
+                    "${seguimiento.fecha} · ${seguimiento.aves} aves",
+                    12f,
+                    "#183C2E",
+                    true
+                )
+            )
             info.addView(texto(seguimiento.observacion, 11f, "#78847E", false, 3))
             fila.addView(info)
             fila.addView(crearBadgeEstado(seguimiento.estado, pequeño = true))
@@ -207,9 +253,10 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         val boton = MaterialButton(requireContext()).apply {
             text = "Registrar seguimiento"
             isAllCaps = false
-            textSize = 12f
+            textSize = 13f
             setTextColor(Color.WHITE)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#2F8B5E"))
+            backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#2F8B5E"))
             cornerRadius = dp(9)
             minWidth = 0
             minHeight = 0
@@ -235,12 +282,16 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
         return TextView(requireContext()).apply {
             text = estado
-            setTextColor(Color.parseColor(textoColor))
+            setTextColor(ColoresAdaptativos.texto(requireContext(), textoColor))
             textSize = if (pequeño) 10f else 11f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(if (pequeño) 8 else 10), dp(5), dp(if (pequeño) 8 else 10), dp(5))
-            background = roundedBackground(Color.parseColor(fondo), Color.TRANSPARENT, 12)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), fondo),
+                Color.TRANSPARENT,
+                12
+            )
         }
     }
 
@@ -253,8 +304,12 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
     ): TextView {
         return TextView(requireContext()).apply {
             text = contenido
-            textSize = tamano
-            setTextColor(Color.parseColor(color))
+            textSize = if (tamano < 16f) tamano + 1f else tamano
+            typeface = android.graphics.Typeface.create(
+                "sans-serif-medium",
+                android.graphics.Typeface.NORMAL
+            )
+            setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             if (negrita) setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

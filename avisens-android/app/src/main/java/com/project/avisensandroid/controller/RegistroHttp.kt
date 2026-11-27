@@ -32,6 +32,7 @@ object RegistroHttp {
                 mensaje.isJsonArray -> mensaje.asJsonArray
                     .filter { it.isJsonPrimitive }
                     .joinToString(". ") { it.asString }
+
                 else -> null
             }?.trim()?.takeIf { it.isNotEmpty() }
         } catch (_: Exception) {

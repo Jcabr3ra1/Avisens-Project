@@ -81,6 +81,10 @@ object UserSession {
             .commit()
     }
 
+    fun userId(context: Context): Int? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_USER_ID, 0).takeIf { it > 0 }
+
     fun accessToken(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_TOKEN, null)

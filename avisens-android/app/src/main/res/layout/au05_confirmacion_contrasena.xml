@@ -78,7 +78,7 @@
                     android:lineSpacingExtra="4dp"
                     android:text="Tu contraseña se cambió correctamente. Ahora puedes iniciar sesión con tu nueva contraseña."
                     android:textColor="#66736D"
-                    android:textSize="15sp" />
+                    android:textSize="16sp" />
 
 
                 <!-- ========================================== -->
@@ -93,7 +93,7 @@
                     android:text="Volver al inicio de sesión"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:backgroundTint="#2E9B6F"
                     app:cornerRadius="10dp"

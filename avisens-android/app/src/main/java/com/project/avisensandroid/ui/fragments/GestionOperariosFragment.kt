@@ -1,11 +1,17 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.estiloCancelar
 
+
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.WindowManager
+import android.graphics.Rect
+import android.widget.ScrollView
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -28,12 +34,37 @@ import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class GestionOperariosFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private lateinit var containerOperarios: LinearLayout
 
     private var rolOperarioId: Int? = null
+
+    // El API no expone un estado de eliminado. Conservamos localmente
+    // los IDs eliminados desde este dispositivo para ocultarlos de la lista.
+    private val preferenciasEliminados by lazy {
+        requireContext().applicationContext.getSharedPreferences(
+            "avisens_operarios_eliminados", android.content.Context.MODE_PRIVATE
+        )
+    }
+
+    private fun idsOperariosEliminados(): Set<Int> =
+        preferenciasEliminados.getStringSet("ids", emptySet())
+            .orEmpty().mapNotNull { it.toIntOrNull() }.toSet()
+
+    private fun registrarOperarioEliminado(id: Int) {
+        val ids = preferenciasEliminados.getStringSet("ids", emptySet())
+            .orEmpty().toMutableSet()
+        ids.add(id.toString())
+        preferenciasEliminados.edit().putStringSet("ids", ids).apply()
+    }
 
     // ============================================================
     // CREAR VISTA
@@ -64,10 +95,12 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             view,
             savedInstanceState
         )
+        entradaTarjetas.reiniciar()
 
         configurarBottomNav(
             R.id.nav_usuarios
         )
+
 
         containerOperarios =
             view.findViewById(
@@ -82,6 +115,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             mostrarDialogCrearOperario()
         }
 
+        ultimosOperarios = null
         cargarOperarios()
     }
 
@@ -89,82 +123,62 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     // CARGAR OPERARIOS
     // ============================================================
 
-    private fun cargarOperarios() {
+    private var cargaOperarios: Job? = null
+    private var ultimosOperarios: List<UsuarioGestionResponse>? = null
 
-        viewLifecycleOwner.lifecycleScope.launch {
+    fun actualizarSilenciosamente() {
+        if (view != null && isAdded && cargaOperarios?.isActive != true) cargarOperarios(true)
+    }
 
+    private fun cargarOperarios(silenciosa: Boolean = false) {
+        cargaOperarios?.cancel()
+        cargaOperarios = viewLifecycleOwner.lifecycleScope.launch {
+            fun pintar(usuarios: List<UsuarioGestionResponse>) {
+                val eliminados = idsOperariosEliminados()
+                val operarios = usuarios.filter {
+                    it.rol.nombre.equals("operario", ignoreCase = true) && it.id !in eliminados
+                }
+                if (ultimosOperarios != operarios) {
+                    ultimosOperarios = operarios
+                    mostrarOperarios(operarios)
+                }
+            }
             try {
-
-                // ------------------------------------------------
-                // Obtener catálogo de roles
-                // ------------------------------------------------
-
-                val rolesResponse =
-                    RetrofitClient.api.listarRolesUsuarios()
-
-                if (rolesResponse.isSuccessful) {
-
-                    rolOperarioId =
-                        rolesResponse
-                            .body()
-                            .orEmpty()
-                            .firstOrNull {
-
-                                it.nombre.equals(
-                                    "operario",
-                                    ignoreCase = true
-                                )
-                            }
-                            ?.id
+                if (!silenciosa && ultimosOperarios == null) {
+                    try {
+                        val local = RetrofitClient.apiCache.listarUsuarios(page = 1, limit = 100)
+                        local.body()?.let { if (local.isSuccessful) pintar(it.data) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
-
-                // ------------------------------------------------
-                // Obtener usuarios
-                // ------------------------------------------------
-
-                val response =
-                    RetrofitClient.api.listarUsuarios(
-                        page = 1,
-                        limit = 100
-                    )
-
-                if (!response.isSuccessful) {
-
-                    mostrarError(
-                        "No se pudieron cargar los usuarios. " +
-                                "Código: ${response.code()}"
-                    )
-
-                    return@launch
-                }
-
-                // ------------------------------------------------
-                // Filtrar solamente Operarios
-                // ------------------------------------------------
-
-                val operarios =
-                    response.body()
-                        ?.data
-                        .orEmpty()
-                        .filter {
-
+                coroutineScope {
+                    val roles = async {
+                        try {
+                            val respuesta = RetrofitClient.api.listarRolesUsuarios()
+                            if (respuesta.isSuccessful) rolOperarioId = respuesta.body().orEmpty()
+                                .firstOrNull { it.nombre.equals("operario", ignoreCase = true) }?.id
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                        }
+                    }
+                    val usuarios = RetrofitClient.api.listarUsuarios(page = 1, limit = 100)
+                    if (!usuarios.isSuccessful) error("Código ${usuarios.code()}")
+                    val datos = usuarios.body()?.data ?: error("Respuesta vacía")
+                    if (!silenciosa || ultimosOperarios != datos.filter {
                             it.rol.nombre.equals(
                                 "operario",
-                                ignoreCase = true
-                            )
-                        }
-
-                mostrarOperarios(
-                    operarios
-                )
-
+                                true
+                            ) && it.id !in idsOperariosEliminados()
+                        } || ultimosOperarios == null) pintar(datos)
+                    roles.await()
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-
-                mostrarError(
-                    "Error al cargar operarios: " +
-                            (e.message
-                                ?: "sin detalle")
-                )
+                if (!silenciosa && ultimosOperarios == null) mostrarError("Error al cargar operarios: ${e.message ?: "sin detalle"}")
             }
         }
     }
@@ -176,6 +190,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun mostrarOperarios(
         operarios: List<UsuarioGestionResponse>
     ) {
+        entradaTarjetas.encabezados(containerOperarios)
+        entradaTarjetas.comenzar()
         containerOperarios.removeAllViews()
 
         if (operarios.isEmpty()) {
@@ -184,7 +200,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 gravity = android.view.Gravity.CENTER
                 setPadding(dp(24), dp(28), dp(24), dp(28))
                 background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
+                    setColor(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                     cornerRadius = dp(18).toFloat()
                     setStroke(dp(1), Color.parseColor("#DDE8E2"))
                 }
@@ -201,21 +217,32 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 text = "Aún no tienes operarios"
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#1F5C42"))
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_1f5c42
+                    )
+                )
                 gravity = android.view.Gravity.CENTER
             }
             emptyCard.addView(title, LinearLayout.LayoutParams(-1, -2))
 
             val message = TextView(requireContext()).apply {
                 text = "Crea un operario para comenzar a asignarle granjas."
-                textSize = 13f
-                setTextColor(Color.parseColor("#78847E"))
+                textSize = 14f
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_78847e
+                    )
+                )
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, dp(5), 0, 0)
             }
             emptyCard.addView(message, LinearLayout.LayoutParams(-1, -2))
 
             containerOperarios.addView(emptyCard)
+            entradaTarjetas.mostrar(emptyCard, "operarios:vacio", true)
             return
         }
 
@@ -233,7 +260,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val avatar = TextView(requireContext()).apply {
                 text = iniciales(usuario.nombre_completo)
-                textSize = 15f
+                textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
                 setTextColor(Color.WHITE)
@@ -252,26 +279,46 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 text = usuario.nombre_completo
                 textSize = 17f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#183C2E"))
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_183c2e
+                    )
+                )
                 maxLines = 2
             })
             identity.addView(TextView(requireContext()).apply {
                 text = "Operario"
-                textSize = 11f
-                setTextColor(Color.parseColor("#2F8B5E"))
+                textSize = 12f
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_2f8b5e
+                    )
+                )
                 setPadding(0, dp(3), 0, 0)
             })
             header.addView(identity, LinearLayout.LayoutParams(0, -2, 1f))
 
             val status = TextView(requireContext()).apply {
                 text = if (usuario.activo) "Activo" else "Inactivo"
-                textSize = 11f
+                textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
-                setTextColor(Color.parseColor(if (usuario.activo) "#28744D" else "#A34A4A"))
+                setTextColor(
+                    ColoresAdaptativos.texto(
+                        requireContext(),
+                        if (usuario.activo) "#28744D" else "#A34A4A"
+                    )
+                )
                 setPadding(dp(10), dp(6), dp(10), dp(6))
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor(if (usuario.activo) "#E8F5ED" else "#FBECEC"))
+                    setColor(
+                        ColoresAdaptativos.superficie(
+                            requireContext(),
+                            if (usuario.activo) "#E8F5ED" else "#FBECEC"
+                        )
+                    )
                     cornerRadius = dp(20).toFloat()
                 }
             }
@@ -288,7 +335,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             card.addView(info)
 
             card.addView(View(requireContext()).apply {
-                setBackgroundColor(Color.parseColor("#E7EEE9"))
+                setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E7EEE9"))
             }, LinearLayout.LayoutParams(-1, dp(1)).apply {
                 topMargin = dp(16)
                 bottomMargin = dp(12)
@@ -296,9 +343,14 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val assignmentTitle = TextView(requireContext()).apply {
                 text = "Granjas asignadas"
-                textSize = 14f
+                textSize = 15f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#1F5C42"))
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_1f5c42
+                    )
+                )
             }
             card.addView(assignmentTitle)
 
@@ -309,34 +361,68 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             card.addView(assignments)
             cargarAsignaciones(usuario.id, assignments, false)
 
-            val editButton = com.google.android.material.button.MaterialButton(requireContext()).apply {
-                text = "✎  Editar"
-                setAllCaps(false)
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.WHITE)
-                minHeight = 0
-                minimumHeight = 0
-                minWidth = 0
-                minimumWidth = 0
-                setPadding(dp(10), 0, dp(10), 0)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(
-                    Color.parseColor("#2F8B5E")
-                )
-                cornerRadius = dp(10)
-                rippleColor = android.content.res.ColorStateList.valueOf(
-                    Color.parseColor("#245F42")
-                )
-                setOnClickListener { mostrarDialogEditarOperario(usuario) }
-            }
+            val editButton =
+                com.google.android.material.button.MaterialButton(requireContext()).apply {
+                    text = "✎  Editar"
+                    setAllCaps(false)
+                    textSize = 13f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(Color.WHITE)
+                    minHeight = 0
+                    minimumHeight = 0
+                    minWidth = 0
+                    minimumWidth = 0
+                    setPadding(dp(10), 0, dp(10), 0)
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        Color.parseColor("#2F8B5E")
+                    )
+                    cornerRadius = dp(10)
+                    rippleColor = android.content.res.ColorStateList.valueOf(
+                        Color.parseColor("#245F42")
+                    )
+                    setOnClickListener { mostrarDialogEditarOperario(usuario) }
+                }
             card.addView(editButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
                 topMargin = dp(12)
+            })
+
+            val deleteButton =
+                com.google.android.material.button.MaterialButton(requireContext()).apply {
+                    text = "Eliminar operario"
+                    setAllCaps(false)
+                    textSize = 13f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_b23a3a
+                        )
+                    )
+                    minHeight = 0
+                    minimumHeight = 0
+                    minWidth = 0
+                    minimumWidth = 0
+                    cornerRadius = dp(10)
+                    strokeWidth = dp(1)
+                    strokeColor =
+                        android.content.res.ColorStateList.valueOf(Color.parseColor("#B23A3A"))
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        ColoresAdaptativos.superficie(
+                            requireContext(),
+                            "#FFFFFF"
+                        )
+                    )
+                    setOnClickListener { confirmarEliminarOperario(usuario) }
+                }
+            card.addView(deleteButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+                topMargin = dp(8)
             })
 
             val params = LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(14)
             }
             containerOperarios.addView(card, params)
+            entradaTarjetas.mostrar(card, "operario:${usuario.id}")
         }
     }
 
@@ -344,7 +430,12 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         TextView(requireContext()).apply {
             text = "$icon   $value"
             textSize = 12.5f
-            setTextColor(Color.parseColor("#68756E"))
+            setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.adaptive_text_68756e
+                )
+            )
             setPadding(0, dp(3), 0, dp(3))
             maxLines = 2
         }
@@ -360,6 +451,62 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).roundToInt()
+
+    private fun confirmarEliminarOperario(usuario: UsuarioGestionResponse) {
+        val context = requireContext()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_confirmar_eliminar_operario, null)
+        dialogView.findViewById<TextView>(R.id.tvMensajeEliminarOperario).text =
+            "¿Deseas eliminar a ${usuario.nombre_completo}? Su cuenta será desactivada y perderá el acceso a la aplicación."
+
+        val dialog = AlertDialog.Builder(context).setView(dialogView).create()
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        dialogView.findViewById<View>(R.id.btnCancelarEliminarOperario).setOnClickListener {
+            dialog.dismiss()
+        }
+        val btnEliminar =
+            dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnConfirmarEliminarOperario)
+        btnEliminar.setOnClickListener {
+            btnEliminar.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val response = RetrofitClient.api.eliminarOperario(usuario.id)
+                    if (!isAdded) return@launch
+                    if (response.isSuccessful) {
+                        registrarOperarioEliminado(usuario.id)
+                        dialog.dismiss()
+                        Toast.makeText(
+                            requireContext(),
+                            "Operario eliminado correctamente",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        cargarOperarios()
+                    } else {
+                        Toast.makeText(
+                            requireContext(),
+                            "No se pudo eliminar el operario (código ${response.code()})",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        btnEliminar.isEnabled = true
+                    }
+                } catch (e: Exception) {
+                    if (isAdded) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Error al eliminar operario: ${e.message ?: "Sin conexión"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        btnEliminar.isEnabled = true
+                    }
+                }
+            }
+        }
+    }
 
     // ============================================================
     // CARGAR ASIGNACIONES DE UN OPERARIO
@@ -394,10 +541,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                                 "No se pudieron consultar " +
                                         "las asignaciones."
 
-                            textSize = 12f
+                            textSize = 13f
 
                             setTextColor(
-                                Color.parseColor(
+                                ColoresAdaptativos.texto(
+                                    requireContext(),
                                     "#9A9A9A"
                                 )
                             )
@@ -431,10 +579,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             text =
                                 "Sin granjas asignadas."
 
-                            textSize = 13f
+                            textSize = 14f
 
                             setTextColor(
-                                Color.parseColor(
+                                ColoresAdaptativos.texto(
+                                    requireContext(),
                                     "#9A9A9A"
                                 )
                             )
@@ -477,10 +626,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         text =
                             "Error al consultar asignaciones."
 
-                        textSize = 12f
+                        textSize = 13f
 
                         setTextColor(
-                            Color.parseColor(
+                            ColoresAdaptativos.texto(
+                                requireContext(),
                                 "#9A9A9A"
                             )
                         )
@@ -534,10 +684,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     "${granja.nombre} " +
                             "(${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"})"
 
-                textSize = 13f
+                textSize = 14f
 
                 setTextColor(
-                    Color.parseColor(
+                    ColoresAdaptativos.texto(
+                        requireContext(),
                         "#4F5A55"
                     )
                 )
@@ -567,11 +718,12 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     "Quitar"
 
                 setAllCaps(false)
-                textSize = 11f
+                textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
 
                 setTextColor(
-                    Color.parseColor(
+                    ColoresAdaptativos.texto(
+                        requireContext(),
                         "#C94A4A"
                     )
                 )
@@ -588,16 +740,26 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 minHeight = 0
                 minimumHeight = 0
 
-                background = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(
-                        dp(1),
-                        Color.parseColor(
-                            "#C94A4A"
-                        )
+                // MaterialButton debe usar tint y stroke propios;
+                // asignar background directamente puede dejar el color azul del tema.
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ColoresAdaptativos.superficie(
+                        requireContext(),
+                        "#FFFFFF"
                     )
-                }
+                )
+                strokeColor =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
+                strokeWidth = dp(2)
+                cornerRadius = dp(10)
+                insetTop = 0
+                insetBottom = 0
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_c62828
+                    )
+                )
 
                 setOnClickListener {
 
@@ -701,7 +863,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         "Cancelar",
                         null
                     )
-                    .show()
+                    .show().estiloCancelar()
 
             } catch (e: Exception) {
 
@@ -779,13 +941,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
 
                 if (fallos == 0) {
-
-                    Toast.makeText(
-                        requireContext(),
-                        "Granja asignada correctamente " +
-                                "(${galponesDeGranja.size} galpón${if (galponesDeGranja.size == 1) "" else "es"})",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Asignación exitosa: actualización silenciosa.
 
                 } else {
 
@@ -818,86 +974,113 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         onSuccess: (() -> Unit)? = null,
         onSolicitudPendiente: ((List<Int>) -> Unit)? = null
     ) {
+        val context = requireContext()
+        val contenido = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(18))
+            background = GradientDrawable().apply {
+                setColor(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.parseColor("#D8E7DE"))
+            }
+        }
 
-        AlertDialog.Builder(
-            requireContext()
-        )
-            .setTitle(
-                "Quitar asignación"
-            )
-            .setMessage(
-                "¿Quieres quitar \"$nombreGranja\" del operario? " +
-                        "Se le quitarán sus ${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"} asignados."
-            )
-            .setNegativeButton(
-                "Cancelar",
-                null
-            )
-            .setPositiveButton(
-                "Quitar"
-            ) { _, _ ->
+        fun linea(valor: String, tamano: Float, color: String, bold: Boolean = false) =
+            TextView(context).apply {
+                text = valor
+                textSize = if (tamano < 16f) tamano + 1f else tamano
+                setTextColor(ColoresAdaptativos.texto(requireContext(), color))
+                if (bold) setTypeface(null, Typeface.BOLD)
+            }
+        contenido.addView(linea("AVISENS · OPERARIOS", 10f, "#176747", true))
+        contenido.addView(linea("Quitar asignación", 20f, "#183C2E", true).apply {
+            setPadding(0, dp(6), 0, 0)
+        })
+        contenido.addView(
+            linea(
+                "¿Deseas quitar la granja \"$nombreGranja\"? Se retirarán ${galponIds.size} galpones asignados.",
+                13f, "#66756D"
+            ).apply { setPadding(0, dp(9), 0, dp(15)) })
+        val botones = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
 
-                // En el formulario de Editar Operario la eliminación
-                // es solo visual y queda pendiente hasta pulsar Guardar.
-                if (onSolicitudPendiente != null) {
-                    onSolicitudPendiente.invoke(galponIds)
-                    Toast.makeText(
+        fun boton(etiqueta: String, fondo: String, texto: String) =
+            com.google.android.material.button.MaterialButton(context).apply {
+                this.text = etiqueta
+                isAllCaps = false
+                textSize = 14f
+                setTextColor(ColoresAdaptativos.texto(requireContext(), texto))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ColoresAdaptativos.superficie(
                         requireContext(),
-                        "Granja marcada para quitar. Pulsa Guardar para aplicar los cambios.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setPositiveButton
-                }
+                        fondo
+                    )
+                )
+                cornerRadius = dp(10)
+                minWidth = 0
+                minHeight = 0
+                insetTop = 0
+                insetBottom = 0
+                layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f)
+            }
 
-                viewLifecycleOwner.lifecycleScope.launch {
-
-                    try {
-
-                        var fallos = 0
-
-                        galponIds.forEach { galponId ->
-
-                            val response =
-                                RetrofitClient.api
-                                    .desasignarGalpon(
-                                        usuarioId,
-                                        galponId
-                                    )
-
-                            if (!response.isSuccessful) {
-                                fallos++
-                            }
-                        }
-
-                        if (fallos == 0) {
-
-                            Toast.makeText(
-                                requireContext(),
-                                "Granja retirada",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                        } else {
-
-                            mostrarError(
-                                "Se retiró la granja, pero $fallos galpón(es) fallaron."
-                            )
-                        }
-
-                        onSuccess?.invoke()
-                        cargarOperarios()
-
-                    } catch (e: Exception) {
-
-                        mostrarError(
-                            "Error al quitar la asignación: " +
-                                    (e.message
-                                        ?: "sin detalle")
-                        )
+        val cancelar = boton("Cancelar", "#EEF4F0", "#176747").apply {
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
+            backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_background
+                )
+            )
+            strokeWidth = dp(1)
+            strokeColor = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_stroke
+                )
+            )
+        }
+        val quitar = boton("Quitar", "#176747", "#FFFFFF")
+        (quitar.layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
+        botones.addView(cancelar)
+        botones.addView(quitar)
+        contenido.addView(botones)
+        val dialog = android.app.Dialog(context)
+        dialog.setContentView(contenido)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels - dp(32)).coerceAtMost(dp(440)),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        cancelar.setOnClickListener { dialog.dismiss() }
+        quitar.setOnClickListener {
+            dialog.dismiss()
+            if (onSolicitudPendiente != null) {
+                // En Editar operario, aplicar la desasignación únicamente al guardar.
+                onSolicitudPendiente.invoke(galponIds)
+                return@setOnClickListener
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    var fallos = 0
+                    galponIds.forEach { galponId ->
+                        val response = RetrofitClient.api.desasignarGalpon(usuarioId, galponId)
+                        if (!response.isSuccessful) fallos++
                     }
+                    if (fallos > 0) {
+                        mostrarError("No se pudieron quitar $fallos galpón(es).")
+                    } else {
+                        onSuccess?.invoke()
+                    }
+                    cargarOperarios()
+                } catch (e: Exception) {
+                    mostrarError("Error al quitar la asignación: ${e.message ?: "sin detalle"}")
                 }
             }
-            .show()
+        }
     }
 
     // ============================================================
@@ -908,12 +1091,19 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_editar_operario, null)
         val tvNombre = dialogView.findViewById<TextView>(R.id.tvNombreEditarOperario)
         val tvDatos = dialogView.findViewById<TextView>(R.id.tvDatosEditarOperario)
-        val switchActivo = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchUsuarioActivo)
+        val switchActivo =
+            dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchUsuarioActivo)
         val container = dialogView.findViewById<LinearLayout>(R.id.containerGranjasEditar)
         val spinnerGranjas = dialogView.findViewById<Spinner>(R.id.spinnerGranjasEditar)
         val btnCancelar = dialogView.findViewById<View>(R.id.btnCancelarEditarOperario)
         val btnGuardar = dialogView.findViewById<View>(R.id.btnGuardarEditarOperario)
 
+        val nombreEditar =
+            dialogView.findViewById<android.widget.EditText>(R.id.etNombreEditarOperario)
+        val telefonoEditar =
+            dialogView.findViewById<android.widget.EditText>(R.id.etTelefonoEditarOperario)
+        nombreEditar.setText(usuario.nombre_completo)
+        telefonoEditar.setText(usuario.telefono.orEmpty())
         tvNombre.text = usuario.nombre_completo
         tvDatos.text = "${usuario.email}  •  Cédula: ${usuario.cedula}"
         switchActivo.isChecked = usuario.activo
@@ -929,115 +1119,258 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             (resources.displayMetrics.heightPixels * 0.82).toInt()
         )
 
-        val galponesPendientesDeQuitar = mutableSetOf<Int>()
-
-        fun cargarGranjasDelDialog() {
-            container.removeAllViews()
-            cargarAsignaciones(
-                usuario.id,
-                container,
-                true,
-                onCambio = null,
-                onQuitarPendiente = { ids ->
-                    galponesPendientesDeQuitar.addAll(ids)
-                }
-            )
-            cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
-        }
-
-        // Al seleccionar una granja, se asigna automáticamente.
-        spinnerGranjas.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: android.widget.AdapterView<*>?,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                val granjasDisponibles = spinnerGranjas.tag as? List<GranjaResponse> ?: return
-                if (position <= 0 || position - 1 !in granjasDisponibles.indices) return
-
-                val granjaSeleccionada = granjasDisponibles[position - 1]
-
-                spinnerGranjas.isEnabled = false
-                asignarGranjaEnDialog(usuario.id, granjaSeleccionada) {
-                    cargarGranjasDelDialog()
-                    cargarOperarios()
+        fun habilitarCampo(campo: android.widget.EditText, boton: android.widget.ImageButton) {
+            val oscuro =
+                (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val colorBloqueado = Color.parseColor(if (oscuro) "#9CA3AF" else "#757575")
+            val colorEditable = if (oscuro) Color.WHITE else Color.BLACK
+            campo.setTextColor(colorBloqueado)
+            campo.isFocusable = false
+            campo.isFocusableInTouchMode = false
+            campo.isCursorVisible = false
+            campo.showSoftInputOnFocus = false
+            boton.setOnClickListener {
+                val editar = !campo.isFocusable
+                campo.isFocusableInTouchMode = editar
+                campo.isFocusable = editar
+                campo.setTextColor(if (editar) colorEditable else colorBloqueado)
+                campo.isCursorVisible = editar
+                campo.showSoftInputOnFocus = editar
+                boton.setImageResource(if (editar) R.drawable.ic_check else R.drawable.ic_edit)
+                val teclado =
+                    requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                if (editar) {
+                    campo.requestFocus()
+                    campo.setSelection(campo.text.length)
+                    campo.post {
+                        teclado.showSoftInput(
+                            campo,
+                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
+                        )
+                    }
+                } else {
+                    teclado.hideSoftInputFromWindow(campo.windowToken, 0)
+                    campo.clearFocus()
                 }
             }
+        }
+        habilitarCampo(nombreEditar, dialogView.findViewById(R.id.btnHabilitarNombreOperario))
+        habilitarCampo(telefonoEditar, dialogView.findViewById(R.id.btnHabilitarTelefonoOperario))
 
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        // Ningún cambio se envía al backend hasta pulsar Guardar.
+        val galponesPendientesDeQuitar = mutableSetOf<Int>()
+        val granjasPendientesDeAsignar = linkedMapOf<Int, GranjaResponse>()
+        var guardando = false
+
+        fun agregarGranjaPendiente(granja: GranjaResponse) {
+            if (granjasPendientesDeAsignar.containsKey(granja.id)) return
+            granjasPendientesDeAsignar[granja.id] = granja
+
+            val fila = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(7), 0, dp(7))
+            }
+            val nombre = TextView(requireContext()).apply {
+                text = "${granja.nombre} (pendiente de guardar)"
+                textSize = 14f
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_2f8b5e
+                    )
+                )
+            }
+            fila.addView(nombre, LinearLayout.LayoutParams(0, -2, 1f))
+            val quitar = com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "Quitar"
+                isAllCaps = false
+                textSize = 12f
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_c62828
+                    )
+                )
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    ColoresAdaptativos.superficie(
+                        requireContext(),
+                        "#FFFFFF"
+                    )
+                )
+                strokeColor =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
+                strokeWidth = dp(2)
+                cornerRadius = dp(10)
+                insetTop = 0
+                insetBottom = 0
+                minHeight = 0
+                minimumHeight = 0
+                setOnClickListener {
+                    if (!guardando) {
+                        granjasPendientesDeAsignar.remove(granja.id)
+                        container.removeView(fila)
+                    }
+                }
+            }
+            fila.addView(quitar, LinearLayout.LayoutParams(dp(88), dp(40)))
+            container.addView(fila)
         }
 
-        cargarGranjasDelDialog()
+        // Contenedor separado: la carga asíncrona de asignaciones
+        // existentes no borra las nuevas granjas pendientes.
+        val asignacionesActuales = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        container.addView(asignacionesActuales)
+        cargarAsignaciones(
+            usuario.id,
+            asignacionesActuales,
+            true,
+            onCambio = null,
+            onQuitarPendiente = { ids ->
+                galponesPendientesDeQuitar.addAll(ids)
+            }
+        )
+
+        spinnerGranjas.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (position <= 0 || guardando) return
+                    val disponibles = spinnerGranjas.tag as? List<GranjaResponse> ?: return
+                    val granja = disponibles.getOrNull(position - 1) ?: return
+                    agregarGranjaPendiente(granja)
+                    spinnerGranjas.setSelection(0)
+                }
+
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            }
+        cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
 
         btnCancelar.setOnClickListener {
-            // Como las eliminaciones están pendientes, Cancelar simplemente
-            // cierra el diálogo y no toca el backend.
-            dialog.dismiss()
+            if (!guardando) dialog.dismiss()
         }
 
         btnGuardar.setOnClickListener {
-            val nuevoEstado = switchActivo.isChecked
+            if (guardando) return@setOnClickListener
+            val nombreNuevo = nombreEditar.text.toString().trim()
+            val telefonoNuevo =
+                telefonoEditar.text.toString().trim().replace(Regex("[\\s()\\-]"), "")
+            if (nombreNuevo.isBlank() || nombreNuevo.length > 120) {
+                nombreEditar.error = "Ingresa un nombre válido"; return@setOnClickListener
+            }
+            if (telefonoNuevo.isNotEmpty() && !telefonoNuevo.matches(Regex("^\\+?[0-9]{10,13}$"))) {
+                telefonoEditar.error = "Ingresa un teléfono válido"; return@setOnClickListener
+            }
+            guardando = true
+            btnGuardar.isEnabled = false
+            btnCancelar.isEnabled = false
+            spinnerGranjas.isEnabled = false
 
+            val nuevoEstado = switchActivo.isChecked
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    // ----------------------------------------------------
-                    // 1. Aplicar primero las granjas marcadas para quitar.
-                    // ----------------------------------------------------
-                    var fallosAlQuitar = 0
-
-                    galponesPendientesDeQuitar.toList().forEach { galponId ->
-                        val response = RetrofitClient.api.desasignarGalpon(
-                            usuario.id,
-                            galponId
+                    // Obtener galpones antes de modificar nada.
+                    val nuevasAsignaciones = mutableSetOf<Int>()
+                    if (granjasPendientesDeAsignar.isNotEmpty()) {
+                        val respuestaGalpones = RetrofitClient.api.listarGalpones(
+                            page = 1, limit = 100
                         )
-
-                        if (response.isSuccessful) {
-                            galponesPendientesDeQuitar.remove(galponId)
-                        } else {
-                            fallosAlQuitar++
+                        if (!respuestaGalpones.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudieron consultar los galpones. Código: ${respuestaGalpones.code()}"
+                            )
+                        }
+                        val galpones = respuestaGalpones.body()?.data.orEmpty()
+                        granjasPendientesDeAsignar.values.forEach { granja ->
+                            val ids = galpones.filter {
+                                it.activo && it.granja.id == granja.id
+                            }.map { it.id }
+                            if (ids.isEmpty()) {
+                                throw IllegalStateException(
+                                    "La granja \"${granja.nombre}\" no tiene galpones activos."
+                                )
+                            }
+                            nuevasAsignaciones.addAll(ids)
                         }
                     }
 
-                    if (fallosAlQuitar > 0) {
-                        cargarGranjasDelDialog()
-                        mostrarError(
-                            "No se pudieron quitar $fallosAlQuitar galpón(es). Revisa las asignaciones e inténtalo nuevamente."
+                    // Guardar los cambios solicitados. El backend no ofrece
+                    // una operación transaccional para todos los galpones.
+                    galponesPendientesDeQuitar.toList().forEach { galponId ->
+                        val respuesta = RetrofitClient.api.desasignarGalpon(
+                            usuario.id, galponId
                         )
-                        return@launch
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo quitar un galpón. Código: ${respuesta.code()}"
+                            )
+                        }
+                        galponesPendientesDeQuitar.remove(galponId)
                     }
 
-                    // ----------------------------------------------------
-                    // 2. Guardar el cambio de estado, si hubo uno.
-                    // ----------------------------------------------------
+                    nuevasAsignaciones.forEach { galponId ->
+                        val respuesta = RetrofitClient.api.asignarGalpon(
+                            usuario.id, AsignarGalponRequest(galpon_id = galponId)
+                        )
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo asignar un galpón. Código: ${respuesta.code()}"
+                            )
+                        }
+                    }
+
+                    if (nombreNuevo != usuario.nombre_completo || telefonoNuevo != usuario.telefono.orEmpty()) {
+                        val datos = com.google.gson.JsonObject().apply {
+                            addProperty("nombre_completo", nombreNuevo)
+                            addProperty("telefono", telefonoNuevo)
+                        }
+                        check(
+                            RetrofitClient.api.editarDatosOperario(
+                                usuario.id,
+                                datos
+                            ).isSuccessful
+                        ) { "No se pudieron actualizar los datos" }
+                    }
                     if (nuevoEstado != usuario.activo) {
-                        val response = RetrofitClient.api.actualizarEstadoUsuario(
+                        val respuesta = RetrofitClient.api.actualizarEstadoUsuario(
                             usuario.id,
                             ActualizarEstadoUsuarioRequest(activo = nuevoEstado)
                         )
-
-                        if (!response.isSuccessful) {
-                            switchActivo.isChecked = usuario.activo
-                            mostrarError(
-                                "No se pudo actualizar el estado. Código: ${response.code()}"
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo actualizar el estado. Código: ${respuesta.code()}"
                             )
-                            return@launch
                         }
+                    }
 
+                    if (isAdded) {
+                        dialog.dismiss()
+                        cargarOperarios()
                         Toast.makeText(
                             requireContext(),
-                            if (nuevoEstado) "Usuario activado" else "Usuario desactivado",
+                            "Cambios guardados correctamente",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-
-                    cargarOperarios()
-                    dialog.dismiss()
-
                 } catch (e: Exception) {
-                    mostrarError(
-                        "Error al guardar los cambios: ${e.message ?: "sin detalle"}"
-                    )
+                    if (isAdded) {
+                        mostrarError(
+                            "No se pudieron guardar todos los cambios: ${e.message ?: "sin detalle"}. " +
+                                    "Si algunos se aplicaron, revisa las asignaciones antes de reintentar."
+                        )
+                        cargarOperarios()
+                    }
+                } finally {
+                    guardando = false
+                    btnGuardar.isEnabled = true
+                    btnCancelar.isEnabled = true
+                    spinnerGranjas.isEnabled = true
                 }
             }
         }
@@ -1064,7 +1397,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 if (!asignacionesResponse.isSuccessful || !granjasResponse.isSuccessful) {
                     spinner.isEnabled = false
-                    spinner.adapter = crearAdapterGranjas(listOf("No se pudieron cargar las granjas"))
+                    spinner.adapter =
+                        crearAdapterGranjas(listOf("No se pudieron cargar las granjas"))
                     spinner.tag = emptyList<GranjaResponse>()
                     return@launch
                 }
@@ -1109,13 +1443,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         ) {
 
             private val colorTextoSeleccionado =
-                0xFF171D1A.toInt()
+                ColoresAdaptativos.texto(requireContext(), "#171D1A")
 
             private val colorTextoDropdown =
-                0xFF171D1A.toInt()
+                ColoresAdaptativos.texto(requireContext(), "#171D1A")
 
             private val colorFondoDropdown =
-                0xFFFFFFFF.toInt()
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF")
 
             init {
                 setDropDownViewResource(
@@ -1137,7 +1471,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 if (view is TextView) {
                     view.setTextColor(colorTextoSeleccionado)
-                    view.textSize = 13f
+                    view.textSize = 14f
                     view.setPadding(8, 0, 8, 0)
                     view.gravity = Gravity.CENTER_VERTICAL
                 }
@@ -1160,7 +1494,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 if (view is TextView) {
                     view.setTextColor(colorTextoDropdown)
                     view.setBackgroundColor(colorFondoDropdown)
-                    view.textSize = 13f
+                    view.textSize = 14f
                     view.setPadding(16, 14, 16, 14)
                     view.gravity = Gravity.CENTER_VERTICAL
                 }
@@ -1214,11 +1548,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
 
                 if (fallos == 0) {
-                    Toast.makeText(
-                        requireContext(),
-                        "${granja.nombre} asignada correctamente.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Asignación exitosa sin Toast.
                     alTerminar()
                 } else {
                     mostrarError(
@@ -1273,6 +1603,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             dialogView.findViewById<TextInputEditText>(
                 R.id.etTelefonoOperario
             )
+
+        val etUsername = dialogView.findViewById<TextInputEditText>(R.id.etUsernameOperario)
 
         val etPassword =
             dialogView.findViewById<TextInputEditText>(
@@ -1331,18 +1663,51 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             )
         )
 
-        // --------------------------------------------------------
-        // Tamaño del diálogo
-        // --------------------------------------------------------
-
-        dialog.window?.setLayout(
-            (
-                    resources.displayMetrics.widthPixels * 0.90
-                    ).toInt(),
-            (
-                    resources.displayMetrics.heightPixels * 0.82
-                    ).toInt()
+        // Ajustar altura real del dialogo al espacio visible al abrir el teclado.
+        val scrollCrear = dialogView.findViewById<ScrollView>(R.id.scrollCrearOperario)
+        val window = dialog.window
+        window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         )
+        val ancho = (resources.displayMetrics.widthPixels * 0.90f).toInt()
+        val altoMaximo = (resources.displayMetrics.heightPixels * 0.82f).toInt()
+        window?.setLayout(ancho, altoMaximo)
+        val decor = window?.decorView
+        var altoAnterior = -1
+        decor?.viewTreeObserver?.addOnGlobalLayoutListener {
+            if (!dialog.isShowing) return@addOnGlobalLayoutListener
+            val rect = Rect()
+            decor.getWindowVisibleDisplayFrame(rect)
+            val alto = minOf(altoMaximo, (rect.height() - dp(12)).coerceAtLeast(dp(220)))
+            if (kotlin.math.abs(alto - altoAnterior) > dp(4)) {
+                altoAnterior = alto
+                window.setLayout(ancho, alto)
+            }
+        }
+        // Mantener visible el campo activo en pantallas pequenas y con teclado.
+        listOf(
+            etNombre, etCedula, etEmail, etTelefono,
+            etUsername, etPassword, etConfirmarPassword
+        ).forEach { campo ->
+            campo.setOnFocusChangeListener { vista, tieneFoco ->
+                if (tieneFoco) {
+                    vista.postDelayed({
+                        if (dialog.isShowing) {
+                            val campoRect = Rect()
+                            vista.getDrawingRect(campoRect)
+                            scrollCrear.offsetDescendantRectToMyCoords(vista, campoRect)
+                            val margen = dp(16)
+                            val destino = (campoRect.bottom - scrollCrear.height + margen)
+                                .coerceAtLeast(0)
+                            if (destino > scrollCrear.scrollY) {
+                                scrollCrear.smoothScrollTo(0, destino)
+                            }
+                        }
+                    }, 200)
+                }
+            }
+        }
 
         // --------------------------------------------------------
         // CANCELAR
@@ -1390,6 +1755,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         null
                     }
 
+            val username =
+                etUsername.text?.toString()?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
+
             val password =
                 etPassword.text
                     ?.toString()
@@ -1407,6 +1775,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             etNombre.error = null
             etCedula.error = null
             etEmail.error = null
+            etUsername.error = null
             etPassword.error = null
             etConfirmarPassword.error = null
 
@@ -1424,13 +1793,21 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 return@setOnClickListener
             }
 
-            if (cedula.isBlank()) {
+            if (!cedula.matches(Regex("^[0-9]{6,10}$"))) {
 
                 etCedula.error =
-                    "Ingresa la cédula"
+                    "La cédula debe tener entre 6 y 10 dígitos"
 
                 etCedula.requestFocus()
 
+                return@setOnClickListener
+            }
+
+            if (telefono != null && !telefono.replace(Regex("[\\s()\\-]"), "")
+                    .matches(Regex("^\\+?[0-9]{10,13}$"))
+            ) {
+                etTelefono.error = "Ingresa un teléfono válido"
+                etTelefono.requestFocus()
                 return@setOnClickListener
             }
 
@@ -1456,6 +1833,19 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 etEmail.requestFocus()
 
+                return@setOnClickListener
+            }
+
+            if (username.isBlank()) {
+                etUsername.error = "Ingresa un nombre de usuario"
+                etUsername.requestFocus()
+                return@setOnClickListener
+            }
+
+            if (!username.matches(Regex("^[a-z0-9._-]{3,30}$"))) {
+                etUsername.error =
+                    "Usa de 3 a 30 caracteres: letras, números, punto, guion o guion bajo"
+                etUsername.requestFocus()
                 return@setOnClickListener
             }
 
@@ -1534,6 +1924,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 botonCancelar = btnCancelar,
                 nombre = nombre,
                 cedula = cedula,
+                username = username,
                 email = email,
                 telefono = telefono,
                 password = password,
@@ -1552,6 +1943,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         botonCancelar: View,
         nombre: String,
         cedula: String,
+        username: String,
         email: String,
         telefono: String?,
         password: String,
@@ -1568,6 +1960,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         CreateUsuarioRequest(
                             nombre_completo = nombre,
                             cedula = cedula,
+                            username = username,
                             email = email,
                             password = password,
                             telefono = telefono,
@@ -1600,9 +1993,27 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     botonCrear.isEnabled = true
                     botonCancelar.isEnabled = true
 
+                    val detalle = try {
+                        val body = response.errorBody()?.string().orEmpty()
+                        val json = org.json.JSONObject(body)
+                        val mensaje = json.opt("message")
+                        when (mensaje) {
+                            is org.json.JSONArray -> (0 until mensaje.length()).joinToString(". ") {
+                                mensaje.optString(
+                                    it
+                                )
+                            }
+
+                            is String -> mensaje
+                            else -> ""
+                        }
+                    } catch (_: Exception) {
+                        ""
+                    }
+
                     mostrarError(
-                        "No se pudo crear el operario. " +
-                                "Código: ${response.code()}"
+                        if (detalle.isNotBlank()) "No se pudo crear el operario: $detalle"
+                        else "No se pudo crear el operario. Código: ${response.code()}"
                     )
                 }
 

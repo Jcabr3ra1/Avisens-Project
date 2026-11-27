@@ -1,8 +1,23 @@
 package com.project.avisensandroid.ui
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import android.app.DatePickerDialog
 import android.app.Dialog
+import android.net.Uri
+import android.widget.ProgressBar
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.graphics.Color
+import androidx.core.content.FileProvider
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.File
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -14,11 +29,12 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.core.os.bundleOf
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.Hu56OfflineQueue
+import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.controller.SesionExpirada
 import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
@@ -31,7 +47,6 @@ import com.project.avisensandroid.databinding.Co03PerfilOpBinding
 import com.project.avisensandroid.databinding.Co04SeguridadOpBinding
 import com.project.avisensandroid.databinding.R01RegistrarGalponBinding
 import com.project.avisensandroid.databinding.R03NuevoInsumoBinding
-import com.project.avisensandroid.databinding.R03MovimientoInsumoBinding
 import com.project.avisensandroid.databinding.R04RegistrarEventoMortalidadBinding
 import com.project.avisensandroid.databinding.R05RegistrarEventoEnfermoBinding
 import com.project.avisensandroid.databinding.R06RegistrarSeguimientoSanitarioBinding
@@ -41,7 +56,6 @@ import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
 import com.project.avisensandroid.model.LoteSelectorResponse
-import com.project.avisensandroid.model.RegistrarMovimientoRequest
 import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.model.UserRole
@@ -57,14 +71,27 @@ import com.project.avisensandroid.ui.fragments.PropietarioFragment
 import com.project.avisensandroid.ui.fragments.GestionOperariosFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import com.project.avisensandroid.controller.NotificacionesLocales
+import android.Manifest
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import java.util.Calendar
 import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AperturaReanudableActivity() {
+
+    private var monitoreoNotificaciones: Job? = null
+
 
     companion object {
         private const val STATE_GRANJA_ID = "state_granja_id"
         private const val STATE_GALPON_ID = "state_galpon_id"
+        private const val SELECCION_PREFS = "avisens_seleccion_por_usuario"
     }
 
     // =========================================================
@@ -85,8 +112,8 @@ class MainActivity : AppCompatActivity() {
     // COLORES DE SPINNER
     // =========================================================
 
-    private val spinnerTextoSeleccionado =
-        0xFF171D1A.toInt()
+    private val spinnerTextoSeleccionado get() =
+        ColoresAdaptativos.texto(this, "#171D1A")
 
     private val spinnerTextoDropdown =
         0xFFFFFFFF.toInt()
@@ -98,7 +125,14 @@ class MainActivity : AppCompatActivity() {
     // ADAPTADOR DE SPINNER ESTILIZADO
     // =========================================================
 
-    private class SpinnerAdapterEstilizado(
+    object CausasMortalidad {
+        const val OTRA = "Otra causa"
+        val opciones = listOf("Golpe de calor", "Estrés por frío", "Enfermedad respiratoria",
+            "Enfermedad digestiva", "Deshidratación", "Aplastamiento", "Lesiones físicas",
+            "Problemas de alimentación", "Causa desconocida")
+    }
+
+    class SpinnerAdapterEstilizado(
         context: android.content.Context,
         items: MutableList<String>
     ) : ArrayAdapter<String>(
@@ -108,13 +142,13 @@ class MainActivity : AppCompatActivity() {
     ) {
 
         private val colorTextoSeleccionado =
-            0xFF171D1A.toInt()
+            ColoresAdaptativos.texto(context, "#171D1A")
 
         private val colorTextoDropdown =
-            0xFF171D1A.toInt()
+            ColoresAdaptativos.texto(context, "#171D1A")
 
         private val colorFondoDropdown =
-            0xFFFFFFFF.toInt()
+            ColoresAdaptativos.superficie(context, "#FFFFFF")
 
         init {
             setDropDownViewResource(
@@ -140,7 +174,7 @@ class MainActivity : AppCompatActivity() {
                     colorTextoSeleccionado
                 )
 
-                view.textSize = 13f
+                view.textSize = 14f
 
                 view.setPadding(
                     8,
@@ -178,7 +212,7 @@ class MainActivity : AppCompatActivity() {
                     colorFondoDropdown
                 )
 
-                view.textSize = 13f
+                view.textSize = 14f
 
                 view.setPadding(
                     16,
@@ -213,27 +247,166 @@ class MainActivity : AppCompatActivity() {
     // Se conserva mientras el usuario navega entre las pantallas.
     private var galponSeleccionadoId: Int? = null
 
+    // Fotografía de mortalidad: captura y envío binario al backend.
+    private var fotoMortalidadTemporal: File? = null
+    private var fotoMortalidadTomada: Boolean = false
+    private var fotoMortalidadVistaPrevia: android.widget.ImageView? = null
+    private var fotoMortalidadBotonAdjuntar: View? = null
+    private var fotoMortalidadContenedorPrevia: View? = null
+    private val capturarFotoMortalidad = registerForActivityResult(ActivityResultContracts.TakePicture()) { exito ->
+        fotoMortalidadTomada = exito && fotoMortalidadTemporal?.exists() == true
+        val archivo = fotoMortalidadTemporal
+        if (fotoMortalidadTomada && archivo != null) {
+            fotoMortalidadVistaPrevia?.apply {
+                setImageURI(null)
+                setImageURI(Uri.fromFile(archivo))
+                visibility = View.VISIBLE
+            }
+            fotoMortalidadBotonAdjuntar?.visibility = View.GONE
+            fotoMortalidadContenedorPrevia?.visibility = View.VISIBLE
+        } else {
+            fotoMortalidadVistaPrevia?.visibility = View.GONE
+            fotoMortalidadBotonAdjuntar?.visibility = View.VISIBLE
+            fotoMortalidadContenedorPrevia?.visibility = View.GONE
+            archivo?.delete()
+            fotoMortalidadTemporal = null
+        }
+    }
+
+    // El indicador es exclusivo de la reconexión, nunca del sondeo cada 15 s.
+    private var indicadorReconexion: View? = null
+    private val ocultarIndicadorReconexion = Runnable { ocultarCargaReconexion() }
+
+    private fun mostrarCargaReconexion() {
+        val raiz = findViewById<ViewGroup>(android.R.id.content) ?: return
+        ocultarCargaReconexion()
+        // Indicador pequeño en la zona superior, sin bloquear ni cubrir el contenido.
+        val densidad = resources.displayMetrics.density
+        val tamano = (32 * densidad).toInt()
+        val contenedor = FrameLayout(this).apply {
+            isClickable = false
+            isFocusable = false
+            elevation = 8 * densidad
+        }
+        contenedor.addView(ProgressBar(this).apply {
+            isIndeterminate = true
+        }, FrameLayout.LayoutParams(tamano, tamano))
+        val posicion = FrameLayout.LayoutParams(
+            tamano, tamano, android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+        ).apply { topMargin = (72 * densidad).toInt() }
+        raiz.addView(contenedor, posicion)
+        indicadorReconexion = contenedor
+        // Evita dejar el indicador bloqueado si la petición tarda o falla.
+        mainHandler.postDelayed(ocultarIndicadorReconexion, 2500L)
+    }
+
+    private fun ocultarCargaReconexion() {
+        mainHandler.removeCallbacks(ocultarIndicadorReconexion)
+        indicadorReconexion?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        indicadorReconexion = null
+    }
+
+    private val networkManager by lazy { getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager }
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var ultimaConexionValidada: Boolean? = null
+    private var observandoConexion = false
+    private var reconexionPendiente = false
+    private val reconectarRunnable = Runnable { actualizarPantallaTrasReconectar(false) }
+
+    // Consulta el apartado visible cada 15 s mientras la app está en primer plano.
+    // Así detecta cambios realizados por otras cuentas sin depender de una reconexión.
+    private val intervaloActualizacionMs = 15_000L
+    private val actualizacionPeriodica = object : Runnable {
+        override fun run() {
+            if (!observandoConexion) return
+            if (com.project.avisensandroid.controller.OfflineCache.hayInternet(this@MainActivity)) {
+                actualizarPantallaTrasReconectar(true)
+            }
+            mainHandler.postDelayed(this, intervaloActualizacionMs)
+        }
+    }
+
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = revisarConexion()
+        override fun onLost(network: Network) = revisarConexion()
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = revisarConexion()
+    }
+
+    private fun revisarConexion() {
+        mainHandler.post {
+            if (!observandoConexion) return@post
+            val red = networkManager.activeNetwork
+            val caps = red?.let { networkManager.getNetworkCapabilities(it) }
+            val conectada = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            val anterior = ultimaConexionValidada
+            ultimaConexionValidada = conectada
+            if (!conectada) {
+                reconexionPendiente = true
+                mainHandler.removeCallbacks(reconectarRunnable)
+            } else if (anterior == false || reconexionPendiente) {
+                reconexionPendiente = false
+                Hu56OfflineQueue.programar(applicationContext)
+                mainHandler.removeCallbacks(reconectarRunnable)
+                mainHandler.postDelayed(reconectarRunnable, 1200L)
+            }
+        }
+    }
+
+    private fun actualizarPantallaTrasReconectar(silenciosa: Boolean) {
+        if (!observandoConexion || supportFragmentManager.isStateSaved) return
+        if (!com.project.avisensandroid.controller.OfflineCache.hayInternet(this)) return
+        // Actualizar el fragmento existente, sin destruirlo ni cambiar de apartado.
+        val visible = supportFragmentManager.fragments.lastOrNull { it.isAdded && it.isVisible }
+        if (!silenciosa && visible is InicioFragment ||
+            !silenciosa && visible is SensoresFragment ||
+            !silenciosa && visible is BodegaFragment ||
+            !silenciosa && visible is BitacoraFragment ||
+            !silenciosa && visible is AlertasFragment) {
+            mostrarCargaReconexion()
+        }
+        when (visible) {
+            is InicioFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            is SensoresFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            // Bodega ya tiene su propio progressInsumos para la carga inicial.
+            // En reconexión se usa únicamente el indicador superior común.
+            is BodegaFragment -> visible.actualizarSilenciosamente()
+            is com.project.avisensandroid.ui.fragments.BitacoraPesajesFragment -> visible.actualizarSilenciosamente()
+            is com.project.avisensandroid.ui.fragments.BitacoraConsumoFragment -> visible.actualizarSilenciosamente()
+            is BitacoraFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            is GestionOperariosFragment -> visible.actualizarSilenciosamente()
+            is AlertasFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+        }
+    }
+
+    private fun preferenciasSeleccion() = getSharedPreferences(SELECCION_PREFS, MODE_PRIVATE)
+    private fun claveSeleccion(tipo: String): String = "${UserSession.userId(this) ?: 0}_$tipo"
+
     fun obtenerRolActual(): UserRole? = rolActual
 
     fun obtenerGranjaSeleccionadaId(): Int? = granjaSeleccionadaId
 
     fun seleccionarGranja(granjaId: Int) {
         granjaSeleccionadaId = granjaId
+        preferenciasSeleccion().edit().putInt(claveSeleccion("granja"), granjaId).apply()
     }
 
     fun obtenerGalponSeleccionadoId(): Int? = galponSeleccionadoId
 
     fun seleccionarGalpon(galponId: Int) {
         galponSeleccionadoId = galponId
+        preferenciasSeleccion().edit().putInt(claveSeleccion("galpon"), galponId).apply()
     }
 
     fun limpiarGalponSeleccionado() {
         galponSeleccionadoId = null
+        preferenciasSeleccion().edit().remove(claveSeleccion("galpon")).apply()
     }
 
     fun limpiarGranjaSeleccionada() {
         granjaSeleccionadaId = null
         galponSeleccionadoId = null
+        preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
+            .remove(claveSeleccion("galpon")).apply()
     }
 
     fun obtenerNombreUsuario(): String =
@@ -242,20 +415,60 @@ class MainActivity : AppCompatActivity() {
     fun esOperario(): Boolean =
         rolActual == UserRole.OPERARIO
 
+    // Un único propietario de los insets para todas las pantallas de MainActivity.
+    @Suppress("DEPRECATION")
+    private fun configurarMargenesSistema() {
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+        val contenido = findViewById<View>(android.R.id.content)
+        contenido.setBackgroundResource(R.color.bg_app)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(contenido) { v, insets ->
+            val barras = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                        androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+            )
+            val teclado = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            v.setPadding(barras.left, barras.top, barras.right, maxOf(barras.bottom, teclado.bottom))
+            // Evita que los fragments y BottomNavigationView sumen otra vez los márgenes.
+            androidx.core.view.WindowInsetsCompat.CONSUMED
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(contenido)
+    }
+
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(if (savedInstanceState?.getBoolean("configuracion_abierta") == true) null else savedInstanceState)
+
+        configurarMargenesSistema()
 
         granjaSeleccionadaId = savedInstanceState?.getInt(STATE_GRANJA_ID)?.takeIf { it != 0 }
+            ?: preferenciasSeleccion().getInt(claveSeleccion("granja"), 0).takeIf { it > 0 }
         galponSeleccionadoId = savedInstanceState?.getInt(STATE_GALPON_ID)?.takeIf { it != 0 }
+            ?: preferenciasSeleccion().getInt(claveSeleccion("galpon"), 0).takeIf { it > 0 }
 
         RetrofitClient.inicializar(applicationContext)
+        Hu56OfflineQueue.programar(applicationContext)
 
         rolActual = UserSession.role(this)
 
+        if (rolActual == UserRole.ADMINISTRADOR) {
+            rechazarAdministrador()
+            return
+        }
+
         if (!UserSession.isLoggedIn(this) || rolActual == null) {
             irALogin()
+            return
+        }
+
+        if (savedInstanceState?.getBoolean("configuracion_abierta") == true) {
+            mostrarConfiguracion()
             return
         }
 
@@ -275,7 +488,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             UserRole.ADMINISTRADOR -> {
-                mostrarPantallaRolPendiente()
+                rechazarAdministrador()
             }
 
             null -> irALogin()
@@ -290,6 +503,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (isFinishing) return
 
         // Si la sesión se perdió con la app en segundo plano, nadie recibió
         // el aviso: se comprueba al volver.
@@ -299,34 +513,104 @@ class MainActivity : AppCompatActivity() {
         }
 
         SesionExpirada.registrar(alExpirarSesion)
+        if (UserSession.isLoggedIn(this)) {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 712)
+            }
+            NotificacionesLocales.programar(applicationContext)
+            monitoreoNotificaciones?.cancel()
+            monitoreoNotificaciones = lifecycleScope.launch {
+                while (isActive) {
+                    try { NotificacionesLocales.revisar(applicationContext) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */ }
+                    delay(15_000L)
+                }
+            }
+        }
+        ultimaConexionValidada = com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
+        if (!ultimaConexionValidada!!) reconexionPendiente = true
+        try {
+            networkManager.registerDefaultNetworkCallback(networkCallback)
+            observandoConexion = true
+        } catch (_: Exception) {
+            observandoConexion = false
+        }
+        mainHandler.removeCallbacks(actualizacionPeriodica)
+        if (observandoConexion) {
+            mainHandler.postDelayed(actualizacionPeriodica, intervaloActualizacionMs)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (observandoConexion) revisarConexion()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        abrirAvisoPendiente()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (!supportFragmentManager.isStateSaved) abrirAvisoPendiente()
+    }
+
+    private fun abrirAvisoPendiente() {
+        val aviso = intent ?: return
+        val id = aviso.getIntExtra(NotificacionesLocales.EXTRA_NOTIFICACION, -1)
+        if (id <= 0 || supportFragmentManager.isStateSaved) return
+        val usuario = aviso.getIntExtra(NotificacionesLocales.EXTRA_USUARIO, -1)
+        val alerta = aviso.getBooleanExtra(NotificacionesLocales.EXTRA_ALERTA, false)
+        aviso.removeExtra(NotificacionesLocales.EXTRA_NOTIFICACION)
+        if (!UserSession.isLoggedIn(this) || UserSession.userId(this) != usuario) return
+        if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) return
+        if (findViewById<SlidingBottomNavigationView>(R.id.bottomNav) == null) volverAlInicio()
+        if (alerta) {
+            mostrarFragment(AlertasFragment())
+        } else {
+            volverAlInicio()
+        }
+        lifecycleScope.launch {
+            try {
+                if (UserSession.userId(this@MainActivity) == usuario) {
+                    RetrofitClient.api.marcarNotificacionLeida(id)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
     }
 
     override fun onStop() {
+        monitoreoNotificaciones?.cancel()
+        monitoreoNotificaciones = null
+        observandoConexion = false
+        mainHandler.removeCallbacks(reconectarRunnable)
+        mainHandler.removeCallbacks(actualizacionPeriodica)
+        ocultarCargaReconexion()
+        try { networkManager.unregisterNetworkCallback(networkCallback) } catch (_: Exception) { }
         SesionExpirada.quitar(alExpirarSesion)
         super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putBoolean("configuracion_abierta", ::configuracionBinding.isInitialized && configuracionBinding.root.isAttachedToWindow)
         outState.putInt(STATE_GRANJA_ID, granjaSeleccionadaId ?: 0)
         outState.putInt(STATE_GALPON_ID, galponSeleccionadoId ?: 0)
     }
 
-    private fun mostrarPantallaRolPendiente() {
-
-        setContentView(R.layout.activity_rol_pendiente)
-
-        val txtRol = findViewById<TextView>(R.id.txtRolActual)
-        val txtMensaje = findViewById<TextView>(R.id.txtMensajeRol)
-        val btnCerrarSesion = findViewById<View>(R.id.btnCerrarSesionRol)
-
-        txtRol.text = rolActual?.displayName ?: "Usuario"
-        txtMensaje.text =
-            "La interfaz para ${rolActual?.displayName ?: "este rol"} todavía está en desarrollo.\n\nLa sesión fue autenticada correctamente y no se mostrará la interfaz de Operario."
-
-        btnCerrarSesion.setOnClickListener {
-            cerrarSesion()
+    private fun rechazarAdministrador() {
+        val refreshToken = UserSession.refreshToken(this)
+        UserSession.clear(this)
+        if (!refreshToken.isNullOrBlank()) {
+            RetrofitClient.cerrarSesionRemota(refreshToken)
         }
+        irALogin(adminNoPermitido = true)
     }
 
     fun mostrarPanelPropietario() {
@@ -338,7 +622,7 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    fun mostrarGestionOperarios() {
+    fun mostrarGestionOperarios(animar: Boolean = false) {
         if (rolActual != UserRole.PROPIETARIO) return
 
         supportFragmentManager
@@ -359,7 +643,10 @@ class MainActivity : AppCompatActivity() {
      */
     private fun cerrarSesion() {
         val refreshToken = UserSession.refreshToken(this)
+        preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
+            .remove(claveSeleccion("galpon")).apply()
         UserSession.clear(this)
+        NotificacionesLocales.cancelar(applicationContext)
         if (!refreshToken.isNullOrBlank()) {
             RetrofitClient.cerrarSesionRemota(refreshToken)
         }
@@ -371,7 +658,8 @@ class MainActivity : AppCompatActivity() {
     // =========================================================
 
     fun mostrarFragment(
-        fragment: Fragment
+        fragment: Fragment,
+        animar: Boolean = false
     ) {
         if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
@@ -383,6 +671,17 @@ class MainActivity : AppCompatActivity() {
                 fragment
             )
             .commit()
+    }
+
+    private fun actualizarTrasRegistro(destino: Fragment) {
+        val contenedor = if (rolActual == UserRole.PROPIETARIO)
+            R.id.propietarioFragmentContainer else R.id.mainFragmentContainer
+        val actual = supportFragmentManager.findFragmentById(contenedor)
+        if (actual is BodegaFragment && destino is BodegaFragment && actual.view != null) {
+            actual.actualizarSilenciosamente()
+        } else if (actual is BitacoraFragment && destino is BitacoraFragment && actual.view != null) {
+            actual.actualizarSilenciosamente()
+        } else mostrarFragment(destino)
     }
 
     fun mostrarAsistenteVoz() {
@@ -404,31 +703,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun navegarDesdeBottomNav(itemId: Int) {
-        when (rolActual) {
-            UserRole.OPERARIO -> when (itemId) {
-                R.id.nav_inicio -> mostrarFragment(InicioFragment())
-                R.id.nav_sensores -> mostrarFragment(SensoresFragment())
-                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
-                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
-                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
-            }
-            UserRole.PROPIETARIO -> when (itemId) {
-                R.id.nav_inicio -> mostrarFragment(InicioFragment())
-                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
-                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
-                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
-                R.id.nav_usuarios -> mostrarGestionOperarios()
-            }
-            else -> Unit
+        val barra = findViewById<SlidingBottomNavigationView>(R.id.bottomNav)
+        val menu = barra.menu
+        val origen = (0 until menu.size()).firstOrNull {
+            menu.getItem(it).itemId == barra.selectedItemId
+        } ?: return
+        val destino = (0 until menu.size()).firstOrNull {
+            menu.getItem(it).itemId == itemId
+        } ?: return
+        if (origen == destino) return
+
+        val fragment = when (itemId) {
+            R.id.nav_inicio -> InicioFragment()
+            R.id.nav_sensores -> SensoresFragment()
+            R.id.nav_bodega -> BodegaFragment()
+            R.id.nav_alertas -> AlertasFragment()
+            R.id.nav_bitacora -> BitacoraFragment()
+            R.id.nav_usuarios -> GestionOperariosFragment()
+            else -> return
         }
+        val contenedor = when (rolActual) {
+            UserRole.PROPIETARIO -> R.id.propietarioFragmentContainer
+            UserRole.OPERARIO -> R.id.mainFragmentContainer
+            else -> return
+        }
+        val transaccion = supportFragmentManager.beginTransaction()
+            .setCustomAnimations(
+                if (destino > origen) R.anim.slide_entrada_derecha else R.anim.slide_entrada_izquierda,
+                if (destino > origen) R.anim.slide_salida_izquierda else R.anim.slide_salida_derecha
+            )
+            .replace(contenedor, fragment)
+        // Mantener el comportamiento anterior de Atrás en Operarios.
+        if (itemId == R.id.nav_usuarios) transaccion.addToBackStack(null)
+        transaccion.commit()
     }
 
     // =========================================================
     // API - GRANJAS
     // =========================================================
 
-    suspend fun obtenerGranjas() =
-        RetrofitClient.api.listarGranjas(
+    suspend fun obtenerGranjas(soloCache: Boolean = false) =
+        (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarGranjas(
             page = 1,
             limit = 100
         )
@@ -437,8 +752,8 @@ class MainActivity : AppCompatActivity() {
     // API - GALPONES
     // =========================================================
 
-    suspend fun obtenerGalpones() =
-        RetrofitClient.api.listarGalpones(
+    suspend fun obtenerGalpones(soloCache: Boolean = false) =
+        (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarGalpones(
             page = 1,
             limit = 100
         )
@@ -514,14 +829,14 @@ class MainActivity : AppCompatActivity() {
      * seleccionado. Se usa para que las bitácoras muestren únicamente los
      * registros del galpón activo.
      */
-    suspend fun obtenerIdsLotesDeGalponSeleccionado(): Set<Int> {
+    suspend fun obtenerIdsLotesDeGalponSeleccionado(soloCache: Boolean = false): Set<Int> {
         val galponId = galponSeleccionadoId ?: return emptySet()
         val todosLosLotes = mutableListOf<LoteSelectorResponse>()
         var pagina = 1
         var totalPaginas = 1
 
         do {
-            val response = RetrofitClient.api.listarLotes(
+            val response = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarLotes(
                 page = pagina,
                 limit = 100
             )
@@ -565,9 +880,10 @@ class MainActivity : AppCompatActivity() {
     // IR AL LOGIN
     // =========================================================
 
-    private fun irALogin(sesionExpirada: Boolean = false) {
+    private fun irALogin(sesionExpirada: Boolean = false, adminNoPermitido: Boolean = false) {
 
         if (isFinishing) return
+        NotificacionesLocales.cancelar(applicationContext)
 
         // Limpia la tarea para que Atrás no regrese a pantallas sin sesión.
         startActivity(
@@ -577,6 +893,7 @@ class MainActivity : AppCompatActivity() {
             ).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, sesionExpirada)
+                putExtra(LoginActivity.EXTRA_ADMIN_NO_PERMITIDO, adminNoPermitido)
             }
         )
 
@@ -802,6 +1119,19 @@ class MainActivity : AppCompatActivity() {
 
         if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
+        // Configuración reemplaza el layout completo: retirar primero los
+        // fragments que dependen de los contenedores de navegación.
+        val manager = supportFragmentManager
+        manager.executePendingTransactions()
+        if (manager.backStackEntryCount > 0) {
+            manager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
+        if (manager.fragments.isNotEmpty()) {
+            val transaction = manager.beginTransaction()
+            manager.fragments.forEach { transaction.remove(it) }
+            transaction.commitNow()
+        }
+
         configuracionBinding =
             Co01ConfiguracionOpBinding.inflate(
                 layoutInflater
@@ -810,6 +1140,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(
             configuracionBinding.root
         )
+
+        configuracionBinding.switchModoOscuro.isChecked = AvisensApplication.oscuro(this)
+        configuracionBinding.switchModoOscuro.setOnCheckedChangeListener { _, checked ->
+            AvisensApplication.cambiar(this, checked)
+        }
 
         configuracionBinding
             .btnConfiguracionPerfil
@@ -943,6 +1278,10 @@ class MainActivity : AppCompatActivity() {
     // NOTIFICACIONES
     // =========================================================
 
+    fun abrirCentroNotificaciones() {
+        CentroNotificaciones(this).mostrar()
+    }
+
     private fun mostrarNotificaciones() {
 
         notificacionesBinding =
@@ -966,246 +1305,189 @@ class MainActivity : AppCompatActivity() {
     // PERFIL
     // =========================================================
 
-    private fun mostrarPerfil() {
+    private var fotoInicio: android.graphics.Bitmap? = null
+    private var fotoInicioUsuario: Int? = null
+    private var versionFotoInicio = 0
 
-        perfilBinding =
-            Co03PerfilOpBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            perfilBinding.root
-        )
-
-        val nombreInicial =
-            perfilBinding
-                .edtNombrePerfil
-                .text
-                .toString()
-
-        val correoInicial =
-            perfilBinding
-                .edtCorreoPerfil
-                .text
-                .toString()
-
-        val telefonoInicial =
-            perfilBinding
-                .edtTelefonoPerfil
-                .text
-                .toString()
-
-        setPerfilEditable(false)
-
-        perfilBinding
-            .btnGuardarPerfil
-            .visibility =
-            View.GONE
-
-        fun revisarCambios() {
-
-            val hayCambios =
-                perfilBinding
-                    .edtNombrePerfil
-                    .text
-                    .toString() != nombreInicial ||
-
-                        perfilBinding
-                            .edtCorreoPerfil
-                            .text
-                            .toString() != correoInicial ||
-
-                        perfilBinding
-                            .edtTelefonoPerfil
-                            .text
-                            .toString() != telefonoInicial
-
-            perfilBinding
-                .btnGuardarPerfil
-                .visibility =
-                if (hayCambios) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+    fun actualizarAvatarInicio(contenedor: android.widget.FrameLayout) {
+        val usuario = UserSession.userId(this) ?: return
+        val icono = contenedor.getChildAt(0) as? android.widget.ImageView ?: return
+        if (fotoInicioUsuario != usuario) {
+            fotoInicioUsuario = usuario
+            fotoInicio = null
+            versionFotoInicio++
         }
-
-        val textWatcher =
-            object : TextWatcher {
-
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) = Unit
-
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) {
-
-                    revisarCambios()
+        fun pintar() {
+            val foto = fotoInicio
+            val medida = if (foto == null) (22 * resources.displayMetrics.density).toInt() else -1
+            icono.layoutParams = android.widget.FrameLayout.LayoutParams(medida, medida, android.view.Gravity.CENTER)
+            icono.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+            contenedor.clipToOutline = true
+            if (foto == null) icono.setImageResource(R.drawable.ic_person) else icono.setImageBitmap(foto)
+        }
+        pintar()
+        val version = versionFotoInicio
+        lifecycleScope.launch {
+            try {
+                for (api in listOf(RetrofitClient.apiCache, RetrofitClient.api)) {
+                    val r = try { api.consultarFotoPerfil() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { continue }
+                    val imagen = if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        r.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+                    } else {
+                        r.errorBody()?.close()
+                        if (r.code() != 404) return@launch
+                        null
+                    }
+                    if (version != versionFotoInicio || UserSession.userId(this@MainActivity) != usuario) return@launch
+                    fotoInicio = imagen
+                    if (contenedor.isAttachedToWindow) pintar()
                 }
-
-                override fun afterTextChanged(
-                    s: Editable?
-                ) = Unit
-            }
-
-        perfilBinding
-            .edtNombrePerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .edtCorreoPerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .edtTelefonoPerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .btnCerrarPerfil
-            .setOnClickListener {
-
-                mostrarConfiguracion()
-            }
-
-        perfilBinding
-            .btnEditarNombre
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtNombrePerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtNombrePerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnEditarCorreo
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtCorreoPerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtCorreoPerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnEditarTelefono
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtTelefonoPerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtTelefonoPerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnGuardarPerfil
-            .setOnClickListener {
-
-                val nombre =
-                    perfilBinding
-                        .edtNombrePerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                val correo =
-                    perfilBinding
-                        .edtCorreoPerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                val telefono =
-                    perfilBinding
-                        .edtTelefonoPerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                when {
-
-                    nombre.isEmpty() -> {
-
-                        perfilBinding
-                            .edtNombrePerfil
-                            .error =
-                            "Ingresa tu nombre"
-                    }
-
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo)
-                        .matches() -> {
-
-                        perfilBinding
-                            .edtCorreoPerfil
-                            .error =
-                            "Ingresa un correo válido"
-                    }
-
-                    telefono.isEmpty() -> {
-
-                        perfilBinding
-                            .edtTelefonoPerfil
-                            .error =
-                            "Ingresa tu teléfono"
-                    }
-
-                    else -> {
-
-                        setPerfilEditable(false)
-
-                        perfilBinding
-                            .btnGuardarPerfil
-                            .visibility =
-                            View.GONE
-
-                        Toast.makeText(
-                            this,
-                            "Perfil actualizado",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
     }
 
-    private fun setPerfilEditable(
-        editable: Boolean
-    ) {
+    private var perfilFotoOcupada = false
+    private val elegirFotoPerfil = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && ::perfilBinding.isInitialized && perfilBinding.root.isAttachedToWindow) {
+            val b = perfilBinding
+            operarFotoPerfil(b) {
+                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        val salida = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            require(salida.size() + n <= 3 * 1024 * 1024) { "La foto supera 3 MB" }
+                            salida.write(buffer, 0, n)
+                        }
+                        salida.toByteArray()
+                    } ?: error("No se pudo abrir la foto")
+                }
+                val tipo = contentResolver.getType(uri)
+                require(tipo in listOf("image/jpeg", "image/png", "image/webp")) { "Selecciona JPG, PNG o WebP" }
+                val respuesta = RetrofitClient.api.subirFotoPerfil(bytes.toRequestBody(tipo!!.toMediaType()))
+                check(respuesta.isSuccessful) { "No se pudo subir la foto (${respuesta.code()})" }
+                cargarFotoPerfil(b)
+            }
+        }
+    }
 
-        perfilBinding
-            .edtNombrePerfil
-            .isEnabled = editable
+    private fun operarFotoPerfil(b: Co03PerfilOpBinding, accion: suspend () -> Unit) {
+        if (perfilFotoOcupada) return
+        if (!OfflineCache.hayInternet(this)) {
+            Toast.makeText(this, "Necesitas conexión para modificar la foto", Toast.LENGTH_SHORT).show()
+            return
+        }
+        perfilFotoOcupada = true
+        lifecycleScope.launch {
+            try { accion() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Toast.makeText(this@MainActivity, e.message ?: "No se pudo actualizar la foto", Toast.LENGTH_LONG).show() }
+            finally { perfilFotoOcupada = false }
+        }
+    }
 
-        perfilBinding
-            .edtCorreoPerfil
-            .isEnabled = editable
+    private suspend fun cargarFotoPerfil(b: Co03PerfilOpBinding, soloCache: Boolean = false) {
+        val respuesta = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarFotoPerfil()
+        if (!b.root.isAttachedToWindow) { respuesta.body()?.close(); respuesta.errorBody()?.close(); return }
+        if (respuesta.code() == 404) {
+            fotoInicio = null
+            fotoInicioUsuario = UserSession.userId(this)
+            versionFotoInicio++
+            respuesta.errorBody()?.close()
+            b.imgFotoPerfil.visibility = View.GONE
+            b.txtInicialPerfil.visibility = View.VISIBLE
 
-        perfilBinding
-            .edtTelefonoPerfil
-            .isEnabled = editable
+            return
+        }
+        check(respuesta.isSuccessful) { "No se pudo consultar la foto" }
+        val imagen = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            respuesta.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+        }
+        if (imagen != null && b.root.isAttachedToWindow) {
+            fotoInicio = imagen
+            fotoInicioUsuario = UserSession.userId(this)
+            versionFotoInicio++
+            b.imgFotoPerfil.setImageBitmap(imagen)
+            b.imgFotoPerfil.visibility = View.VISIBLE
+            b.txtInicialPerfil.visibility = View.GONE
+
+        }
+    }
+
+    private fun inicialesPerfil(nombre: String): String = nombre.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }.ifBlank { "U" }
+
+    private fun mostrarPerfil() {
+        val b = Co03PerfilOpBinding.inflate(layoutInflater)
+        perfilBinding = b
+        setContentView(b.root)
+        val nombre = UserSession.name(this)
+        b.txtNombrePerfil.text = nombre
+        b.txtInicialPerfil.text = inicialesPerfil(nombre)
+        b.edtCorreoPerfil.setText(UserSession.email(this))
+        b.edtTelefonoPerfil.setText("No disponible")
+        b.btnCerrarPerfil.setOnClickListener { mostrarConfiguracion() }
+        b.btnCambiarFotoPerfil.setOnClickListener {
+            if (perfilFotoOcupada) return@setOnClickListener
+            val tieneFoto = b.imgFotoPerfil.visibility == View.VISIBLE
+            val opciones = if (tieneFoto) arrayOf("Ver foto", "Cambiar foto", "Eliminar foto") else arrayOf("Elegir foto")
+            androidx.appcompat.app.AlertDialog.Builder(this).setItems(opciones) { _, indice ->
+                when (opciones[indice]) {
+                    "Ver foto" -> {
+                        val imagen = android.widget.ImageView(this).apply {
+                            setImageDrawable(b.imgFotoPerfil.drawable)
+                            adjustViewBounds = true
+                            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                        }
+                        androidx.appcompat.app.AlertDialog.Builder(this).setView(imagen).setPositiveButton("Cerrar", null).show()
+                    }
+                    "Eliminar foto" -> androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setMessage("¿Eliminar tu foto de perfil?")
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Eliminar") { _, _ ->
+                            operarFotoPerfil(b) {
+                                val r = RetrofitClient.api.eliminarFotoPerfil()
+                                check(r.isSuccessful) { "No se pudo eliminar la foto" }
+                                fotoInicio = null
+                                fotoInicioUsuario = UserSession.userId(this@MainActivity)
+                                versionFotoInicio++
+                                b.imgFotoPerfil.visibility = View.GONE
+                                b.txtInicialPerfil.visibility = View.VISIBLE
+                            }
+                        }.show().estiloCancelar()
+                    else -> elegirFotoPerfil.launch("image/*")
+                }
+            }.show()
+        }
+        lifecycleScope.launch {
+            val usuario = UserSession.userId(this@MainActivity)
+            for (soloCache in listOf(true, false)) {
+                if (!b.root.isAttachedToWindow || usuario != UserSession.userId(this@MainActivity)) break
+                if (!soloCache && !OfflineCache.hayInternet(this@MainActivity)) break
+                try {
+                    if (!perfilFotoOcupada) {
+                        try { cargarFotoPerfil(b, soloCache) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (_: Exception) { }
+                    }
+                    val r = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarPerfil()
+                    val datos = r.body() ?: continue
+                    if (!b.root.isAttachedToWindow || usuario != UserSession.userId(this@MainActivity)) break
+                    fun dato(clave: String) = datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                    b.txtNombrePerfil.text = dato("nombre_completo")
+                    b.txtInicialPerfil.text = inicialesPerfil(dato("nombre_completo"))
+                    b.edtCorreoPerfil.setText(dato("email").ifBlank { "No registrado" })
+                    b.edtTelefonoPerfil.setText(dato("telefono").ifBlank { "No registrado" })
+                    b.txtDetallePerfil.text = dato("rol").lowercase().replaceFirstChar { it.uppercase() }
+                    b.txtUsuarioPerfil.text = dato("username").ifBlank { "No registrado" }
+                    b.txtOrganizacionPerfil.text = datos.get("organizacion")?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
+
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
+            }
+        }
     }
 
     // =========================================================
@@ -1270,35 +1552,17 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                if (nombre.isEmpty()) {
-
-                    binding
-                        .edtNombreGalpon
-                        .error =
-                        "Ingresa el nombre del galpón"
-
-                    return@setOnClickListener
+                var primerError: View? = null
+                if (nombre.isBlank()) {
+                    binding.edtNombreGalpon.error = "Ingresa el nombre del galpón"
+                    primerError = primerError ?: binding.edtNombreGalpon
                 }
-
-                if (cantidad.isEmpty()) {
-
-                    binding
-                        .edtCantidadPollos
-                        .error =
-                        "Ingresa la cantidad de pollos"
-
-                    return@setOnClickListener
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadPollos.error = "Ingresa una cantidad mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadPollos
                 }
-
-                if (
-                    (cantidad.toIntOrNull() ?: 0) <= 0
-                ) {
-
-                    binding
-                        .edtCantidadPollos
-                        .error =
-                        "La cantidad debe ser mayor que cero"
-
+                if (primerError != null) {
+                    primerError.requestFocus()
                     return@setOnClickListener
                 }
 
@@ -1394,6 +1658,29 @@ class MainActivity : AppCompatActivity() {
             unidadesMedida
         )
         binding.spinnerUnidadInsumo.adapter = adapterUnidades
+        fun actualizarCamposUnidad(esBultos: Boolean) {
+            binding.txtCantidadInsumo.text = if (esBultos)
+                "Cantidad a ingresar (kg por bulto)" else "Cantidad a ingresar"
+            binding.edtCantidadInsumo.hint = if (esBultos) "Ej. 40" else "Ej. 100"
+            binding.contenedorNumeroBultos.visibility = if (esBultos) View.VISIBLE else View.GONE
+            binding.txtStockMinimoInsumo.text = if (esBultos)
+                "Stock mínimo para alerta (kg)" else "Stock mínimo para alerta"
+            binding.edtCantidadInsumo.error = null
+            if (!esBultos) {
+                binding.edtNumeroBultos.text.clear()
+                binding.edtNumeroBultos.error = null
+            }
+        }
+        binding.spinnerUnidadInsumo.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?,
+                                            view: View?, position: Int, id: Long) {
+                    actualizarCamposUnidad(unidadesMedida.getOrNull(position) == "Bultos")
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
+                    actualizarCamposUnidad(false)
+                }
+            }
 
         cargarTiposAlimentoParaInsumo(
             tiposAlimento,
@@ -1413,46 +1700,53 @@ class MainActivity : AppCompatActivity() {
             val cantidadTexto = binding.edtCantidadInsumo.text.toString().trim()
             val unidadSeleccionada = binding.spinnerUnidadInsumo.selectedItemPosition
             val unidad = binding.spinnerUnidadInsumo.selectedItem?.toString()?.trim().orEmpty()
-            val cantidad = cantidadTexto.toDoubleOrNull()
+            val cantidad = cantidadTexto.replace(',', '.').toDoubleOrNull()
+            val esBultos = unidad == "Bultos"
+            val numeroBultos = binding.edtNumeroBultos.text.toString().trim().toIntOrNull()
             val minimoTexto = binding.edtStockMinimoInsumo.text.toString().trim()
                 .replace(',', '.')
             val stockMinimo = minimoTexto.takeIf { it.isNotBlank() }?.toDoubleOrNull()
 
-            if (minimoTexto.isNotBlank() && (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
+            var primerError: View? = null
+            val faltanSelecciones = mutableListOf<String>()
+            if (minimoTexto.isNotBlank() &&
+                (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
                 binding.edtStockMinimoInsumo.error = "Ingresa un mínimo mayor que 0"
-                return@setOnClickListener
+                primerError = primerError ?: binding.edtStockMinimoInsumo
             }
-
-            if (tipoAlimento == null) {
-                Toast.makeText(
-                    this,
-                    "Selecciona un tipo de alimento",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-
-            if (cantidad == null || cantidad < 0.0) {
+            if (tipoAlimento == null) faltanSelecciones.add("tipo de alimento")
+            if (cantidad == null || !cantidad.isFinite() || cantidad < 0.0 || (esBultos && cantidad <= 0.0)) {
                 binding.edtCantidadInsumo.error = "Ingresa una cantidad válida"
+                primerError = primerError ?: binding.edtCantidadInsumo
+            }
+            if (esBultos && (numeroBultos == null || numeroBultos <= 0)) {
+                binding.edtNumeroBultos.error = "Ingresa un número de bultos mayor que 0"
+                primerError = primerError ?: binding.edtNumeroBultos
+            }
+            if (unidadSeleccionada <= 0 || unidad.isEmpty()) faltanSelecciones.add("unidad de medida")
+            if (faltanSelecciones.isNotEmpty() || primerError != null) {
+                if (faltanSelecciones.isNotEmpty()) Toast.makeText(
+                    this, "Selecciona: ${faltanSelecciones.joinToString(", ")}", Toast.LENGTH_SHORT
+                ).show()
+                primerError?.requestFocus()
                 return@setOnClickListener
             }
 
-            if (unidadSeleccionada <= 0 || unidad.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Selecciona una unidad de medida",
-                    Toast.LENGTH_SHORT
-                ).show()
+            val tipoAlimentoValidado = tipoAlimento ?: return@setOnClickListener
+            val cantidadValidada = cantidad ?: return@setOnClickListener
+            val total = if (esBultos) cantidadValidada * (numeroBultos ?: return@setOnClickListener) else cantidadValidada
+            if (!total.isFinite()) {
+                binding.edtCantidadInsumo.error = "La cantidad total no es válida"
                 return@setOnClickListener
             }
 
             crearInsumo(
                 dialog = dialog,
                 binding = binding,
-                nombre = tipoAlimento.nombre.trim(),
+                nombre = tipoAlimentoValidado.nombre.trim(),
                 categoria = "alimento",
-                cantidad = cantidad,
-                unidad = unidad,
+                cantidad = total,
+                unidad = if (esBultos) "Kg" else unidad,
                 stockMinimo = stockMinimo
             )
         }
@@ -1567,7 +1861,7 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                     dialog.dismiss()
-                    mostrarFragment(BodegaFragment())
+                    actualizarTrasRegistro(BodegaFragment())
                 } else {
                     binding.btnAgregarInsumo.isEnabled = true
                     val detalle = response.errorBody()?.string()?.take(250).orEmpty()
@@ -1616,138 +1910,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================
-    // DIALOG - MOVIMIENTO DE INSUMO
-    // =========================================================
-
-    fun mostrarDialogMovimientoInsumo(insumo: InsumoResponse) {
-        if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) {
-            Toast.makeText(
-                this,
-                "Este usuario no puede registrar movimientos de inventario",
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-
-        val dialog = Dialog(this)
-        val binding = R03MovimientoInsumoBinding.inflate(layoutInflater)
-
-        dialog.setContentView(binding.root)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.show()
-
-        dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.90f).toInt(),
-            WindowManager.LayoutParams.WRAP_CONTENT
-        )
-
-        binding.txtNombreMovimiento.text = insumo.nombre
-        binding.txtStockMovimiento.text =
-            "Stock actual: ${formatearNumeroInsumo(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida}"
-
-        val tipos = mutableListOf("Entrada", "Salida")
-        binding.spinnerTipoMovimiento.adapter = SpinnerAdapterEstilizado(this, tipos)
-
-        binding.btnCancelarMovimiento.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        binding.btnGuardarMovimiento.setOnClickListener {
-            val cantidad = binding.edtCantidadMovimiento.text.toString()
-                .trim()
-                .replace(',', '.')
-                .toDoubleOrNull()
-            val motivo = binding.edtMotivoMovimiento.text.toString().trim()
-            val tipoMovimiento = if (binding.spinnerTipoMovimiento.selectedItemPosition == 0) {
-                "entrada"
-            } else {
-                "salida"
-            }
-
-            if (cantidad == null || cantidad <= 0.0) {
-                binding.edtCantidadMovimiento.error = "Ingresa una cantidad mayor que 0"
-                return@setOnClickListener
-            }
-
-            registrarMovimientoInsumo(
-                dialog = dialog,
-                binding = binding,
-                insumo = insumo,
-                tipoMovimiento = tipoMovimiento,
-                cantidad = cantidad,
-                motivo = motivo.ifBlank { null }
-            )
-        }
-    }
-
-    private fun registrarMovimientoInsumo(
-        dialog: Dialog,
-        binding: R03MovimientoInsumoBinding,
-        insumo: InsumoResponse,
-        tipoMovimiento: String,
-        cantidad: Double,
-        motivo: String?
-    ) {
-        binding.btnGuardarMovimiento.isEnabled = false
-
-        lifecycleScope.launch {
-            try {
-                val request = RegistrarMovimientoRequest(
-                    tipo_movimiento = tipoMovimiento,
-                    cantidad = cantidad,
-                    motivo = motivo,
-                    lote_id = null,
-                    comprobante_url = null
-                )
-
-                val response = RetrofitClient.api.registrarMovimientoInsumo(
-                    insumoId = insumo.id,
-                    request = request
-                )
-
-                if (response.isSuccessful) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Movimiento registrado correctamente",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    dialog.dismiss()
-                    mostrarFragment(BodegaFragment())
-                } else {
-                    binding.btnGuardarMovimiento.isEnabled = true
-                    val detalle = response.errorBody()?.string()?.take(250).orEmpty()
-                    val mensaje = when (response.code()) {
-                        401 -> "Sesión no válida. Inicia sesión nuevamente."
-                        403 -> "No tienes permiso para registrar este movimiento."
-                        400 -> "La cantidad o el tipo de movimiento no son válidos."
-                        404 -> "El insumo ya no existe o no está disponible."
-                        else -> "No se pudo registrar el movimiento. Código: ${response.code()}"
-                    }
-                    Toast.makeText(
-                        this@MainActivity,
-                        if (detalle.isBlank()) mensaje else "$mensaje\n$detalle",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            } catch (e: Exception) {
-                binding.btnGuardarMovimiento.isEnabled = true
-                Toast.makeText(
-                    this@MainActivity,
-                    "Error al registrar movimiento: ${e.message ?: "error desconocido"}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    private fun formatearNumeroInsumo(numero: Double): String {
-        return java.text.NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2
-            minimumFractionDigits = 0
-        }.format(numero)
-    }
-
-    // =========================================================
     // DIALOG - MORTALIDAD
     // =========================================================
 
@@ -1772,6 +1934,73 @@ class MainActivity : AppCompatActivity() {
         dialog.setContentView(
             binding.root
         )
+
+        // Foto opcional, almacenada localmente y asociada al ID del registro.
+        fotoMortalidadTemporal = null
+        fotoMortalidadTomada = false
+        fotoMortalidadVistaPrevia = binding.imgFotoMortalidad
+        fotoMortalidadBotonAdjuntar = binding.btnTomarFotoMortalidad
+        fotoMortalidadContenedorPrevia = binding.contenedorFotoMortalidad
+
+        binding.imgFotoMortalidad.setOnClickListener {
+            val foto = fotoMortalidadTemporal
+            if (fotoMortalidadTomada && foto?.exists() == true) {
+                val visor = Dialog(this)
+                val imagenAmpliada = android.widget.ImageView(this).apply {
+                    setImageURI(Uri.fromFile(foto))
+                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    adjustViewBounds = true
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                }
+                visor.setContentView(imagenAmpliada)
+                visor.show()
+                visor.window?.setBackgroundDrawableResource(android.R.color.black)
+                visor.window?.setLayout(
+                    (resources.displayMetrics.widthPixels * 0.95f).toInt(),
+                    (resources.displayMetrics.heightPixels * 0.85f).toInt()
+                )
+                imagenAmpliada.setOnClickListener { visor.dismiss() }
+            }
+        }
+
+        // El botón inferior "Ampliar" utiliza la misma vista previa que la foto.
+        binding.btnAmpliarFotoMortalidad.setOnClickListener {
+            binding.imgFotoMortalidad.performClick()
+        }
+
+        binding.btnEliminarFotoMortalidad.setOnClickListener {
+            fotoMortalidadTemporal?.delete()
+            fotoMortalidadTemporal = null
+            fotoMortalidadTomada = false
+            binding.imgFotoMortalidad.setImageDrawable(null)
+            binding.imgFotoMortalidad.visibility = View.GONE
+            binding.contenedorFotoMortalidad.visibility = View.GONE
+            binding.btnTomarFotoMortalidad.visibility = View.VISIBLE
+        }
+
+        binding.btnTomarFotoMortalidad.setOnClickListener {
+            try {
+                val carpeta = File(filesDir, "evidencias_mortalidad").apply { mkdirs() }
+                val archivo = File.createTempFile("captura_", ".jpg", carpeta)
+                fotoMortalidadTemporal = archivo
+                val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", archivo)
+                omitirAperturaPorActividadExterna()
+                capturarFotoMortalidad.launch(uri)
+            } catch (e: Exception) {
+                cancelarOmisionApertura()
+                Toast.makeText(this, "No se pudo abrir la cámara", Toast.LENGTH_LONG).show()
+            }
+        }
+        dialog.setOnDismissListener {
+            fotoMortalidadVistaPrevia = null
+            fotoMortalidadBotonAdjuntar = null
+            fotoMortalidadContenedorPrevia = null
+            if (fotoMortalidadTemporal?.name?.startsWith("captura_") == true) {
+                fotoMortalidadTemporal?.delete()
+            }
+            fotoMortalidadTemporal = null
+            fotoMortalidadTomada = false
+        }
 
         binding.root.alpha = 0f
 
@@ -1833,6 +2062,15 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
 
+        val causas = (listOf("Sin causa registrada") + CausasMortalidad.opciones + CausasMortalidad.OTRA).toMutableList()
+        binding.spinnerCausaPresuntiva.adapter = SpinnerAdapterEstilizado(this, causas)
+        binding.spinnerCausaPresuntiva.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                binding.edtCausaPresuntiva.visibility = if (causas[position] == CausasMortalidad.OTRA) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+
         binding
             .btnGuardarEvento
             .setOnClickListener {
@@ -1865,54 +2103,42 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                val causa =
-                    binding
-                        .edtCausaPresuntiva
-                        .text
-                        .toString()
-                        .trim()
-                        .ifBlank {
-                            null
-                        }
-
-                when {
-
-                    loteId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un lote",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
-                    }
-
-                    fecha.isEmpty() -> {
-
-                        binding
-                            .edtFecha
-                            .error =
-                            "Selecciona una fecha"
-
-                        return@setOnClickListener
-                    }
-
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
-
-                        binding
-                            .edtCantidadAves
-                            .error =
-                            "Ingresa una cantidad válida mayor que cero"
-
-                        return@setOnClickListener
-                    }
+                val seleccionCausa = causas.getOrNull(binding.spinnerCausaPresuntiva.selectedItemPosition)
+                val causa = when (seleccionCausa) {
+                    null, "Sin causa registrada" -> null
+                    CausasMortalidad.OTRA -> binding.edtCausaPresuntiva.text.toString().trim()
+                    else -> seleccionCausa
                 }
+                if (seleccionCausa == CausasMortalidad.OTRA && (causa.isNullOrBlank() || causa.length > 150 || causa.none { it.isLetter() })) {
+                    binding.edtCausaPresuntiva.error = "Escribe una causa válida (máximo 150 caracteres)"
+                    binding.edtCausaPresuntiva.requestFocus()
+                    return@setOnClickListener
+                }
+
+                var primerError: View? = null
+                var faltanSelecciones = false
+                if (loteId == null) faltanSelecciones = true
+                if (fecha.isBlank()) {
+                    binding.edtFecha.error = "Selecciona una fecha"
+                    primerError = primerError ?: binding.edtFecha
+                }
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadAves.error = "Ingresa una cantidad válida mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadAves
+                }
+                if (faltanSelecciones || primerError != null) {
+                    if (faltanSelecciones) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                    primerError?.requestFocus()
+                    return@setOnClickListener
+                }
+
+                // Las validaciones anteriores ya mostraron todos los errores.
+                // A partir de aquí se utilizan valores no nulos para construir la solicitud.
+                val loteIdValidado = loteId ?: return@setOnClickListener
 
                 val request =
                     RegistroMortalidadRequest(
-                        lote_id = loteId,
+                        lote_id = loteIdValidado,
                         fecha =
                             convertirFechaParaApi(
                                 fecha
@@ -1938,7 +2164,33 @@ class MainActivity : AppCompatActivity() {
 
                 lifecycleScope.launch {
 
+                    if (!OfflineCache.hayInternet(this@MainActivity)) {
+                        val bytesFoto = try {
+                            if (fotoMortalidadTomada) com.project.avisensandroid.controller.FotosMortalidad.preparar(checkNotNull(fotoMortalidadTemporal)) else null
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+                            binding.btnGuardarEvento.isEnabled = true
+                            Toast.makeText(this@MainActivity, "No se pudo preparar la fotografía", Toast.LENGTH_LONG).show()
+                            return@launch
+                        }
+                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request, bytesFoto)
+                        binding.btnGuardarEvento.isEnabled = !guardado
+                        Toast.makeText(this@MainActivity,
+                            if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
+                            Toast.LENGTH_LONG).show()
+                        if (guardado) {
+                            dialog.dismiss()
+                            actualizarTrasRegistro(BitacoraFragment())
+                        }
+                        return@launch
+                    }
                     try {
+                        val foto = fotoMortalidadTemporal
+                        val bytesFoto = if (fotoMortalidadTomada && foto != null) {
+                            com.project.avisensandroid.controller.FotosMortalidad.preparar(foto)
+                        } else null
+                        dialog.setCancelable(false)
+                        dialog.setCanceledOnTouchOutside(false)
+
 
                         val response =
                             RetrofitClient.api
@@ -1947,20 +2199,25 @@ class MainActivity : AppCompatActivity() {
                                 )
 
                         if (response.isSuccessful) {
-
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Registro de mortalidad guardado correctamente",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            val registroId = response.body()?.id
+                            val fotoGuardada = if (bytesFoto != null && registroId != null) {
+                                try {
+                                    com.project.avisensandroid.controller.FotosMortalidad.subir(this@MainActivity, registroId, bytesFoto)
+                                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                catch (_: Exception) { false }
+                            } else bytesFoto == null
+                            Toast.makeText(this@MainActivity,
+                                if (fotoGuardada) "Registro de mortalidad guardado correctamente"
+                                else "Registro guardado, pero la foto no se confirmó. Revisa el registro en Bitácora.",
+                                Toast.LENGTH_LONG).show()
 
                             dialog.dismiss()
 
-                            mostrarFragment(
-                                BitacoraFragment()
-                            )
+                            actualizarTrasRegistro(BitacoraFragment())
 
                         } else {
+                            dialog.setCancelable(true)
+                            dialog.setCanceledOnTouchOutside(true)
 
                             binding
                                 .btnGuardarEvento
@@ -1974,7 +2231,11 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
 
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
+                        dialog.setCancelable(true)
+                        dialog.setCanceledOnTouchOutside(true)
 
                         binding
                             .btnGuardarEvento
@@ -2041,23 +2302,20 @@ class MainActivity : AppCompatActivity() {
 
             val cantidad = cantidadTexto.toIntOrNull()
 
-            when {
-                lotePosition <= 0 || loteId == null -> {
-                    Toast.makeText(
-                        this,
-                        "Selecciona un lote",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
-                fecha.isEmpty() -> {
-                    binding.edtFechaSeguimiento.error = "Selecciona una fecha"
-                    return@setOnClickListener
-                }
-                cantidad == null || cantidad < 0 -> {
-                    binding.edtCantidadAvesSeguimiento.error = "Ingresa una cantidad válida"
-                    return@setOnClickListener
-                }
+            var primerError: View? = null
+            val lotePendiente = lotePosition <= 0 || loteId == null
+            if (fecha.isBlank()) {
+                binding.edtFechaSeguimiento.error = "Selecciona una fecha"
+                primerError = primerError ?: binding.edtFechaSeguimiento
+            }
+            if (cantidad == null || cantidad < 0) {
+                binding.edtCantidadAvesSeguimiento.error = "Ingresa una cantidad válida"
+                primerError = primerError ?: binding.edtCantidadAvesSeguimiento
+            }
+            if (lotePendiente || primerError != null) {
+                if (lotePendiente) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                primerError?.requestFocus()
+                return@setOnClickListener
             }
 
             // El estado pertenece a cada seguimiento y se determina de forma
@@ -2274,60 +2532,28 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                when {
-
-                    loteId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un lote",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
+                var primerError: View? = null
+                val seleccionesPendientes = mutableListOf<String>()
+                if (loteId == null) seleccionesPendientes.add("lote")
+                if (insumoId == null) seleccionesPendientes.add("insumo")
+                if (fecha.isBlank()) {
+                    binding.edtFechaEnfermo.error = "Selecciona una fecha"
+                    primerError = primerError ?: binding.edtFechaEnfermo
+                }
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadAvesEnfermo.error = "Ingresa una cantidad válida mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadAvesEnfermo
+                }
+                if (dosis.isBlank()) {
+                    binding.edtDosisEnfermo.error = "Ingresa la dosis"
+                    primerError = primerError ?: binding.edtDosisEnfermo
+                }
+                if (seleccionesPendientes.isNotEmpty() || primerError != null) {
+                    if (seleccionesPendientes.isNotEmpty()) {
+                        Toast.makeText(this, "Selecciona: ${seleccionesPendientes.joinToString(", ")}", Toast.LENGTH_SHORT).show()
                     }
-
-                    insumoId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un insumo",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
-                    }
-
-                    fecha.isEmpty() -> {
-
-                        binding
-                            .edtFechaEnfermo
-                            .error =
-                            "Selecciona una fecha"
-
-                        return@setOnClickListener
-                    }
-
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
-
-                        binding
-                            .edtCantidadAvesEnfermo
-                            .error =
-                            "Ingresa una cantidad válida mayor que cero"
-
-                        return@setOnClickListener
-                    }
-
-                    dosis.isEmpty() -> {
-
-                        binding
-                            .edtDosisEnfermo
-                            .error =
-                            "Ingresa la dosis"
-
-                        return@setOnClickListener
-                    }
+                    primerError?.requestFocus()
+                    return@setOnClickListener
                 }
 
                 val via =
@@ -2340,15 +2566,19 @@ class MainActivity : AppCompatActivity() {
                             null
                         }
 
+                // Solo continuar con IDs no nulos después de validar todos los campos.
+                val loteIdValidado = loteId ?: return@setOnClickListener
+                val insumoIdValidado = insumoId ?: return@setOnClickListener
+
                 val request =
                     EventoSanitarioRequest(
-                        lote_id = loteId,
+                        lote_id = loteIdValidado,
                         tipo = "tratamiento",
                         fecha =
                             convertirFechaParaApi(
                                 fecha
                             ),
-                        insumo_id = insumoId,
+                        insumo_id = insumoIdValidado,
                         diagnostico = null,
                         producto = null,
                         dosis = dosis,
@@ -2372,6 +2602,18 @@ class MainActivity : AppCompatActivity() {
 
                 lifecycleScope.launch {
 
+                    if (!OfflineCache.hayInternet(this@MainActivity)) {
+                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "sanitario", request)
+                        binding.btnGuardarEnfermo.isEnabled = !guardado
+                        Toast.makeText(this@MainActivity,
+                            if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
+                            Toast.LENGTH_LONG).show()
+                        if (guardado) {
+                            dialog.dismiss()
+                            mostrarFragment(BitacoraEnfermoFragment())
+                        }
+                        return@launch
+                    }
                     try {
 
                         val response =

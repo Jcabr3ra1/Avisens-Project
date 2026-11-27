@@ -1,4 +1,3 @@
-
 package com.project.avisensandroid.ui.fragments
 
 import android.Manifest
@@ -32,6 +31,11 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.FragmentAsistenteVozBinding
 import com.project.avisensandroid.model.GalponResponse
+import com.project.avisensandroid.model.AlertaResponse
+import java.text.Normalizer
+import java.time.OffsetDateTime
+import java.time.Duration
+import java.time.Instant
 import com.project.avisensandroid.model.InterpretarComandoVozRequest
 import com.project.avisensandroid.model.RespuestaComandoVoz
 import com.project.avisensandroid.ui.MainActivity
@@ -443,6 +447,21 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
                 binding.txtEstadoVoz.text = "Consultando a Lía..."
                 binding.btnHablarConLia.isEnabled = false
 
+                // HU-11: no consultar el backend para preguntas ajenas a las
+                // capacidades actuales del asistente.
+                if (!esConsultaAdmitidaHu11(texto)) {
+                    mostrarRespuestaHu11(
+                        "No estoy segura de haber entendido. Inténtalo de nuevo."
+                    )
+                    return@launch
+                }
+
+                val consultaLocal = resolverConsultaHu11(texto, id)
+                if (consultaLocal != null) {
+                    mostrarRespuestaHu11(consultaLocal)
+                    return@launch
+                }
+
                 val respuesta =
                     RetrofitClient.api.interpretarComandoVoz(
                         request = InterpretarComandoVozRequest(
@@ -502,8 +521,7 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
         }
 
         if (lecturas.isEmpty()) {
-            return "No encontré lecturas recientes de sensores para este galpón. " +
-                    "Verifica que tenga sensores activos enviando mediciones."
+            return mensajeBase
         }
 
         val detalles = lecturas.joinToString(". ") { lectura ->
@@ -517,6 +535,116 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
         }
 
         return "$mensajeBase $detalles."
+    }
+
+    // HU-11: consultas ambientales y alertas reales, sin modificar el backend.
+    private fun normalizarConsulta(texto: String): String =
+        Normalizer.normalize(texto.lowercase(Locale.ROOT), Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "")
+
+    // Reconoce únicamente las consultas soportadas por los endpoints actuales.
+    // Las respuestas de sensores y alertas siguen viniendo del backend.
+    private fun esConsultaAdmitidaHu11(texto: String): Boolean {
+        val consulta = normalizarConsulta(texto)
+        val terminos = listOf(
+            "temperatura", "calor", "grados", "humedad", "humedo",
+            "ambiente", "ambiental", "como esta", "condiciones",
+            "estado del galpon", "alerta", "alarmas", "emergencia",
+            "amoniaco", "co2", "dioxido de carbono"
+        )
+        return terminos.any { consulta.contains(it) }
+    }
+
+    private suspend fun resolverConsultaHu11(texto: String, id: Int): String? {
+        val consulta = normalizarConsulta(texto)
+        val pideAlertas = listOf("alerta", "alarmas", "emergencia").any { it in consulta }
+        val pideAmbiente =
+            listOf("como esta", "estado del galpon", "ambiente", "condiciones del galpon")
+                .any { it in consulta }
+        if (!pideAlertas && !pideAmbiente) return null
+
+        val nombreGalpon = galpones.firstOrNull { it.id == id }?.nombre ?: "galpón seleccionado"
+        // Consultar alertas únicamente si el usuario las solicita.
+        // Una consulta ambiental no debe realizar esta llamada ni anunciar alertas.
+        if (pideAlertas) {
+            val respuestaAlertas = RetrofitClient.api.listarAlertasDeGalpon(id, 1, 100)
+            val alertas = if (respuestaAlertas.isSuccessful) {
+                respuestaAlertas.body()?.data.orEmpty().filter {
+                    !it.estado.equals("cerrada", true) && !it.estado.equals("cerrado", true)
+                }
+            } else null
+            return when {
+                alertas == null -> "No pude consultar las alertas de $nombreGalpon. Intenta de nuevo."
+                alertas.isEmpty() -> "No hay alertas activas registradas para $nombreGalpon."
+                else -> describirAlertas(nombreGalpon, alertas)
+            }
+        }
+
+        val respuestaLecturas = RetrofitClient.api.listarUltimasLecturas(id)
+        val lecturas =
+            if (respuestaLecturas.isSuccessful) respuestaLecturas.body()?.sensores else null
+        val tipos = listOf(
+            "temperatura" to "temperatura",
+            "humedad" to "humedad",
+            "amoniaco" to "amoníaco",
+            "co2" to "CO₂"
+        )
+        val detalles = tipos.map { (clave, etiqueta) ->
+            val sensor = lecturas?.firstOrNull { item ->
+                val tipo = normalizarConsulta(item.tipo.orEmpty()).replace("₂", "2")
+                tipo.contains(clave) || (clave == "co2" && (tipo.contains("dioxido") || tipo.contains(
+                    "carbono"
+                )))
+            }
+            val lectura = sensor?.ultima_lectura
+            if (lectura?.valor == null) {
+                "$etiqueta sin dato reciente"
+            } else {
+                val unidad = sensor?.unidad_medida.orEmpty()
+                val antiguedad = lectura.antiguedad_segundos
+                val estado =
+                    if (antiguedad != null && antiguedad > 900) " (lectura de hace más de 15 minutos)" else ""
+                "$etiqueta ${lectura.valor} $unidad$estado"
+            }
+        }
+        val resumen = if (lecturas == null) {
+            "No pude obtener las mediciones ambientales de $nombreGalpon."
+        } else {
+            "Estado ambiental de $nombreGalpon: ${detalles.joinToString(", ")}."
+        }
+        return resumen
+    }
+
+    private fun describirAlertas(nombre: String, alertas: List<AlertaResponse>): String {
+        val ordenadas = alertas.sortedWith(compareBy<AlertaResponse> {
+            when (normalizarConsulta(it.criticidad)) {
+                "critica", "critico", "alta" -> 0
+                "media" -> 1
+                else -> 2
+            }
+        }.thenByDescending { it.fecha_creacion.orEmpty() })
+        val descripcion = ordenadas.take(5).joinToString(". ") { alerta ->
+            val variable = alerta.sensor?.tipo ?: alerta.tipo
+            val detectado = alerta.valor_detectado?.let { " valor detectado $it" }.orEmpty()
+            val umbral = alerta.valor_umbral?.let { " límite $it" }.orEmpty()
+            val tiempo = try {
+                val inicio = OffsetDateTime.parse(alerta.fecha_creacion).toInstant()
+                val minutos = Duration.between(inicio, Instant.now()).toMinutes()
+                if (minutos >= 0) ", activa hace $minutos minutos" else ""
+            } catch (_: Exception) {
+                ""
+            }
+            "${alerta.criticidad}: $variable$detectado$umbral$tiempo"
+        }
+        val restantes =
+            if (ordenadas.size > 5) ". Hay ${ordenadas.size - 5} alertas adicionales" else ""
+        return "Hay ${alertas.size} alertas activas en $nombre: $descripcion$restantes."
+    }
+
+    private fun mostrarRespuestaHu11(mensaje: String) {
+        binding.txtRespuestaLia.text = convertirUnidadesParaPantalla(mensaje)
+        binding.txtEstadoVoz.text = "Respuesta lista."
+        hablar(convertirUnidadesParaVoz(mensaje))
     }
 
     // =====================================================

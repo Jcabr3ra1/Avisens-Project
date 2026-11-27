@@ -12,7 +12,8 @@ data class RegistroMortalidadResponse(
     val metodo_registro: String?,
     val observaciones: String?,
     val fecha_registro: String,
-    val lote: LoteMortalidadResponse
+    val lote: LoteMortalidadResponse,
+    val foto_mime_type: String? = null
 )
 
 data class LoteMortalidadResponse(

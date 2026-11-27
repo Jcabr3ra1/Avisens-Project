@@ -1,6 +1,16 @@
-
 package com.project.avisensandroid.ui.fragments
 
+import android.animation.ObjectAnimator
+import android.view.animation.DecelerateInterpolator
+import android.widget.ProgressBar
+import android.app.Dialog
+import android.text.Editable
+import android.text.TextWatcher
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import android.view.WindowManager
+import com.project.avisensandroid.databinding.R03MovimientoInsumoBinding
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,17 +26,38 @@ import com.project.avisensandroid.model.InsumoResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
 import java.text.NumberFormat
 import java.util.Locale
 
 class BodegaFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po03BodegaOpBinding? = null
     private val binding get() = _binding!!
 
     private var cargando = false
+    private var datosMostrados = false
+    private var ultimosInsumos: List<InsumoResponse>? = null
+
+    private val textosAutonomia =
+        mutableMapOf<Int, android.widget.TextView>()
+
+    private var ultimaGranja: Int? = null
+
+    private val barrasStock =
+        mutableMapOf<Int, ProgressBar>()
+
+    private val animacionesStock =
+        mutableMapOf<Int, ObjectAnimator>()
+
     private val preferenciasStock by lazy {
-        requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
+        requireContext().getSharedPreferences(
+            "bodega_referencia_stock",
+            android.content.Context.MODE_PRIVATE
+        )
     }
 
     override fun onCreateView(
@@ -34,14 +65,27 @@ class BodegaFragment : BaseBottomNavFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = Po03BodegaOpBinding.inflate(inflater, container, false)
+
+        _binding = Po03BodegaOpBinding.inflate(
+            inflater,
+            container,
+            false
+        )
+
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
+
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
+        entradaTarjetas.encabezados(binding.contenedorInsumos)
 
         val activity = requireActivity() as MainActivity
+
         configurarBottomNav(R.id.nav_bodega)
 
         binding.btnNuevoInsumo.visibility =
@@ -59,220 +103,1283 @@ class BodegaFragment : BaseBottomNavFragment() {
     }
 
     override fun onResume() {
+
         super.onResume()
+
         if (_binding != null) {
             cargarDatosBodega()
         }
     }
 
-    private fun cargarDatosBodega() {
+    fun actualizarAlRecuperarInternet() {
+
+        if (_binding != null && isAdded) {
+            cargarDatosBodega()
+        }
+    }
+
+    fun actualizarSilenciosamente() {
+
+        if (_binding != null && isAdded) {
+            cargarDatosBodega(silenciosa = true)
+        }
+    }
+
+    private fun cargarDatosBodega(
+        silenciosa: Boolean = false
+    ) {
+
         if (cargando || _binding == null) return
+
         val activity = requireActivity() as MainActivity
+
         binding.btnNuevoInsumo.visibility =
-            if (activity.obtenerRolActual() == UserRole.PROPIETARIO)
-                View.VISIBLE else View.GONE
+            if (activity.obtenerRolActual() == UserRole.PROPIETARIO) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
         cargando = true
-        binding.progressInsumos.visibility = View.VISIBLE
-        binding.txtSinInsumos.visibility = View.GONE
-        binding.txtSinInsumos.text = "No hay insumos registrados"
+
+        binding.progressInsumos.visibility = View.GONE
+
+        if (!datosMostrados) {
+            binding.txtSinInsumos.visibility = View.GONE
+        }
+
+        binding.txtSinInsumos.text =
+            "No hay insumos registrados"
 
         viewLifecycleOwner.lifecycleScope.launch {
+
+            val indicador = launch {
+
+                delay(180L)
+
+                if (!datosMostrados && !silenciosa) {
+
+                    _binding?.progressInsumos?.visibility =
+                        View.VISIBLE
+                }
+            }
+
             try {
-                val insumos = cargarTodosLosInsumos()
+
+                val remoto = async {
+
+                    try {
+
+                        Result.success(cargarTodosLosInsumos())
+
+                    } catch (
+                        e: kotlinx.coroutines.CancellationException
+                    ) {
+
+                        throw e
+
+                    } catch (e: Exception) {
+
+                        Result.failure<List<InsumoResponse>>(e)
+                    }
+                }
+
+                if (!datosMostrados) {
+
+                    try {
+
+                        val locales = cargarTodosLosInsumos(
+                            RetrofitClient.apiCache
+                        )
+
+                        mostrarInsumos(locales)
+
+                        datosMostrados = true
+
+                        binding.progressInsumos.visibility =
+                            View.GONE
+
+                    } catch (
+                        e: kotlinx.coroutines.CancellationException
+                    ) {
+
+                        throw e
+
+                    } catch (_: Exception) {
+                        // Primera visita sin copia completa.
+                    }
+                }
+
+                val insumos = remoto.await().getOrThrow()
+
                 mostrarInsumos(insumos)
+
+                datosMostrados = true
+
+                actualizarAutonomias(insumos)
+
+            } catch (
+                e: kotlinx.coroutines.CancellationException
+            ) {
+
+                throw e
+
             } catch (e: Exception) {
-                if (_binding != null && isAdded) {
-                    binding.txtSinInsumos.text = "No se pudieron cargar los alimentos. ${e.message ?: "Intenta nuevamente."}"
-                    binding.txtSinInsumos.visibility = View.VISIBLE
+
+                if (
+                    !silenciosa &&
+                    !datosMostrados &&
+                    _binding != null &&
+                    isAdded
+                ) {
+
+                    binding.txtSinInsumos.text =
+                        "No se pudieron cargar los alimentos. " +
+                                "${e.message ?: "Intenta nuevamente."}"
+
+                    binding.txtSinInsumos.visibility =
+                        View.VISIBLE
+
                     Toast.makeText(
                         requireContext(),
-                        "Error al cargar bodega: ${e.message ?: "error desconocido"}",
+                        "Error al cargar bodega: " +
+                                "${e.message ?: "error desconocido"}",
                         Toast.LENGTH_LONG
                     ).show()
                 }
+
             } finally {
+
+                indicador.cancel()
+
                 cargando = false
-                _binding?.progressInsumos?.visibility = View.GONE
+
+                _binding?.progressInsumos?.visibility =
+                    View.GONE
             }
         }
     }
 
-    private suspend fun cargarTodosLosInsumos(): List<InsumoResponse> {
+    private suspend fun cargarTodosLosInsumos(
+        api: com.project.avisensandroid.controller.ApiService =
+            RetrofitClient.api
+    ): List<InsumoResponse> {
+
         val todos = mutableListOf<InsumoResponse>()
+
         var page = 1
         var totalPages = 1
 
         do {
-            val response = RetrofitClient.api.listarInsumos(
+
+            val response = api.listarInsumos(
                 page = page,
                 limit = 100
             )
 
             if (!response.isSuccessful) {
-                val detalle = response.errorBody()?.string()?.take(180).orEmpty()
+
+                val detalle = response.errorBody()
+                    ?.string()
+                    ?.take(180)
+                    .orEmpty()
+
                 throw IllegalStateException(
                     if (detalle.isBlank()) {
-                        "No se pudieron cargar los insumos. Código: ${response.code()}"
+
+                        "No se pudieron cargar los insumos. " +
+                                "Código: ${response.code()}"
+
                     } else {
-                        "No se pudieron cargar los insumos. Código: ${response.code()} $detalle"
+
+                        "No se pudieron cargar los insumos. " +
+                                "Código: ${response.code()} $detalle"
                     }
                 )
             }
 
             val body = response.body()
-                ?: throw IllegalStateException("La API no devolvió información de insumos")
+                ?: throw IllegalStateException(
+                    "La API no devolvió información de insumos"
+                )
 
             todos += body.data
+
             totalPages = body.meta.totalPages
+
             page++
+
         } while (page <= totalPages)
 
         return todos.distinctBy { it.id }
     }
 
-    private fun mostrarInsumos(insumos: List<InsumoResponse>) {
-        binding.contenedorInsumos.removeAllViews()
+    private fun mostrarInsumos(
+        insumos: List<InsumoResponse>
+    ) {
 
         val activity = requireActivity() as MainActivity
-        val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
 
-        val disponibles = insumos.filter { it.activo }
-        // Si hay selección, muestra esa granja. Si aún no existe, muestra
-        // los insumos autorizados por el backend para el usuario.
+        val granjaIdSeleccionada =
+            activity.obtenerGranjaSeleccionadaId()
+
+        if (
+            ultimosInsumos == insumos &&
+            ultimaGranja == granjaIdSeleccionada
+        ) {
+
+            binding.txtSinInsumos.visibility =
+                if (binding.contenedorInsumos.childCount == 0) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+
+            return
+        }
+
+        val anteriores =
+            if (ultimaGranja == granjaIdSeleccionada) {
+
+                barrasStock.mapValues { it.value.progress }
+
+            } else {
+
+                emptyMap()
+            }
+
+        animacionesStock.values.forEach {
+            it.cancel()
+        }
+
+        animacionesStock.clear()
+        barrasStock.clear()
+
+        ultimosInsumos = insumos.toList()
+        ultimaGranja = granjaIdSeleccionada
+
+        textosAutonomia.clear()
+
+        entradaTarjetas.encabezados(binding.contenedorInsumos)
+        entradaTarjetas.comenzar()
+        binding.contenedorInsumos.removeAllViews()
+
+        val disponibles = insumos.filter {
+            it.activo
+        }
+
         val activos = disponibles.filter { insumo ->
-            granjaIdSeleccionada == null || insumo.granja_id == granjaIdSeleccionada
+
+            granjaIdSeleccionada == null ||
+                    insumo.granja_id == granjaIdSeleccionada
         }
 
         if (activos.isEmpty()) {
-            binding.txtSinInsumos.visibility = View.VISIBLE
+
+            binding.txtSinInsumos.visibility =
+                View.VISIBLE
+
             binding.txtCriticos.text = "● 0 críticos"
+
             return
         }
 
         binding.txtSinInsumos.visibility = View.GONE
 
         val cantidadCriticos = activos.count { insumo ->
+
             val stock = insumo.stock_actual ?: 0.0
             val minimo = insumo.stock_minimo ?: 0.0
+
             minimo > 0.0 && stock <= minimo
         }
 
-        binding.txtCriticos.text = "● $cantidadCriticos críticos"
+        binding.txtCriticos.text =
+            "● $cantidadCriticos críticos"
 
         activos.forEach { insumo ->
-            agregarTarjetaInsumo(insumo)
+
+            agregarTarjetaInsumo(
+                insumo,
+                anteriores[insumo.id] ?: 0
+            )
         }
     }
 
-    private fun agregarTarjetaInsumo(insumo: InsumoResponse) {
+    private fun agregarTarjetaInsumo(
+        insumo: InsumoResponse,
+        progresoAnterior: Int
+    ) {
+
         val itemBinding = ItemInsumoBinding.inflate(
             layoutInflater,
             binding.contenedorInsumos,
             false
         )
 
-        val stockActual = (insumo.stock_actual ?: 0.0).coerceAtLeast(0.0)
-        val stockMinimo = (insumo.stock_minimo ?: 0.0).coerceAtLeast(0.0)
-        val esCritico = stockMinimo > 0.0 && stockActual <= stockMinimo
+        val stockActual =
+            (insumo.stock_actual ?: 0.0)
+                .coerceAtLeast(0.0)
 
-        itemBinding.txtNombreInsumo.text = insumo.nombre
-        itemBinding.txtTipoInsumo.text = insumo.tipo
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: "Sin categoría"
+        val stockMinimo =
+            (insumo.stock_minimo ?: 0.0)
+                .coerceAtLeast(0.0)
 
-        itemBinding.txtCantidadInsumo.text = formatearNumero(stockActual)
-        itemBinding.txtUnidadInsumo.text = insumo.unidad_medida
+        val esCritico =
+            stockMinimo > 0.0 &&
+                    stockActual <= stockMinimo
 
-        // Si el backend ya entrega el máximo histórico, utilizarlo.
-        // En versiones anteriores de la API ese campo no existe. En ese caso,
-        // guardar el MAYOR STOCK REAL observado por esta instalación, nunca
-        // un multiplicador inventado ni una capacidad ficticia.
-        val claveReferencia = "insumo_${insumo.id}_max_observado"
-        val observadoAnterior = preferenciasStock.getString(claveReferencia, null)
-            ?.toDoubleOrNull()
-            ?.takeIf { it.isFinite() && it > 0.0 }
-            ?: 0.0
-        val referenciaBackend = insumo.stock_referencia
-            ?.takeIf { it.isFinite() && it > 0.0 }
-            ?: 0.0
-        val referencia = maxOf(stockActual, observadoAnterior, referenciaBackend)
-        if (referencia > observadoAnterior) {
-            preferenciasStock.edit()
-                .putString(claveReferencia, referencia.toString())
-                .apply()
+        itemBinding.txtNombreInsumo.text =
+            insumo.nombre
+
+        itemBinding.txtTipoInsumo.text =
+            insumo.tipo
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: "Sin categoría"
+
+        // Conversión visual automática del stock.
+        val stockVisual = obtenerCantidadVisual(
+            stockActual,
+            insumo.unidad_medida
+        )
+
+        itemBinding.txtCantidadInsumo.text =
+            formatearNumero(stockVisual.first)
+
+        itemBinding.txtUnidadInsumo.text =
+            stockVisual.second
+
+        val referencia = if (stockMinimo > 0.0) {
+
+            stockMinimo
+
+        } else {
+
+            insumo.stock_referencia
+                ?.takeIf {
+                    it.isFinite() && it > 0.0
+                }
+                ?: stockActual
         }
+
         val porcentaje = if (referencia > 0.0) {
+
             ((stockActual / referencia) * 100.0)
                 .coerceIn(0.0, 100.0)
                 .toInt()
+
         } else {
+
             0
         }
 
-        // La barra debe verse siempre, incluso en insumos antiguos o agotados.
-        itemBinding.progressStock.visibility = View.VISIBLE
+        itemBinding.progressStock.visibility =
+            View.VISIBLE
+
         itemBinding.progressStock.max = 100
-        itemBinding.progressStock.progress = porcentaje
-        itemBinding.progressStock.progressDrawable = ContextCompat.getDrawable(
-            requireContext(),
-            if (esCritico) R.drawable.progress_stock_red
-            else R.drawable.progress_stock_green
-        )
 
-        itemBinding.txtMinimoAutonomia.text = if (stockMinimo > 0.0) {
-            "Mínimo: ${formatearNumero(stockMinimo)} ${insumo.unidad_medida}"
-        } else {
-            "Mínimo: no configurado"
-        }
+        itemBinding.progressStock.progressDrawable =
+            ContextCompat.getDrawable(
+                requireContext(),
+                if (esCritico) {
+                    R.drawable.progress_stock_red
+                } else {
+                    R.drawable.progress_stock_green
+                }
+            )
 
-        itemBinding.txtEstadoInsumo.text = if (esCritico) {
-            "Stock crítico"
-        } else {
-            "Stock OK"
-        }
+        // Conversión visual automática del stock mínimo.
+        itemBinding.txtMinimoAutonomia.text =
+            if (stockMinimo > 0.0) {
+
+                "Mínimo: ${
+                    formatearCantidadConUnidad(
+                        stockMinimo,
+                        insumo.unidad_medida
+                    )
+                }"
+
+            } else {
+
+                "Mínimo: no configurado"
+            }
+
+        textosAutonomia[insumo.id] =
+            itemBinding.txtAutonomiaEstimada
+
+        itemBinding.txtAutonomiaEstimada.text =
+            "Autonomía estimada: sin datos suficientes"
+
+        itemBinding.txtEstadoInsumo.text =
+            if (esCritico) {
+                "Stock crítico"
+            } else {
+                "Stock OK"
+            }
 
         itemBinding.txtEstadoInsumo.setTextColor(
             ContextCompat.getColor(
                 requireContext(),
-                if (esCritico) R.color.badge_red_text else R.color.badge_green_text
+                if (esCritico) {
+                    R.color.badge_red_text
+                } else {
+                    R.color.badge_green_text
+                }
             )
         )
 
         itemBinding.txtEstadoInsumo.setBackgroundResource(
-            if (esCritico) R.drawable.bg_stock_critico
-            else R.drawable.bg_stock_ok
+            if (esCritico) {
+                R.drawable.bg_stock_critico
+            } else {
+                R.drawable.bg_stock_ok
+            }
         )
 
         itemBinding.cardInsumo.setBackgroundResource(
-            if (esCritico) R.drawable.bg_bodega_card_critico
-            else R.drawable.bg_bodega_card
+            if (esCritico) {
+                R.drawable.bg_bodega_card_critico
+            } else {
+                R.drawable.bg_bodega_card
+            }
         )
 
-        itemBinding.btnMovimientoInsumo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarDialogMovimientoInsumo(insumo)
-        }
+        val params =
+            itemBinding.cardInsumo.layoutParams
+                    as ViewGroup.MarginLayoutParams
 
-        val params = itemBinding.cardInsumo.layoutParams as ViewGroup.MarginLayoutParams
         params.topMargin = dp(11)
+
         itemBinding.cardInsumo.layoutParams = params
 
-        binding.contenedorInsumos.addView(itemBinding.root)
+        itemBinding.btnEntradaInsumo.visibility =
+            if (
+                (requireActivity() as MainActivity)
+                    .obtenerRolActual() == UserRole.PROPIETARIO
+            ) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        itemBinding.btnEntradaInsumo.setOnClickListener {
+            mostrarDialogEntrada(insumo)
+        }
+
+        binding.contenedorInsumos.addView(
+            itemBinding.root
+        )
+
+        entradaTarjetas.mostrar(itemBinding.root, "insumo:${insumo.id}")
+        val barra = itemBinding.progressStock
+
+        barrasStock[insumo.id] = barra
+
+        barra.progress = progresoAnterior
+
+        if (progresoAnterior != porcentaje) {
+
+            animacionesStock[insumo.id] =
+                ObjectAnimator.ofInt(
+                    barra,
+                    "progress",
+                    progresoAnterior,
+                    porcentaje
+                ).apply {
+
+                    duration = 850L
+
+                    interpolator =
+                        DecelerateInterpolator()
+
+                    start()
+                }
+        }
     }
 
-    private fun formatearNumero(numero: Double): String {
-        val formato = NumberFormat.getNumberInstance(Locale.US).apply {
-            maximumFractionDigits = 2
-            minimumFractionDigits = 0
+    private suspend fun actualizarAutonomias(
+        insumos: List<InsumoResponse>
+    ) {
+
+        val hoy = java.time.LocalDate.now(
+            java.time.ZoneId.of("America/Bogota")
+        )
+
+        val desde = hoy.minusDays(6)
+
+        for (insumo in insumos) {
+
+            val texto =
+                textosAutonomia[insumo.id] ?: continue
+
+            val estimacion = try {
+
+                var pagina = 1
+                var total = 0.0
+
+                var ultimaSalida: java.time.LocalDate? = null
+
+                var totalHistorico = 0.0
+
+                var continuar: Boolean
+
+                do {
+
+                    val respuesta =
+                        RetrofitClient.api.listarMovimientosInsumo(
+                            insumo.id,
+                            pagina,
+                            100
+                        )
+
+                    val body = checkNotNull(respuesta.body())
+
+                    check(respuesta.isSuccessful)
+
+                    body.data.forEach { movimiento ->
+
+                        val dia = runCatching {
+
+                            java.time.Instant.parse(
+                                movimiento.fecha_movimiento
+                            ).atZone(
+                                java.time.ZoneId.of("America/Bogota")
+                            ).toLocalDate()
+
+                        }.getOrElse {
+
+                            java.time.LocalDate.parse(
+                                movimiento.fecha_movimiento.take(10)
+                            )
+                        }
+
+                        if (
+                            movimiento.tipo_movimiento.equals(
+                                "salida",
+                                ignoreCase = true
+                            ) &&
+                            movimiento.unidad_medida.equals(
+                                insumo.unidad_medida,
+                                ignoreCase = true
+                            ) &&
+                            movimiento.cantidad > 0.0
+                        ) {
+
+                            if (!dia.isBefore(desde)) {
+
+                                total += movimiento.cantidad
+                            }
+
+                            if (ultimaSalida == null) {
+
+                                ultimaSalida = dia
+                            }
+
+                            val referencia = ultimaSalida
+
+                            if (
+                                referencia != null &&
+                                !dia.isBefore(
+                                    referencia.minusDays(6)
+                                )
+                            ) {
+
+                                totalHistorico +=
+                                    movimiento.cantidad
+                            }
+                        }
+                    }
+
+                    continuar =
+                        pagina < body.meta.totalPages &&
+                                (
+                                        ultimaSalida == null ||
+                                                body.data.lastOrNull()?.let { movimiento ->
+
+                                                    val dia = runCatching {
+
+                                                        java.time.Instant.parse(
+                                                            movimiento.fecha_movimiento
+                                                        ).atZone(
+                                                            java.time.ZoneId.of(
+                                                                "America/Bogota"
+                                                            )
+                                                        ).toLocalDate()
+
+                                                    }.getOrElse {
+
+                                                        java.time.LocalDate.parse(
+                                                            movimiento.fecha_movimiento
+                                                                .take(10)
+                                                        )
+                                                    }
+
+                                                    !dia.isBefore(
+                                                        (ultimaSalida ?: hoy)
+                                                            .minusDays(6)
+                                                    )
+
+                                                } == true
+                                        )
+
+                    pagina++
+
+                } while (continuar)
+
+                val stock = insumo.stock_actual
+
+                when {
+
+                    stock == null -> {
+
+                        "sin datos suficientes"
+                    }
+
+                    stock <= 0.0 -> {
+
+                        "0 días"
+                    }
+
+                    total > 0.0 || totalHistorico > 0.0 -> {
+
+                        val promedio =
+                            (
+                                    if (total > 0.0) {
+                                        total
+                                    } else {
+                                        totalHistorico
+                                    }
+                                    ) / 7.0
+
+                        val dias =
+                            kotlin.math.round(
+                                stock / promedio
+                            ).toLong()
+
+                        if (dias == 1L) {
+
+                            "1 día"
+
+                        } else {
+
+                            "$dias días"
+                        }
+                    }
+
+                    else -> {
+
+                        "pendiente de consumo inicial"
+                    }
+                }
+
+            } catch (
+                e: kotlinx.coroutines.CancellationException
+            ) {
+
+                throw e
+
+            } catch (_: Exception) {
+
+                "no disponible"
+            }
+
+            if (
+                _binding != null &&
+                textosAutonomia[insumo.id] === texto
+            ) {
+
+                texto.text =
+                    "Autonomía estimada: $estimacion"
+            }
         }
+    }
+
+    private fun mostrarDialogEntrada(
+        insumo: InsumoResponse
+    ) {
+
+        if (
+            (requireActivity() as MainActivity)
+                .obtenerRolActual() != UserRole.PROPIETARIO
+        ) return
+
+        val unidadBase =
+            normalizarUnidad(insumo.unidad_medida)
+
+        if (unidadBase == null) {
+
+            Toast.makeText(
+                requireContext(),
+                "Unidad del insumo no compatible: " +
+                        insumo.unidad_medida,
+                Toast.LENGTH_LONG
+            ).show()
+
+            return
+        }
+
+        val dialog = Dialog(requireContext())
+
+        val form = R03MovimientoInsumoBinding.inflate(
+            layoutInflater
+        )
+
+        dialog.setContentView(form.root)
+
+        dialog.window?.setBackgroundDrawableResource(
+            android.R.color.transparent
+        )
+
+        form.txtNombreMovimiento.text =
+            insumo.nombre
+
+        val stock = insumo.stock_actual ?: 0.0
+
+        // Mostrar el stock actual en una unidad fácil de leer.
+        form.txtStockMovimiento.text =
+            "Stock actual: ${
+                formatearCantidadConUnidad(
+                    stock,
+                    insumo.unidad_medida
+                )
+            }"
+
+        val unidades = listOf(
+            "Kg",
+            "Gramos",
+            "Bultos",
+            "Toneladas"
+        )
+
+        val adapter = ArrayAdapter(
+            requireContext(),
+            R.layout.spinner_item,
+            unidades
+        )
+
+        adapter.setDropDownViewResource(
+            R.layout.spinner_dropdown_item
+        )
+
+        form.spinnerUnidadMovimiento.adapter =
+            adapter
+
+        form.spinnerUnidadMovimiento.setSelection(
+            unidades.indexOf(unidadBase)
+                .coerceAtLeast(0)
+        )
+
+        fun actualizarVistaPrevia() {
+
+            val seleccion = unidades[
+                form.spinnerUnidadMovimiento
+                    .selectedItemPosition
+                    .coerceAtLeast(0)
+            ]
+
+            form.txtCantidadMovimiento.text =
+                if (seleccion == "Bultos") {
+
+                    "Número de bultos"
+
+                } else {
+
+                    "Cantidad a ingresar"
+                }
+
+            form.edtCantidadMovimiento.hint =
+                if (seleccion == "Bultos") {
+
+                    "Ej. 5"
+
+                } else {
+
+                    "Ej. 100"
+                }
+
+            val usaBultos =
+                seleccion == "Bultos" ||
+                        unidadBase == "Bultos"
+
+            form.contenedorPesoBulto.visibility =
+                if (usaBultos) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+
+            form.txtAyudaBulto.text =
+                if (unidadBase == "Bultos") {
+
+                    "Indica el peso de un bulto de este " +
+                            "insumo para convertir la entrada a bultos."
+
+                } else {
+
+                    "Indica cuántos kilogramos contiene " +
+                            "cada bulto comprado."
+                }
+
+            val cantidad = leerDecimal(
+                form.edtCantidadMovimiento.text.toString()
+            )
+
+            val peso = leerDecimal(
+                form.edtPesoBulto.text.toString()
+            )
+
+            val convertido = if (
+                cantidad != null &&
+                cantidad > 0 &&
+                cantidad.isFinite() &&
+                (
+                        !usaBultos ||
+                                (
+                                        peso != null &&
+                                                peso > 0 &&
+                                                peso.isFinite()
+                                        )
+                        )
+            ) {
+
+                convertirCantidad(
+                    cantidad,
+                    seleccion,
+                    unidadBase,
+                    peso
+                )
+
+            } else {
+
+                null
+            }
+
+            form.txtVistaPreviaMovimiento.text =
+                if (
+                    convertido != null &&
+                    convertido.isFinite() &&
+                    convertido > 0
+                ) {
+
+                    // Conversión únicamente para mostrar los valores.
+                    val entradaVisual =
+                        formatearCantidadConUnidad(
+                            convertido,
+                            insumo.unidad_medida
+                        )
+
+                    val nuevoStockVisual =
+                        formatearCantidadConUnidad(
+                            stock + convertido,
+                            insumo.unidad_medida
+                        )
+
+                    "Entrada: $entradaVisual\n" +
+                            "Nuevo stock estimado: $nuevoStockVisual"
+
+                } else {
+
+                    "Ingresa la cantidad" +
+                            "${if (usaBultos) " y el peso por bulto" else ""}" +
+                            " para calcular el nuevo stock."
+                }
+        }
+
+        val watcher = object : TextWatcher {
+
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) = Unit
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) = actualizarVistaPrevia()
+
+            override fun afterTextChanged(
+                s: Editable?
+            ) = Unit
+        }
+
+        form.edtCantidadMovimiento
+            .addTextChangedListener(watcher)
+
+        form.edtPesoBulto
+            .addTextChangedListener(watcher)
+
+        form.spinnerUnidadMovimiento.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+
+                override fun onItemSelected(
+                    parent: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) = actualizarVistaPrevia()
+
+                override fun onNothingSelected(
+                    parent: AdapterView<*>?
+                ) = Unit
+            }
+
+        actualizarVistaPrevia()
+
+        form.btnCancelarMovimiento.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        form.btnGuardarMovimiento.setOnClickListener {
+
+            val cantidad = leerDecimal(
+                form.edtCantidadMovimiento.text.toString()
+            )
+
+            if (
+                cantidad == null ||
+                !cantidad.isFinite() ||
+                cantidad <= 0.0
+            ) {
+
+                form.edtCantidadMovimiento.error =
+                    "Ingresa una cantidad mayor que cero"
+
+                return@setOnClickListener
+            }
+
+            val seleccion = unidades[
+                form.spinnerUnidadMovimiento
+                    .selectedItemPosition
+                    .coerceAtLeast(0)
+            ]
+
+            val usaBultos =
+                seleccion == "Bultos" ||
+                        unidadBase == "Bultos"
+
+            val peso = leerDecimal(
+                form.edtPesoBulto.text.toString()
+            )
+
+            if (
+                usaBultos &&
+                (
+                        peso == null ||
+                                !peso.isFinite() ||
+                                peso <= 0.0
+                        )
+            ) {
+
+                form.edtPesoBulto.error =
+                    "Indica el peso en kg de cada bulto"
+
+                return@setOnClickListener
+            }
+
+            val cantidadConvertida = convertirCantidad(
+                cantidad,
+                seleccion,
+                unidadBase,
+                peso
+            )
+
+            if (
+                cantidadConvertida == null ||
+                !cantidadConvertida.isFinite() ||
+                cantidadConvertida <= 0.0
+            ) {
+
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo convertir la cantidad",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                return@setOnClickListener
+            }
+
+            form.btnGuardarMovimiento.isEnabled = false
+
+            viewLifecycleOwner.lifecycleScope.launch {
+
+                try {
+
+                    // Se conserva la unidad original del backend.
+                    val response =
+                        RetrofitClient.api.registrarMovimientoInsumo(
+                            insumo.id,
+                            RegistrarMovimientoRequest(
+                                "entrada",
+                                cantidadConvertida,
+                                null
+                            )
+                        )
+
+                    if (!response.isSuccessful) {
+
+                        throw IllegalStateException(
+                            "No se pudo registrar la entrada " +
+                                    "(HTTP ${response.code()})"
+                        )
+                    }
+
+                    if (isAdded) {
+
+                        Toast.makeText(
+                            requireContext(),
+                            "Entrada registrada",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        dialog.dismiss()
+
+                        cargarDatosBodega(
+                            silenciosa = true
+                        )
+                    }
+
+                } catch (
+                    e: kotlinx.coroutines.CancellationException
+                ) {
+
+                    throw e
+
+                } catch (e: Exception) {
+
+                    if (isAdded) {
+
+                        Toast.makeText(
+                            requireContext(),
+                            e.message ?: "Error al registrar entrada",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        form.btnGuardarMovimiento.isEnabled =
+                            true
+                    }
+                }
+            }
+        }
+
+        dialog.show()
+
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92f)
+                .toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    // Convierte gramos a kilogramos únicamente para la interfaz.
+    private fun obtenerCantidadVisual(
+        cantidad: Double,
+        unidad: String
+    ): Pair<Double, String> {
+
+        val unidadNormalizada =
+            normalizarUnidad(unidad)
+
+        return when (unidadNormalizada) {
+
+            "Gramos" -> {
+
+                if (cantidad >= 1000.0) {
+
+                    Pair(
+                        cantidad / 1000.0,
+                        "kg"
+                    )
+
+                } else {
+
+                    Pair(
+                        cantidad,
+                        "g"
+                    )
+                }
+            }
+
+            "Kg" -> {
+
+                Pair(
+                    cantidad,
+                    "kg"
+                )
+            }
+
+            "Bultos" -> {
+
+                Pair(
+                    cantidad,
+                    if (cantidad == 1.0) {
+                        "bulto"
+                    } else {
+                        "bultos"
+                    }
+                )
+            }
+
+            "Toneladas" -> {
+
+                Pair(
+                    cantidad,
+                    "t"
+                )
+            }
+
+            else -> {
+
+                Pair(
+                    cantidad,
+                    unidad
+                )
+            }
+        }
+    }
+
+    // Devuelve la cantidad y unidad listas para mostrar.
+    private fun formatearCantidadConUnidad(
+        cantidad: Double,
+        unidad: String
+    ): String {
+
+        val cantidadVisual =
+            obtenerCantidadVisual(
+                cantidad,
+                unidad
+            )
+
+        return "${formatearNumero(cantidadVisual.first)} " +
+                cantidadVisual.second
+    }
+
+    private fun leerDecimal(
+        texto: String
+    ): Double? {
+
+        return texto.trim()
+            .replace(',', '.')
+            .toDoubleOrNull()
+    }
+
+    private fun normalizarUnidad(
+        unidad: String
+    ): String? {
+
+        return when (
+            unidad.trim().lowercase(Locale.ROOT)
+        ) {
+
+            "kg",
+            "kilogramo",
+            "kilogramos" -> "Kg"
+
+            "g",
+            "gr",
+            "gramo",
+            "gramos" -> "Gramos"
+
+            "bulto",
+            "bultos" -> "Bultos"
+
+            "t",
+            "ton",
+            "tonelada",
+            "toneladas" -> "Toneladas"
+
+            else -> null
+        }
+    }
+
+    private fun convertirCantidad(
+        cantidad: Double,
+        origen: String,
+        destino: String,
+        pesoBulto: Double?
+    ): Double? {
+
+        fun aKg(
+            valor: Double,
+            unidad: String
+        ): Double? {
+
+            return when (unidad) {
+
+                "Kg" -> valor
+
+                "Gramos" -> valor / 1000.0
+
+                "Toneladas" -> valor * 1000.0
+
+                "Bultos" -> pesoBulto?.let {
+                    valor * it
+                }
+
+                else -> null
+            }
+        }
+
+        val kg = aKg(cantidad, origen) ?: return null
+
+        return when (destino) {
+
+            "Kg" -> kg
+
+            "Gramos" -> kg * 1000.0
+
+            "Toneladas" -> kg / 1000.0
+
+            "Bultos" -> pesoBulto?.let {
+                kg / it
+            }
+
+            else -> null
+        }
+    }
+
+    private fun formatearNumero(
+        numero: Double
+    ): String {
+
+        val formato =
+            NumberFormat.getNumberInstance(Locale.US)
+                .apply {
+
+                    maximumFractionDigits = 2
+                    minimumFractionDigits = 0
+                }
+
         return formato.format(numero)
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).toInt()
+    private fun dp(value: Int): Int {
+
+        return (
+                value * resources.displayMetrics.density
+                ).toInt()
+    }
 
     override fun onDestroyView() {
+
+        animacionesStock.values.forEach {
+            it.cancel()
+        }
+
+        animacionesStock.clear()
+        barrasStock.clear()
+        textosAutonomia.clear()
+
         super.onDestroyView()
+
         _binding = null
+        ultimosInsumos = null
+        ultimaGranja = null
+        datosMostrados = false
+        cargando = false
     }
 }
