@@ -4,10 +4,10 @@ import { listarConsumosDiarios } from '@features/consumos-diarios/api/consumosDi
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import type { Lote } from '@features/lotes/api/lotes'
 import { descargarBlob, nombreConFecha } from '@shared/utils/descargas'
-import { diasDeVida } from '@shared/utils/fechas'
 import { mensajeDeError } from '@shared/utils/errores'
+import { cargarLogoAvisens, crearLibroXlsx, TIPO_XLSX } from '@shared/utils/xlsx'
 import type { PlanAlimentoGuia, IndicadorLote } from '../api/guiaCrecimiento'
-import { crearCsv, type ValorCsv } from '../model/reportes'
+import { hojasAlimentacionExcel, hojasCrecimientoExcel } from '../model/reportesExcel'
 import ModalReporteImprimible from './ModalReporteImprimible'
 
 type Props = {
@@ -19,89 +19,15 @@ type Props = {
   onAbrirComparativa?: () => void
 }
 
-const ENCABEZADOS_CRECIMIENTO = [
-  'Lote', 'Día de vida', 'Fecha del indicador', 'Fecha del pesaje',
-  'Peso registrado (g)', 'Peso proyectado (g)', 'Rango mínimo (g)',
-  'Rango máximo (g)', 'Curva estándar (g)', 'FCR registrado', 'Estado del indicador',
-]
-
-const ENCABEZADOS_ALIMENTO = [
-  'Tipo de dato', 'Lote', 'Fecha', 'Día o período', 'Alimento',
-  'Alimento total (kg)', 'Consumo por ave (g)', 'Agua (L)', 'Método de registro',
-]
-
 function nombreSeguro(codigo: string): string {
   return codigo.trim().replace(/[^a-z0-9-]+/gi, '-').replace(/^-|-$/g, '') || 'lote'
 }
 
-function descargar(codigo: string, sufijo: string, contenido: string) {
+function descargarExcel(codigo: string, sufijo: string, libro: Uint8Array) {
   descargarBlob(
-    new Blob([contenido], { type: 'text/csv;charset=utf-8' }),
-    nombreConFecha(`${sufijo}-${nombreSeguro(codigo)}`, 'csv'),
+    new Blob([libro], { type: TIPO_XLSX }),
+    nombreConFecha(`${sufijo}-${nombreSeguro(codigo)}`, 'xlsx'),
   )
-}
-
-function filasCrecimiento(lote: Lote, indicadores: IndicadorLote[], curva: CurvaCrecimiento | null): ValorCsv[][] {
-  const validos = indicadores.filter((dato) => dato.estado_calculo === 'calculado' && dato.dia_vida !== null)
-  const indicadorPorDia = new Map(validos.map((dato) => [dato.dia_vida!, dato]))
-  const curvaPorDia = new Map(curva?.serie.map((punto) => [punto.dia, punto]) ?? [])
-  const dias = [...new Set([...indicadorPorDia.keys(), ...curvaPorDia.keys()])].sort((a, b) => a - b)
-  const proyeccionDisponible = (curva?.modelo.puntos_usados ?? 0) >= 1
-
-  return dias.map((dia) => {
-    const indicador = indicadorPorDia.get(dia)
-    const punto = curvaPorDia.get(dia)
-    const pesoRegistrado = indicador?.estado_peso === 'disponible' ? indicador.peso_promedio_g : null
-    return [
-      lote.codigo,
-      dia,
-      indicador?.fecha.slice(0, 10) ?? null,
-      indicador?.estado_peso === 'disponible' ? indicador.pesaje_fecha_snapshot?.slice(0, 10) ?? null : null,
-      pesoRegistrado,
-      proyeccionDisponible ? punto?.proyectado_g ?? null : null,
-      proyeccionDisponible ? punto?.min_g ?? null : null,
-      proyeccionDisponible ? punto?.max_g ?? null : null,
-      punto?.estandar_g ?? null,
-      indicador?.fcr ?? null,
-      indicador?.estado_calculo ?? null,
-    ]
-  })
-}
-
-function filasAlimento(lote: Lote, registros: Awaited<ReturnType<typeof listarConsumosDiarios>>, alimento: PlanAlimentoGuia | null): ValorCsv[][] {
-  const filas: ValorCsv[][] = registros
-    .filter((registro) => registro.lote_id === lote.id)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id - b.id)
-    .map((registro) => [
-      'Consumo registrado',
-      lote.codigo,
-      registro.fecha.slice(0, 10),
-      diasDeVida(lote.fecha_ingreso, new Date(`${registro.fecha.slice(0, 10)}T12:00:00`)),
-      registro.tipo_alimento?.nombre ?? null,
-      registro.alimento_kg,
-      null,
-      registro.agua_litros,
-      registro.metodo_registro,
-    ])
-
-  const planVigente = alimento !== null && alimento.efectiva && !alimento.desactualizado
-    && !alimento.desglose.no_disponible
-  if (planVigente && alimento) {
-    for (const renglon of alimento.desglose.renglones) {
-      filas.push([
-        'Estimación del plan',
-        lote.codigo,
-        null,
-        `Día ${renglon.dia_inicio}–${renglon.dia_fin}`,
-        renglon.tipo_alimento_nombre_snapshot ?? null,
-        renglon.consumo_total_kg,
-        renglon.consumo_por_ave_g,
-        null,
-        `Plan versión ${alimento.version}`,
-      ])
-    }
-  }
-  return filas
 }
 
 function ReportesCrecimiento({
@@ -117,26 +43,40 @@ function ReportesCrecimiento({
   const crecimientoDisponible = indicadores.some((dato) => dato.estado_calculo === 'calculado' && dato.dia_vida !== null)
     || (curva?.serie.length ?? 0) > 0
 
-  function exportarCrecimiento() {
-    const filas = filasCrecimiento(lote, indicadores, curva)
-    if (filas.length === 0) {
+  async function exportarCrecimiento() {
+    if (!crecimientoDisponible) {
       toast.info('No hay datos de crecimiento para este lote.')
       return
     }
-    descargar(lote.codigo, 'crecimiento', crearCsv(ENCABEZADOS_CRECIMIENTO, filas))
-    toast.success('Reporte de crecimiento descargado')
+    setExportando(true)
+    try {
+      const logo = await cargarLogoAvisens()
+      const libro = crearLibroXlsx(hojasCrecimientoExcel(lote, indicadores, curva, logo))
+      descargarExcel(lote.codigo, 'crecimiento', libro)
+      toast.success('Reporte de crecimiento descargado')
+    } catch (fallo) {
+      toast.error(mensajeDeError(fallo, 'No se pudo descargar el reporte de crecimiento.'))
+    } finally {
+      setExportando(false)
+    }
   }
 
   async function exportarAlimentacion() {
     setExportando(true)
     try {
-      const registros = await listarConsumosDiarios()
-      const filas = filasAlimento(lote, registros, alimento)
-      if (filas.length === 0) {
+      const [registros, logo] = await Promise.all([
+        listarConsumosDiarios(),
+        cargarLogoAvisens(),
+      ])
+      const consumosLote = registros.filter((r) => r.lote_id === lote.id)
+      const planVigente = alimento !== null && alimento.efectiva && !alimento.desactualizado
+        && !alimento.desglose.no_disponible && alimento.desglose.renglones.length > 0
+      if (consumosLote.length === 0 && !planVigente) {
         toast.info('No hay consumos registrados ni una estimación vigente del plan para este lote.')
         return
       }
-      descargar(lote.codigo, 'alimentacion', crearCsv(ENCABEZADOS_ALIMENTO, filas))
+      const libro = crearLibroXlsx(hojasAlimentacionExcel(lote, registros, alimento, logo))
+      descargarExcel(lote.codigo, 'alimentacion', libro)
       toast.success('Reporte de alimentación descargado')
     } catch (fallo) {
       toast.error(mensajeDeError(fallo, 'No se pudo descargar el reporte de alimentación.'))
@@ -148,7 +88,7 @@ function ReportesCrecimiento({
   return (
     <section className="gdc-reportes" aria-label="Reportes del lote">
       <p className="gdc-reportes-nota">
-        Descarga informes técnicos en PDF/impresión o CSV con los datos del lote. Evalúa el rendimiento zootécnico y compara ciclos históricos.
+        Descarga informes técnicos en PDF/impresión o Excel (.xlsx) con los datos del lote. Evalúa el rendimiento zootécnico y compara ciclos históricos.
       </p>
       <div className="gdc-reportes-acciones">
         <button
@@ -170,10 +110,10 @@ function ReportesCrecimiento({
         <button
           type="button"
           className="adm-btn adm-btn--secundario"
-          onClick={exportarCrecimiento}
+          onClick={() => void exportarCrecimiento()}
           disabled={!crecimientoDisponible || exportando}
         >
-          CSV Crecimiento
+          Excel Crecimiento
         </button>
         <button
           type="button"
@@ -181,7 +121,7 @@ function ReportesCrecimiento({
           onClick={() => void exportarAlimentacion()}
           disabled={exportando || cargandoAlimento}
         >
-          {exportando ? 'Preparando reporte…' : 'CSV Alimentación'}
+          {exportando ? 'Preparando reporte…' : 'Excel Alimentación'}
         </button>
       </div>
 
