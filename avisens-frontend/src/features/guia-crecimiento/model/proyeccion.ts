@@ -86,14 +86,14 @@ export function explicarSinProyeccion(mensaje: string): string {
   if (/plan/i.test(mensaje)) {
     return 'Fija el peso objetivo en «Objetivo del lote» y aquí verás cómo cierra el ciclo: mortalidad, alimento y conversión proyectados.'
   }
-  if (/3 d[ií]as/i.test(mensaje)) {
-    return 'Se necesitan pesajes de al menos 3 días distintos para proyectar el cierre del ciclo.'
+  if (/al menos un pesaje|primer pesaje|3 d[ií]as/i.test(mensaje)) {
+    return 'Se necesita al menos un pesaje registrado para proyectar el cierre del ciclo.'
   }
   if (/super[oó]/i.test(mensaje)) {
     return 'El lote ya pasó su día de salida: no queda nada por proyectar.'
   }
   if (/predicci[oó]n|inv[aá]lida|inconsistente|no respondi[oó]|fall[oó]|error/i.test(mensaje)) {
-    return 'No fue posible estimar el cierre del ciclo con los datos actuales. Asegúrate de registrar al menos 3 pesajes y consumos en días distintos dentro de la Bitácora.'
+    return 'No fue posible estimar el cierre del ciclo con los datos actuales. Asegúrate de registrar al menos un pesaje y consumos en días distintos dentro de la Bitácora.'
   }
   return mensaje
 }

@@ -11,7 +11,7 @@ class Pesaje(BaseModel):
 
 class PeticionPrediccion(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    pesajes: Annotated[list[Pesaje], Field(min_length=3, max_length=100)]
+    pesajes: Annotated[list[Pesaje], Field(min_length=1, max_length=100)]
     dia_faena: int = Field(default=42, ge=1, le=100)
     peso_objetivo_g: float = Field(default=2500, gt=0, le=10000, allow_inf_nan=False)
     horas_calor_severo: int = Field(default=0, ge=0, le=168)

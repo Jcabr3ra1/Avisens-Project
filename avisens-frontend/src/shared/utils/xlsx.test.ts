@@ -52,4 +52,24 @@ describe('xlsx', () => {
     // Una celda nula no se escribe.
     expect(texto).toContain('<row r="3"><c r="A3" t="inlineStr"><is><t xml:space="preserve">Sin dato</t></is></c></row>')
   })
+
+  it('incrusta imágenes PNG, celdas combinadas, alturas y oculta cuadrícula', () => {
+    const pngFalso = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    const libro = crearLibroXlsx([{
+      nombre: 'Alimentación',
+      filas: [[{ valor: 'AVISENS', estilo: 'bannerTitulo' }, null]],
+      alturas: { 0: 26 },
+      combinaciones: [{ filaInicio: 0, colInicio: 0, filaFin: 0, colFin: 1 }],
+      ocultarCuadricula: true,
+      imagen: { datos: pngFalso, columna: 0, fila: 0, anchoPx: 52, altoPx: 52 },
+    }])
+    const texto = decodificar(libro)
+
+    expect(texto).toContain('xl/media/image1.png')
+    expect(texto).toContain('xl/drawings/drawing1.xml')
+    expect(texto).toContain('showGridLines="0"')
+    expect(texto).toContain('<mergeCell ref="A1:B1"/>')
+    expect(texto).toContain('ht="26" customHeight="1"')
+    expect(texto).toContain('<drawing r:id="rId1"/>')
+  })
 })

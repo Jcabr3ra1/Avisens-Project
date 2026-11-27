@@ -43,9 +43,21 @@ def test_rechaza_dias_duplicados():
     assert respuesta.status_code == 422
 
 
-def test_rechaza_menos_de_tres_observaciones_y_campos_desconocidos():
+def test_prediccion_acepta_un_solo_pesaje():
     peticion = peticion_valida()
-    peticion["pesajes"] = peticion["pesajes"][:2]
+    peticion["pesajes"] = [{"dia": 7, "peso": 180}]
+
+    respuesta = client.post("/predecir", json=peticion)
+
+    assert respuesta.status_code == 200
+    cuerpo = respuesta.json()
+    assert cuerpo["peso_proyectado_faena_g"] > 0
+    assert cuerpo["modelo"]["puntos_usados"] == 1
+
+
+def test_rechaza_lista_vacia_de_observaciones_y_campos_desconocidos():
+    peticion = peticion_valida()
+    peticion["pesajes"] = []
     peticion["campo_inesperado"] = True
 
     respuesta = client.post("/predecir", json=peticion)

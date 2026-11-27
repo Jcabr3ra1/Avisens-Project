@@ -1,11 +1,30 @@
 // Libro de Excel (.xlsx) armado en el navegador, sin librerías.
 //
-// Un .xlsx es un ZIP de unos pocos XML. Para un reporte de tablas basta con
-// texto y números, así que se escriben esos XML a mano y se empaquetan sin
+// Un .xlsx es un ZIP de XMLs y recursos (como imágenes PNG). Se empaquetan sin
 // compresión (método "store"): Excel, LibreOffice y Google Sheets lo abren
 // igual y no hay que cargar una dependencia de cientos de KB por un botón.
 
-export type EstiloCelda = 'titulo' | 'moneda' | 'decimal'
+export type EstiloCelda =
+  | 'titulo'
+  | 'moneda'
+  | 'decimal'
+  | 'bannerTitulo'
+  | 'bannerSubtitulo'
+  | 'cabeceraTabla'
+  | 'subtituloSeccion'
+  | 'texto'
+  | 'textoZebra'
+  | 'entero'
+  | 'enteroZebra'
+  | 'decimalTabla'
+  | 'decimalZebra'
+  | 'monedaTabla'
+  | 'monedaZebra'
+  | 'totalEtiqueta'
+  | 'totalDecimal'
+  | 'totalMoneda'
+  | 'etiquetaMeta'
+  | 'valorMeta'
 
 export interface Celda {
   valor: string | number | null
@@ -14,15 +33,62 @@ export interface Celda {
 
 export type ValorCelda = string | number | null | Celda
 
+export interface ImagenXlsx {
+  datos: Uint8Array
+  /** Columna inicial (base 0). */
+  columna: number
+  /** Fila inicial (base 0). */
+  fila: number
+  anchoPx: number
+  altoPx: number
+}
+
+export interface RangoCombinado {
+  filaInicio: number
+  colInicio: number
+  filaFin: number
+  colFin: number
+}
+
 export interface HojaXlsx {
   nombre: string
   filas: ValorCelda[][]
   /** Ancho de cada columna, en caracteres. */
   anchos?: number[]
+  /** Alto de fila en puntos (índice base 0 -> pt). */
+  alturas?: Record<number, number>
+  /** Celdas combinadas (índices base 0). */
+  combinaciones?: RangoCombinado[]
+  /** Imagen PNG incrustada en la hoja. */
+  imagen?: ImagenXlsx
+  /** Oculta la cuadrícula estándar de Excel para un acabado de documento. */
+  ocultarCuadricula?: boolean
 }
 
-// Índices de cellXfs en styles.xml: 0 normal, 1 negrita, 2 #,##0, 3 0.00.
-const INDICE_ESTILO: Record<EstiloCelda, number> = { titulo: 1, moneda: 2, decimal: 3 }
+// Índices de cellXfs en styles.xml:
+// 0 normal, 1 negrita, 2 #,##0, 3 0.00 (se mantienen por compatibilidad).
+const INDICE_ESTILO: Record<EstiloCelda, number> = {
+  titulo: 1,
+  moneda: 2,
+  decimal: 3,
+  bannerTitulo: 4,
+  bannerSubtitulo: 5,
+  cabeceraTabla: 6,
+  subtituloSeccion: 7,
+  texto: 8,
+  textoZebra: 9,
+  entero: 10,
+  enteroZebra: 11,
+  decimalTabla: 12,
+  decimalZebra: 13,
+  monedaTabla: 14,
+  monedaZebra: 15,
+  totalEtiqueta: 16,
+  totalDecimal: 17,
+  totalMoneda: 18,
+  etiquetaMeta: 19,
+  valorMeta: 20,
+}
 
 function escaparXml(texto: string): string {
   return texto
@@ -54,52 +120,160 @@ export function nombreDeHoja(nombre: string): string {
 
 function celdaXml(valor: ValorCelda, referencia: string): string {
   const celda: Celda = valor !== null && typeof valor === 'object' ? valor : { valor }
-  if (celda.valor === null || celda.valor === '') return ''
+  const tieneEstilo = Boolean(celda.estilo)
+  if ((celda.valor === null || celda.valor === '') && !tieneEstilo) return ''
   const estilo = celda.estilo ? ` s="${INDICE_ESTILO[celda.estilo]}"` : ''
+  if (celda.valor === null || celda.valor === '') {
+    return `<c r="${referencia}"${estilo}/>`
+  }
   if (typeof celda.valor === 'number' && Number.isFinite(celda.valor)) {
     return `<c r="${referencia}"${estilo}><v>${celda.valor}</v></c>`
   }
   return `<c r="${referencia}" t="inlineStr"${estilo}><is><t xml:space="preserve">${escaparXml(String(celda.valor))}</t></is></c>`
 }
 
-function hojaXml(hoja: HojaXlsx): string {
+function hojaXml(hoja: HojaXlsx, tieneDibujo: boolean): string {
+  const vistas = hoja.ocultarCuadricula
+    ? '<sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews>'
+    : ''
   const columnas = hoja.anchos?.length
     ? `<cols>${hoja.anchos.map((ancho, i) => `<col min="${i + 1}" max="${i + 1}" width="${ancho}" customWidth="1"/>`).join('')}</cols>`
     : ''
   const filas = hoja.filas.map((fila, i) => {
     const celdas = fila.map((valor, j) => celdaXml(valor, `${columnaExcel(j)}${i + 1}`)).join('')
-    return `<row r="${i + 1}">${celdas}</row>`
+    const altura = hoja.alturas?.[i]
+    const attrAltura = altura ? ` ht="${altura}" customHeight="1"` : ''
+    return `<row r="${i + 1}"${attrAltura}>${celdas}</row>`
   }).join('')
+  const combinaciones = hoja.combinaciones?.length
+    ? `<mergeCells count="${hoja.combinaciones.length}">${hoja.combinaciones.map((r) => (
+      `<mergeCell ref="${columnaExcel(r.colInicio)}${r.filaInicio + 1}:${columnaExcel(r.colFin)}${r.filaFin + 1}"/>`
+    )).join('')}</mergeCells>`
+    : ''
+  const dibujo = tieneDibujo ? '<drawing r:id="rId1"/>' : ''
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-    + `${columnas}<sheetData>${filas}</sheetData></worksheet>`
+    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    + `${vistas}${columnas}<sheetData>${filas}</sheetData>${combinaciones}${dibujo}</worksheet>`
+}
+
+function dibujoXml(imagen: ImagenXlsx): string {
+  const emuAncho = Math.round(imagen.anchoPx * 9525)
+  const emuAlto = Math.round(imagen.altoPx * 9525)
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"'
+    + ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+    + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    + '<xdr:oneCellAnchor>'
+    + `<xdr:from><xdr:col>${imagen.columna}</xdr:col><xdr:colOff>76200</xdr:colOff><xdr:row>${imagen.fila}</xdr:row><xdr:rowOff>38100</xdr:rowOff></xdr:from>`
+    + `<xdr:ext cx="${emuAncho}" cy="${emuAlto}"/>`
+    + '<xdr:pic>'
+    + '<xdr:nvPicPr><xdr:cNvPr id="1" name="Logo AVISENS"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'
+    + '<xdr:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
+    + `<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuAncho}" cy="${emuAlto}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>`
+    + '</xdr:pic>'
+    + '<xdr:clientData/>'
+    + '</xdr:oneCellAnchor>'
+    + '</xdr:wsDr>'
 }
 
 const ESTILOS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-  + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-  + '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
-  + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+  + '<fonts count="9">'
+  + '<font><sz val="11"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="11"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="15"/><color rgb="FF0F172A"/><name val="Calibri"/></font>'
+  + '<font><sz val="10"/><color rgb="FF475569"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="11"/><color rgb="FF0F766E"/><name val="Calibri"/></font>'
+  + '<font><sz val="10"/><color rgb="FF0F172A"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="10"/><color rgb="FF0F172A"/><name val="Calibri"/></font>'
+  + '<font><b/><sz val="9"/><color rgb="FF475569"/><name val="Calibri"/></font>'
+  + '</fonts>'
+  + '<fills count="7">'
+  + '<fill><patternFill patternType="none"/></fill>'
+  + '<fill><patternFill patternType="gray125"/></fill>'
+  + '<fill><patternFill patternType="solid"><fgColor rgb="FF0F766E"/></patternFill></fill>'
+  + '<fill><patternFill patternType="solid"><fgColor rgb="FFF0FDFA"/></patternFill></fill>'
+  + '<fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/></patternFill></fill>'
+  + '<fill><patternFill patternType="solid"><fgColor rgb="FFECFDF5"/></patternFill></fill>'
+  + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill>'
+  + '</fills>'
+  + '<borders count="5">'
+  + '<border><left/><right/><top/><bottom/><diagonal/></border>'
+  + '<border><left style="thin"><color rgb="FFE2E8F0"/></left><right style="thin"><color rgb="FFE2E8F0"/></right><top style="thin"><color rgb="FFE2E8F0"/></top><bottom style="thin"><color rgb="FFE2E8F0"/></bottom><diagonal/></border>'
+  + '<border><left style="thin"><color rgb="FF0F766E"/></left><right style="thin"><color rgb="FF0F766E"/></right><top style="thin"><color rgb="FF0F766E"/></top><bottom style="thin"><color rgb="FF0F766E"/></bottom><diagonal/></border>'
+  + '<border><left/><right/><top/><bottom style="medium"><color rgb="FF0F766E"/></bottom><diagonal/></border>'
+  + '<border><left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right><top style="medium"><color rgb="FF0F766E"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>'
+  + '</borders>'
   + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-  + '<cellXfs count="4">'
+  + '<cellXfs count="21">'
+  // 0..3: estilos base existentes
   + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
   + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
   + '<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
   + '<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+  // 4: bannerTitulo
+  + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+  // 5: bannerSubtitulo
+  + '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+  // 6: cabeceraTabla
+  + '<xf numFmtId="0" fontId="4" fillId="2" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+  // 7: subtituloSeccion
+  + '<xf numFmtId="0" fontId="5" fillId="3" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+  // 8: texto
+  + '<xf numFmtId="0" fontId="6" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
+  // 9: textoZebra
+  + '<xf numFmtId="0" fontId="6" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
+  // 10: entero
+  + '<xf numFmtId="3" fontId="6" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 11: enteroZebra
+  + '<xf numFmtId="3" fontId="6" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 12: decimalTabla
+  + '<xf numFmtId="2" fontId="6" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 13: decimalZebra
+  + '<xf numFmtId="2" fontId="6" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 14: monedaTabla
+  + '<xf numFmtId="3" fontId="6" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 15: monedaZebra
+  + '<xf numFmtId="3" fontId="6" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 16: totalEtiqueta
+  + '<xf numFmtId="0" fontId="7" fillId="5" borderId="4" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+  // 17: totalDecimal
+  + '<xf numFmtId="2" fontId="7" fillId="5" borderId="4" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 18: totalMoneda
+  + '<xf numFmtId="3" fontId="7" fillId="5" borderId="4" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>'
+  // 19: etiquetaMeta
+  + '<xf numFmtId="0" fontId="8" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+  // 20: valorMeta
+  + '<xf numFmtId="0" fontId="6" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
   + '</cellXfs>'
   + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
   + '</styleSheet>'
 
-function partesDelLibro(hojas: HojaXlsx[]): [string, string][] {
+function partesDelLibro(hojas: HojaXlsx[]): [string, string | Uint8Array][] {
   const nombres = hojas.map((hoja) => nombreDeHoja(hoja.nombre))
-  return [
+  const dibujos: { indiceHoja: number; indiceDibujo: number; imagen: ImagenXlsx }[] = []
+  hojas.forEach((hoja, i) => {
+    if (hoja.imagen) {
+      dibujos.push({ indiceHoja: i + 1, indiceDibujo: dibujos.length + 1, imagen: hoja.imagen })
+    }
+  })
+
+  const overridesDibujos = dibujos.map((d) => (
+    `<Override PartName="/xl/drawings/drawing${d.indiceDibujo}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`
+  )).join('')
+  const tipoPng = dibujos.length > 0 ? '<Default Extension="png" ContentType="image/png"/>' : ''
+
+  const partes: [string, string | Uint8Array][] = [
     ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-officedocument.relationships+xml"/>'
       + '<Default Extension="xml" ContentType="application/xml"/>'
+      + tipoPng
       + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
       + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
       + hojas.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+      + overridesDibujos
       + '</Types>'],
     ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -115,8 +289,32 @@ function partesDelLibro(hojas: HojaXlsx[]): [string, string][] {
       + `<Relationship Id="rId${hojas.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`
       + '</Relationships>'],
     ['xl/styles.xml', ESTILOS_XML],
-    ...hojas.map((hoja, i): [string, string] => [`xl/worksheets/sheet${i + 1}.xml`, hojaXml(hoja)]),
   ]
+
+  hojas.forEach((hoja, i) => {
+    const dibujo = dibujos.find((d) => d.indiceHoja === i + 1)
+    partes.push([`xl/worksheets/sheet${i + 1}.xml`, hojaXml(hoja, Boolean(dibujo))])
+    if (dibujo) {
+      partes.push([
+        `xl/worksheets/_rels/sheet${i + 1}.xml.rels`,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${dibujo.indiceDibujo}.xml"/>`
+        + '</Relationships>',
+      ])
+      partes.push([`xl/drawings/drawing${dibujo.indiceDibujo}.xml`, dibujoXml(dibujo.imagen)])
+      partes.push([
+        `xl/drawings/_rels/drawing${dibujo.indiceDibujo}.xml.rels`,
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${dibujo.indiceDibujo}.png"/>`
+        + '</Relationships>',
+      ])
+      partes.push([`xl/media/image${dibujo.indiceDibujo}.png`, dibujo.imagen.datos])
+    }
+  })
+
+  return partes
 }
 
 // ─── ZIP sin compresión ───
@@ -209,6 +407,28 @@ export const TIPO_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsh
 export function crearLibroXlsx(hojas: HojaXlsx[]): Uint8Array {
   const codificador = new TextEncoder()
   return empaquetarZip(
-    partesDelLibro(hojas).map(([nombre, xml]) => [nombre, codificador.encode(xml)]),
+    partesDelLibro(hojas).map(([nombre, contenido]) => [
+      nombre,
+      typeof contenido === 'string' ? codificador.encode(contenido) : contenido,
+    ]),
   )
+}
+
+let cacheLogoAvisens: Uint8Array | null | undefined
+
+/** Descarga y cachea el logo PNG de AVISENS para incrustarlo en reportes Excel. */
+export async function cargarLogoAvisens(): Promise<Uint8Array | null> {
+  if (cacheLogoAvisens !== undefined) return cacheLogoAvisens
+  try {
+    const respuesta = await fetch('/logo-avisens.png')
+    if (!respuesta.ok) {
+      cacheLogoAvisens = null
+      return null
+    }
+    cacheLogoAvisens = new Uint8Array(await respuesta.arrayBuffer())
+    return cacheLogoAvisens
+  } catch {
+    cacheLogoAvisens = null
+    return null
+  }
 }

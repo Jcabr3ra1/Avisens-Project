@@ -48,7 +48,7 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
   const reducir = useReducedMotion()
   const referencia = curva?.referencias.genetica?.linea ?? null
   const marca = curva?.referencias.marca?.marca ?? null
-  const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 3
+  const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 1
   const esOperario = getRol() === ROL_OPERARIO
   const rutaBitacora = lote?.galpon?.granja?.id && lote?.galpon?.id
     ? (esOperario
@@ -87,9 +87,9 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
     setErrorComparacion('')
     void obtenerCurvaCrecimiento(Number(loteComparacionId)).then((resultado) => {
       if (!vigente) return
-      if (resultado.modelo.puntos_usados < 3) {
+      if (resultado.modelo.puntos_usados < 1) {
         setCurvaComparacion(null)
-        setErrorComparacion('Ese lote todavía necesita tres pesajes para poder compararse.')
+        setErrorComparacion('Ese lote todavía necesita registrar su primer pesaje para poder compararse.')
       } else {
         setCurvaComparacion(resultado)
       }
@@ -199,14 +199,14 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
                   />
                 </Suspense>
               </div>
-              {!suficiente && <p className="gcr-aviso-datos">Las proyecciones aparecen después de registrar tres pesajes en días distintos.</p>}
+              {!suficiente && <p className="gcr-aviso-datos">Las proyecciones aparecen después de registrar el primer pesaje.</p>}
               {!referencia && (
                 <p className="guia-aviso">
                   Este lote no tiene línea genética asignada. La proyección usa una curva típica de pollo de engorde y no se compara contra un estándar.
                 </p>
               )}
               {suficiente && <p className="gcr-nota">
-                Proyección calculada con {curva.modelo.puntos_usados} pesajes {referencia ? `y la curva de referencia ${referencia}` : 'y el estándar de crecimiento'}. La franja sombreada indica el rango de peso esperado.
+                Proyección calculada con {curva.modelo.puntos_usados} {curva.modelo.puntos_usados === 1 ? 'pesaje' : 'pesajes'} {referencia ? `y la curva de referencia ${referencia}` : 'y el estándar de crecimiento'}. La franja sombreada indica el rango de peso esperado.
               </p>}
             </>
           ) : null)}

@@ -93,7 +93,8 @@ describe('proyeccion', () => {
 
   it('traduce por qué no hay proyección al cierre en una instrucción', () => {
     expect(explicarSinProyeccion('El lote no tiene un plan con día objetivo calculado')).toMatch(/peso objetivo/)
-    expect(explicarSinProyeccion('Se necesitan pesajes de al menos 3 días distintos para predecir')).toMatch(/3 días/)
+    expect(explicarSinProyeccion('Se necesitan pesajes de al menos 3 días distintos para predecir')).toMatch(/pesaje/)
+    expect(explicarSinProyeccion('Se necesita al menos un pesaje para predecir')).toMatch(/pesaje/)
     expect(explicarSinProyeccion('El lote ya superó el día de proyección')).toMatch(/pasó su día de salida/)
     expect(explicarSinProyeccion('El servicio de predicción devolvió una respuesta inválida')).toMatch(/No fue posible estimar el cierre/)
     expect(explicarSinProyeccion('Otro motivo')).toBe('Otro motivo')

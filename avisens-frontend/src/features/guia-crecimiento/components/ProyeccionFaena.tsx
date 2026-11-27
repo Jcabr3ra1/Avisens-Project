@@ -28,7 +28,7 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
   const [errorSimulacion, setErrorSimulacion] = useState('')
   const [cargandoSimulacion, setCargandoSimulacion] = useState(false)
   const planListo = plan !== null && !plan.desactualizado && plan.estado_dia === 'calculado'
-  const datosSuficientes = (curva?.modelo.puntos_usados ?? 0) >= 3
+  const datosSuficientes = (curva?.modelo.puntos_usados ?? 0) >= 1
   const quedanDiasSimulables = minDia <= 100
 
   useEffect(() => {
@@ -72,7 +72,7 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
           ? 'Recalcula el plan del lote para habilitar la simulación.'
           : 'Define una meta de peso con un día de salida válido para habilitar la simulación.'}</p>
       ) : !datosSuficientes ? (
-        <p className="guia-nota">Se necesitan pesajes de al menos tres días distintos para simular la salida.</p>
+        <p className="guia-nota">Se necesita al menos un pesaje registrado para simular la salida.</p>
       ) : !quedanDiasSimulables ? (
         <p className="guia-nota">El último pesaje ya está en el día máximo que aceptan las proyecciones.</p>
       ) : (
