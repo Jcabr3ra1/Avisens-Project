@@ -74,22 +74,6 @@
             app:backgroundTint="@color/green_button"
             app:cornerRadius="9dp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/comparar"
-
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="Comparar lotes"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            app:backgroundTint="@color/green_button"
-            app:cornerRadius="9dp" />
     </LinearLayout>
 
     <LinearLayout
@@ -182,38 +166,88 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/csv"
-
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="wrap_content"
+            android:text="Reportes del lote"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Exporta los datos disponibles del lote seleccionado."
+            android:textColor="@color/text_primary"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/pdfReporte"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
             android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif"
             android:insetTop="0dp"
             android:insetBottom="0dp"
-            android:text="Exportar CSV de crecimiento"
+            android:text="Reporte imprimible / PDF"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold"
             app:backgroundTint="@color/green_button"
-            app:cornerRadius="9dp" />
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/green_button"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/comparar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Comparar con otro lote"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/green_button"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/csv"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="CSV Crecimiento"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/green_button"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/csvAlimento"
-
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="48dp"
             android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif"
             android:insetTop="0dp"
             android:insetBottom="0dp"
-            android:text="Exportar CSV de alimentación"
+            android:text="CSV Alimentación"
             android:textAllCaps="false"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold"
-            app:backgroundTint="@color/green_button"
-            app:cornerRadius="9dp" />
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/green_button"
+            app:strokeWidth="1dp" />
+
     </LinearLayout>
 </LinearLayout>

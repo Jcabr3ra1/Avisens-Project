@@ -4,6 +4,9 @@ import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.widget.ImageView
+import android.content.res.Configuration
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -59,6 +62,43 @@ internal class DetalleSensorModal {
         panel.addView(
             cerrar,
             LinearLayout.LayoutParams(dp(44), dp(44)).apply { gravity = Gravity.END })
+        val icono = when {
+            nombre.contains("temperatura", true) -> R.drawable.ic_thermometer to "#D97736"
+            nombre.contains("humedad", true) -> R.drawable.ic_water_drop to "#438ED5"
+            nombre.contains("luminosidad", true) -> R.drawable.ic_sensor_sol to "#C99A23"
+            nombre.contains("peso", true) || nombre.contains(
+                "alimento",
+                true
+            ) -> R.drawable.ic_sensor_balanza to "#AA8050"
+
+            nombre.contains("agua", true) -> R.drawable.ic_water_drop to "#368DAE"
+            else -> R.drawable.ic_sensor_aire to "#39956D"
+        }
+        val oscuro =
+            ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        val tono = Color.parseColor(icono.second)
+        val insignia = ImageView(ctx).apply {
+            setImageResource(icono.first)
+            setColorFilter(tono)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(15), dp(15), dp(15), dp(15))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(
+                    Color.argb(
+                        if (oscuro) 65 else 35,
+                        Color.red(tono),
+                        Color.green(tono),
+                        Color.blue(tono)
+                    )
+                )
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        panel.addView(insignia, LinearLayout.LayoutParams(dp(60), dp(60)).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            bottomMargin = dp(12)
+        })
         agregar(texto(nombre, 22f, true), 0)
         agregar(texto("Medición actual", 13f, secundario = true))
         val lectura = texto("—", 34f, true); agregar(lectura, 2)

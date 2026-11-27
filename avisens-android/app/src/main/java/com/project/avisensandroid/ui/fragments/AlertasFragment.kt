@@ -766,8 +766,8 @@ class AlertasFragment : BaseBottomNavFragment() {
         return try {
             val dia = java.time.Instant.parse(fecha)
                 .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-            java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("es", "CO"))
-                .format(dia).uppercase(Locale("es", "CO"))
+            java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM 'de' yyyy", Locale("es", "CO"))
+                .format(dia).replaceFirstChar { it.uppercase() }
         } catch (_: Exception) {
             fecha.take(10)
         }

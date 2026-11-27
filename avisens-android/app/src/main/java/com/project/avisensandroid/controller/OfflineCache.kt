@@ -111,7 +111,7 @@ object OfflineCache {
 
             // No hacer esperar al usuario a que venza el timeout si ya sabemos que no hay red.
             if (key != null && !hayInternet(context)) {
-                copiaGuardada()?.let { return@Interceptor it }
+                return@Interceptor copiaGuardada() ?: throw IOException("Sin copia local")
             }
 
             try {

@@ -824,7 +824,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
     // ============================================================
     // FORMATEAR FECHA
-    // Ejemplo: 2026-11-20 -> 20 noviembre 2026
+    // Ejemplo: 2026-11-20 -> Viernes, 20 de noviembre de 2026
     // ============================================================
 
     private fun formatearFechaLarga(
@@ -838,10 +838,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
             fechaLocal.format(
                 DateTimeFormatter.ofPattern(
-                    "d MMMM yyyy",
+                    "EEEE, d 'de' MMMM 'de' yyyy",
                     localeEspanol
                 )
-            )
+            ).replaceFirstChar { it.uppercase() }
 
         } catch (_: Exception) {
             fecha

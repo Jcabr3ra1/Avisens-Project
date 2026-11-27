@@ -77,6 +77,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
         cornerRadius = dp(radio).toFloat()
     }
 
+    private var ajustarAlturaLista: (() -> Unit)? = null
     private lateinit var lista: LinearLayout
     private lateinit var estado: TextView
     private fun dp(n: Int) = (n * activity.resources.displayMetrics.density).toInt()
@@ -127,6 +128,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
             pendientes.background = fondo(if (noLeidas) seleccionado else superficie, 12)
             animadas.clear()
             pintar()
+            raiz.findViewById<ScrollView>(R.id.notifScroll).scrollTo(0, 0)
         }
         todas.setTextColor(verde)
         pendientes.setTextColor(verde)
@@ -150,17 +152,23 @@ class CentroNotificaciones(private val activity: MainActivity) {
             (visible.bottom - posicion[1] - ancla.height - dp(180)).coerceAtLeast(dp(100))
         )
         val scroll = raiz.findViewById<ScrollView>(R.id.notifScroll)
-        scroll.measure(
-            View.MeasureSpec.makeMeasureSpec(ancho - dp(28), View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(alto, View.MeasureSpec.AT_MOST)
-        )
-        scroll.layoutParams = scroll.layoutParams.apply { height = -2 }
-        lista.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        // Medir el contenido sin depender de la altura del filtro anterior.
+        ajustarAlturaLista = {
+            lista.measure(
+                View.MeasureSpec.makeMeasureSpec(ancho - dp(28), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
             val altura = minOf(lista.measuredHeight, alto)
-            if (altura > 0 && scroll.layoutParams.height != altura) {
-                scroll.layoutParams = scroll.layoutParams.apply { height = altura }
+            scroll.layoutParams = scroll.layoutParams.apply { height = altura }
+            if (::dialogo.isInitialized && dialogo.isShowing) {
+                raiz.measure(
+                    View.MeasureSpec.makeMeasureSpec(ancho, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                dialogo.update(ancho, raiz.measuredHeight)
             }
         }
+        ajustarAlturaLista?.invoke()
         dialogo = PopupWindow(raiz, ancho, -2, true).apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true
@@ -170,6 +178,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
                 trabajo?.cancel()
                 sombra?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
                 sombra = null
+                ajustarAlturaLista = null
             }
         }
         raiz.alpha = 0f
@@ -226,12 +235,14 @@ class CentroNotificaciones(private val activity: MainActivity) {
             estado.text =
                 if (cache || !OfflineCache.hayInternet(activity)) "Datos guardados" else ""
             estado.visibility = if (estado.text.isEmpty()) View.GONE else View.VISIBLE
+            ajustarAlturaLista?.invoke()
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             if (vigente() && !cargado && !cache) {
                 estado.visibility = View.VISIBLE; estado.text =
                     "No se pudieron consultar las notificaciones"
+                ajustarAlturaLista?.invoke()
             }
         }
     }
@@ -240,7 +251,9 @@ class CentroNotificaciones(private val activity: MainActivity) {
         if (ocupado || !vigente()) return
         if (!OfflineCache.hayInternet(activity)) {
             estado.visibility = View.VISIBLE; estado.text =
-                "Necesitas conexión para realizar esta acción"; return
+                "Necesitas conexión para realizar esta acción"
+            ajustarAlturaLista?.invoke()
+            return
         }
         ocupado = true
         activity.lifecycleScope.launch {
@@ -249,12 +262,14 @@ class CentroNotificaciones(private val activity: MainActivity) {
                     ocupado = false; cargar(false); despues?.invoke()
                 } else if (vigente()) {
                     estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción"
+                    ajustarAlturaLista?.invoke()
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 if (vigente()) {
                     estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción"
+                    ajustarAlturaLista?.invoke()
                 }
             } finally {
                 ocupado = false
@@ -350,6 +365,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
                 LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
             animar(tarjeta, "notificacion:${n.id}", indice++)
         }
+        ajustarAlturaLista?.invoke()
     }
 
     private fun detalle(n: NotificacionResponse) {

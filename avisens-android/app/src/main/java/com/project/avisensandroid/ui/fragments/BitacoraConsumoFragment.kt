@@ -327,10 +327,10 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                 text = runCatching {
                     java.time.LocalDate.parse(dia).format(
                         java.time.format.DateTimeFormatter.ofPattern(
-                            "d MMMM yyyy",
+                            "EEEE, d 'de' MMMM 'de' yyyy",
                             Locale("es", "CO")
                         )
-                    )
+                    ).replaceFirstChar { it.uppercase() }
                 }.getOrDefault(dia)
                 textSize = 16f
                 setTypeface(null, Typeface.BOLD)
@@ -379,10 +379,10 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                 }
             registros.filter { it.fecha.take(10) == dia }
                 .sortedByDescending { it.fecha_registro.orEmpty() }.forEach { consumo ->
-                val tarjeta = crearTarjetaConsumo(consumo)
-                contenedor.addView(tarjeta)
-                entradaTarjetas.mostrar(tarjeta, "consumo:${consumo.id}")
-            }
+                    val tarjeta = crearTarjetaConsumo(consumo)
+                    contenedor.addView(tarjeta)
+                    entradaTarjetas.mostrar(tarjeta, "consumo:${consumo.id}")
+                }
         }
     }
 

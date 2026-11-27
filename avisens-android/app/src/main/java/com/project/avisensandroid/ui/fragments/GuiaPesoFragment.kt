@@ -66,6 +66,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     private var configurandoSpinnerLotes = false
     private var programandoObjetivo = false
     private var datosListos = false
+    private var estabaSinRed = false
+    private fun apiLectura() = if (!com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())) RetrofitClient.apiCache else RetrofitClient.api
     private val puedeEditarPlan: Boolean
         get() = (activity as? MainActivity)?.obtenerRolActual() == UserRole.PROPIETARIO
 
@@ -175,7 +177,13 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (true) {
                     delay(15000)
-                    actualizarRegistrosGuia()
+                    val online = com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
+                    if (!online) estabaSinRed = true
+                    else if (estabaSinRed || !datosListos) {
+                        estabaSinRed = false
+                        cargarDatos()
+                        panel?.refrescarConsultas()
+                    } else actualizarRegistrosGuia()
                 }
             }
         }
@@ -202,7 +210,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             val c = async {
                 cargarOpcional("consumo") {
                     cargarPaginas {
-                        RetrofitClient.api.listarConsumosDiarios(
+                        apiLectura().listarConsumosDiarios(
                             it,
                             100
                         )
@@ -212,7 +220,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             val m = async {
                 cargarOpcional("mortalidad") {
                     cargarPaginas {
-                        RetrofitClient.api.listarRegistrosMortalidad(
+                        apiLectura().listarRegistrosMortalidad(
                             it,
                             100
                         )
@@ -294,7 +302,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     val consumosDeferred = async {
                         cargarOpcional("consumo") {
                             cargarPaginas { p ->
-                                RetrofitClient.api.listarConsumosDiarios(
+                                apiLectura().listarConsumosDiarios(
                                     page = p,
                                     limit = 100
                                 )
@@ -304,7 +312,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                     val mortalidadDeferred = async {
                         cargarOpcional("mortalidad") {
                             cargarPaginas { p ->
-                                RetrofitClient.api.listarRegistrosMortalidad(
+                                apiLectura().listarRegistrosMortalidad(
                                     page = p,
                                     limit = 100
                                 )
@@ -322,15 +330,15 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 mortalidades = fuentes.third.datos
                 datosListos = true
                 configurarSpinnerLotes()
-                binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
-                binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
+                binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
+                binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
                 val fallos = listOfNotNull(
                     fuentes.first.error,
                     fuentes.second.error,
                     fuentes.third.error
                 )
                 binding.txtEstadoCargaGuia.text = if (fallos.isEmpty()) {
-                    "Datos actualizados"
+                    if (com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())) "Datos actualizados" else ""
                 } else {
                     "Datos parciales: ${fallos.joinToString(" · ")}. Revisa conexión o permisos."
                 }
@@ -415,7 +423,12 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     }
 
     private fun seleccionarLote(lote: LoteResponse) {
-        if (loteSeleccionado?.id == lote.id && planActual != null) return
+        if (loteSeleccionado?.id == lote.id && planActual != null && !estabaSinRed) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                try { cargarPlanCurvaYAlimento(lote, conservarObjetivoActual = true) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+            }
+            return
+        }
         loteSeleccionado = lote
         panel?.limpiar()
         planActual = null
@@ -467,7 +480,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         conservarObjetivoActual: Boolean
     ) {
         binding.txtEstadoPlanGuia.text = "Consultando el plan vigente..."
-        val response = RetrofitClient.api.obtenerPlanLote(lote.id)
+        val response = apiLectura().obtenerPlanLote(lote.id)
         if (loteSeleccionado?.id != lote.id) return
 
         if (!response.isSuccessful || response.body() == null) {
@@ -510,8 +523,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         alimentoActual = cargarEstimacionAlimentoSiDisponible(lote.id)
         if (loteSeleccionado?.id != lote.id) return
 
-        binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
-        binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
+        binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
+        binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
         if (plan.desactualizado) {
             binding.txtEstadoPlanGuia.text = "Requiere recálculo"
             mostrarAdvertencia("La configuración del lote cambió. Recalcula el plan.")
@@ -531,7 +544,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     private suspend fun cargarCurvaDelPlan(plan: PlanLoteApiResponse): CurvaGeneticaApiResponse? {
         val curvaId = plan.curva?.version_id?.takeIf { it > 0 } ?: return null
         return try {
-            val response = RetrofitClient.api.obtenerCurvaGenetica(curvaId)
+            val response = apiLectura().obtenerCurvaGenetica(curvaId)
             if (response.isSuccessful) response.body() else null
         } catch (cancelacion: CancellationException) {
             throw cancelacion
@@ -546,7 +559,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         val sexoLote = lote.sexo?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "mixto"
         return try {
             val curvas = cargarPaginas { pagina ->
-                RetrofitClient.api.listarCurvasGeneticas(page = pagina, limit = 100)
+                apiLectura().listarCurvasGeneticas(page = pagina, limit = 100)
             }
             val vigente = curvas
                 .filter {
@@ -558,7 +571,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 .maxByOrNull { it.version ?: 0 }
                 ?: return null
 
-            val respuesta = RetrofitClient.api.obtenerCurvaGenetica(vigente.id)
+            val respuesta = apiLectura().obtenerCurvaGenetica(vigente.id)
             if (respuesta.isSuccessful) respuesta.body() else null
         } catch (cancelacion: CancellationException) {
             throw cancelacion
@@ -569,7 +582,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
     private suspend fun cargarEstimacionAlimentoSiDisponible(loteId: Int): EstimacionAlimentoApiResponse? =
         try {
-            val response = RetrofitClient.api.obtenerEstimacionAlimento(loteId)
+            val response = apiLectura().obtenerEstimacionAlimento(loteId)
             if (response.isSuccessful) response.body() else null
         } catch (cancelacion: CancellationException) {
             throw cancelacion
@@ -711,8 +724,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             binding.txtEstadoCargaGuia.text = e.message ?: "No se pudo guardar el objetivo."
             mostrarAdvertencia(e.message ?: "No se pudo actualizar el plan.")
         } finally {
-            binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
-            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
+            binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
+            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
         }
     }
 
@@ -776,8 +789,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             mostrarAdvertencia(error.message ?: "No se pudo recalcular el plan.")
         } finally {
             binding.btnRecalcularPlanGuia.isEnabled = puedeEditarPlan
-            binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan
-            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan
+            binding.btnCalcularProyeccion.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
+            binding.btnCancelarObjetivoGuia.isEnabled = puedeEditarPlan && com.project.avisensandroid.controller.OfflineCache.hayInternet(requireContext())
         }
     }
 

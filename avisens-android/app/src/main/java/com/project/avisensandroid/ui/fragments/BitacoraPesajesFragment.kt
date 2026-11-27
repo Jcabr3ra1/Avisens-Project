@@ -46,6 +46,14 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         timeZone = TimeZone.getTimeZone("America/Bogota")
     }.format(Date())
 
+    private fun fechaAnterior(dias: Int): String {
+        val calendario = Calendar.getInstance(TimeZone.getTimeZone("America/Bogota"))
+        calendario.add(Calendar.DAY_OF_YEAR, -dias)
+        return SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = calendario.timeZone
+        }.format(calendario.time)
+    }
+
     private fun dia(l: LoteResponse, fecha: String): Int =
         ((formato().parse(fecha.take(10))!!.time - formato().parse(l.fecha_ingreso.take(10))!!.time) / 86400000L).toInt() + 1
 
@@ -74,12 +82,6 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         b.tabM.setOnClickListener { abrirPestanaBitacora(BitacoraFragment(), 2) }
         b.tabE.setOnClickListener { abrirPestanaBitacora(BitacoraEnfermoFragment(), 2) }
         b.tabC.setOnClickListener { abrirPestanaBitacora(BitacoraConsumoFragment(), 2) }
-        b.tituloHistorialPeso.setOnClickListener {
-            val abierto = b.panelHistorial.visibility != View.VISIBLE
-            b.panelHistorial.visibility = if (abierto) View.VISIBLE else View.GONE
-            b.tituloHistorialPeso.text =
-                if (abierto) "Historial de pesajes  ▴" else "Historial de pesajes  ▾"
-        }
         b.edtBuscarPeso.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) =
                 Unit
@@ -97,7 +99,14 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         b.spinnerFechaPeso.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
-            listOf("Todas las fechas", "Hoy", "Rango personalizado")
+            listOf(
+                "Todas las fechas",
+                "Hoy",
+                "Ayer",
+                "Últimos 7 días",
+                "Últimos 30 días",
+                "Personalizado"
+            )
         )
         b.spinnerDesvioPeso.adapter = ArrayAdapter(
             requireContext(),
@@ -113,7 +122,10 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
             }
             when (b.spinnerFechaPeso.selectedItemPosition) {
                 1 -> aplicar(hoy(), hoy())
-                2 -> elegirFecha { inicio ->
+                2 -> aplicar(fechaAnterior(1), fechaAnterior(1))
+                3 -> aplicar(fechaAnterior(6), hoy())
+                4 -> aplicar(fechaAnterior(29), hoy())
+                5 -> elegirFecha { inicio ->
                     elegirFecha { fin ->
                         aplicar(
                             minOf(inicio, fin),
@@ -264,34 +276,6 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         val nueva = "$l|$curva|$pesajes|$pendientes"
         if (firma == nueva) return
         firma = nueva
-        val ultimo = pesajes.maxWithOrNull(compareBy<PesajeResponse> { it.fecha }.thenBy { it.id })
-        val o = if (l != null && ultimo != null) objetivo(l, ultimo.fecha) else null
-        val d = ultimo?.let { desvio(it.peso_promedio_g, o) }
-        b.resumenPeso.text =
-            "Último peso: ${ultimo?.let { numero(it.peso_promedio_g) + " g" } ?: "—"}"
-        b.objetivoPeso.text = "Peso objetivo: ${o?.let { numero(it) + " g" } ?: "Sin referencia"}"
-        b.desvioPeso.text = when {
-            d == null -> "Sin comparación disponible"; d < -7 -> "${numero(d)} % · Revisar alimento, agua y ambiente"; d > 7 -> "+${
-                numero(
-                    d
-                )
-            } % · Revisar muestra y manejo alimentario"; else -> "${numero(d)} % · Dentro del rango esperado"
-        }
-        b.desvioPeso.setTextColor(
-            androidx.core.content.ContextCompat.getColor(
-                requireContext(),
-                if (d != null && abs(d) > 7) R.color.red_alert else R.color.text_primary
-            )
-        )
-        b.graficaPeso.mostrar(
-            curva.mapNotNull { p -> p.peso_esperado_g?.let { p.dia to it } },
-            if (l == null) emptyList() else pesajes.sortedBy { it.fecha }.map {
-                Triple(
-                    dia(l, it.fecha),
-                    it.peso_promedio_g,
-                    abs(desvio(it.peso_promedio_g, objetivo(l, it.fecha)) ?: 0.0) > 7
-                )
-            })
         b.listaPeso.removeAllViews(); anim.comenzar()
         fun fila(
             titulo: String,
@@ -309,36 +293,70 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
                 clave
             )
         }
+
+        val filas = mutableListOf<Pair<String, () -> Unit>>()
         pendientes.filter { (_, p) ->
             coincide(
-                p.fecha,
-                l?.let { desvio(p.peso_promedio_g, objetivo(it, p.fecha)) },
+                p.fecha, l?.let { desvio(p.peso_promedio_g, objetivo(it, p.fecha)) },
                 "${p.fecha} ${numero(p.peso_promedio_g)} ${p.cantidad_aves_pesadas} ${p.observaciones}"
             )
         }.forEach { (item, p) ->
-            fila(
-                p.fecha,
-                "${numero(p.peso_promedio_g)} g · ${p.cantidad_aves_pesadas} aves",
-                when (item.optString("estado")) {
-                    "REVISAR" -> "Envío por confirmar, no repetir"; "ERROR" -> item.optString("error"); else -> "Pendiente de sincronización"
-                },
-                item.optString("id")
-            )
+            filas.add(p.fecha.take(10) to {
+                fila(
+                    "${numero(p.peso_promedio_g)} g",
+                    p.cantidad_aves_pesadas?.let { "$it aves pesadas" } ?: "Muestra no registrada",
+                    when (item.optString("estado")) {
+                        "REVISAR" -> "Envío por confirmar, no repetir"
+                        "ERROR" -> item.optString("error")
+                        else -> "Pendiente de sincronización"
+                    }, item.optString("id"))
+            })
         }
         pesajes.filter { p ->
             coincide(
                 p.fecha,
-                l?.let { desvio(p.peso_promedio_g, objetivo(it, p.fecha)) },
+                l?.let { desvio(p.peso_promedio_g, p.peso_objetivo_g ?: objetivo(it, p.fecha)) },
                 "${p.fecha} ${numero(p.peso_promedio_g)} ${p.cantidad_aves_pesadas} ${p.observaciones}"
             )
-        }.sortedByDescending { it.fecha }.forEach { p ->
-            val dd = l?.let { desvio(p.peso_promedio_g, objetivo(it, p.fecha)) }
-            fila(
-                p.fecha.take(10),
-                "${numero(p.peso_promedio_g)} g · ${p.cantidad_aves_pesadas ?: "—"} aves",
-                dd?.let { "Desviación: ${numero(it)} %" } ?: "Sin referencia",
-                "p${p.id}") { opciones(p) }
+        }.forEach { p ->
+            val dd =
+                l?.let { desvio(p.peso_promedio_g, p.peso_objetivo_g ?: objetivo(it, p.fecha)) }
+            filas.add(p.fecha.take(10) to {
+                fila(
+                    "${numero(p.peso_promedio_g)} g",
+                    p.cantidad_aves_pesadas?.let { "$it aves pesadas" } ?: "Muestra no registrada",
+                    dd?.let { "Desviación: ${numero(it)} %" } ?: "Sin referencia",
+                    "p${p.id}") { opciones(p) }
+            })
         }
+        filas.groupBy { it.first }.toSortedMap(compareByDescending<String> { it })
+            .forEach { (fecha, registros) ->
+                val encabezado = TextView(requireContext()).apply {
+                    text = runCatching {
+                        SimpleDateFormat("EEEE, d 'de' MMMM 'de' yyyy", Locale("es", "CO")).apply {
+                            timeZone = TimeZone.getTimeZone("UTC")
+                        }.format(formato().parse(fecha)!!).replaceFirstChar { it.uppercase() }
+                    }.getOrDefault(fecha)
+                    textSize = 16f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_183c2e
+                        )
+                    )
+                    val densidad = resources.displayMetrics.density
+                    setPadding(
+                        (2 * densidad).toInt(),
+                        (16 * densidad).toInt(),
+                        0,
+                        (4 * densidad).toInt()
+                    )
+                }
+                b.listaPeso.addView(encabezado)
+                anim.mostrar(encabezado, "fecha-$fecha")
+                registros.forEach { it.second.invoke() }
+            }
         if (b.listaPeso.childCount == 0) fila(
             "Sin pesajes",
             "Registra el primer pesaje del lote",
