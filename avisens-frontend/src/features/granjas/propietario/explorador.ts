@@ -88,17 +88,7 @@ export function proximoPaso(
     }
   }
   const pesajes = pesajesRegistrados ?? (indicador?.pesoPromedioG == null ? 0 : PESAJES_PARA_PROYECTAR)
-  if (pesajes === 0) {
-    return {
-      tono: 'atencion',
-      titulo: 'Registra el primer pesaje',
-      detalle: 'Con el primer pesaje se proyecta la curva del lote hasta el día de salida.',
-      accion: 'Ir a la bitácora',
-      destino: { tipo: 'ruta', ruta: '/bitacora' },
-    }
-  }
   if (pesajes < PESAJES_PARA_PROYECTAR) {
-    const faltan = PESAJES_PARA_PROYECTAR - pesajes
     return {
       tono: 'atencion',
       titulo: 'Registra el primer pesaje',
