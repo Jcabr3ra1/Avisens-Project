@@ -113,6 +113,15 @@ interface ApiService {
     // NOTIFICACIONES
     // =========================================================
 
+    @POST("v1/notificaciones/dispositivos")
+    suspend fun registrarDispositivoPush(@Body dispositivo: DispositivoPush): Response<ResponseBody>
+
+    @retrofit2.http.HTTP(method = "DELETE", path = "v1/notificaciones/dispositivos", hasBody = true)
+    suspend fun desactivarDispositivoPush(@Body dispositivo: DispositivoPush): Response<ResponseBody>
+
+    @GET("v1/notificaciones/push/estado")
+    suspend fun estadoPush(): Response<JsonObject>
+
     @GET("v1/notificaciones")
     suspend fun listarMisNotificaciones(
         @Query("page") page: Int = 1,

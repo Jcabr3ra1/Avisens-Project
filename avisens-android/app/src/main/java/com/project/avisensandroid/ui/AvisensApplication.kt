@@ -11,6 +11,15 @@ class AvisensApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         aplicar(this)
+        // Retirar trabajos y canales de la antigua prueba de avisos locales.
+        androidx.work.WorkManager.getInstance(this)
+            .cancelUniqueWork("avisens_notificaciones_periodicas")
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            val manager = getSystemService(android.app.NotificationManager::class.java)
+            manager.deleteNotificationChannel("avisens_criticas_v2")
+            manager.deleteNotificationChannel("avisens_avisos_v2")
+        }
+        com.project.avisensandroid.controller.PushAvisens.crearCanal(this)
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
             override fun onActivityStarted(activity: Activity) = ajustarContraste(activity)

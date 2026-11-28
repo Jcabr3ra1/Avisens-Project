@@ -66,10 +66,6 @@ import com.project.avisensandroid.ui.fragments.PropietarioFragment
 import com.project.avisensandroid.ui.fragments.GestionOperariosFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import com.project.avisensandroid.controller.NotificacionesLocales
 import android.Manifest
 import android.os.Build
 import androidx.core.app.ActivityCompat
@@ -79,8 +75,6 @@ import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : AperturaReanudableActivity() {
-
-    private var monitoreoNotificaciones: Job? = null
 
 
     companion object {
@@ -529,19 +523,8 @@ class MainActivity : AperturaReanudableActivity() {
                     712
                 )
             }
-            NotificacionesLocales.programar(applicationContext)
-            monitoreoNotificaciones?.cancel()
-            monitoreoNotificaciones = lifecycleScope.launch {
-                while (isActive) {
-                    try {
-                        NotificacionesLocales.revisar(applicationContext)
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */
-                    }
-                    delay(15_000L)
-                }
-            }
+            com.project.avisensandroid.controller.PushAvisens.programar(applicationContext)
+
         }
         ultimaConexionValidada =
             com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
@@ -576,34 +559,22 @@ class MainActivity : AperturaReanudableActivity() {
 
     private fun abrirAvisoPendiente() {
         val aviso = intent ?: return
-        val id = aviso.getIntExtra(NotificacionesLocales.EXTRA_NOTIFICACION, -1)
-        if (id <= 0 || supportFragmentManager.isStateSaved) return
-        val usuario = aviso.getIntExtra(NotificacionesLocales.EXTRA_USUARIO, -1)
-        val alerta = aviso.getBooleanExtra(NotificacionesLocales.EXTRA_ALERTA, false)
-        aviso.removeExtra(NotificacionesLocales.EXTRA_NOTIFICACION)
-        if (!UserSession.isLoggedIn(this) || UserSession.userId(this) != usuario) return
-        if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) return
-        if (findViewById<SlidingBottomNavigationView>(R.id.bottomNav) == null) volverAlInicio()
-        if (alerta) {
-            mostrarFragment(AlertasFragment())
-        } else {
-            volverAlInicio()
-        }
-        lifecycleScope.launch {
-            try {
-                if (UserSession.userId(this@MainActivity) == usuario) {
-                    RetrofitClient.api.marcarNotificacionLeida(id)
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (_: Exception) {
-            }
+        if (supportFragmentManager.isStateSaved) return
+        if (com.project.avisensandroid.controller.PushAvisens.esAviso(aviso)) {
+            val alertaPush = aviso.getStringExtra("referencia_tipo").equals("alerta", true)
+            val usuarioPush = aviso.getIntExtra("push_usuario", -1)
+            com.project.avisensandroid.controller.PushAvisens.limpiarAviso(aviso)
+            if (!UserSession.isLoggedIn(this) ||
+                (usuarioPush > 0 && UserSession.userId(this) != usuarioPush)
+            ) return
+            if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) return
+            if (findViewById<SlidingBottomNavigationView>(R.id.bottomNav) == null) volverAlInicio()
+            if (alertaPush) mostrarFragment(AlertasFragment()) else abrirCentroNotificaciones()
+            return
         }
     }
 
     override fun onStop() {
-        monitoreoNotificaciones?.cancel()
-        monitoreoNotificaciones = null
         observandoConexion = false
         mainHandler.removeCallbacks(reconectarRunnable)
         mainHandler.removeCallbacks(actualizacionPeriodica)
@@ -663,16 +634,24 @@ class MainActivity : AperturaReanudableActivity() {
      * (POST /v1/auth/logout). La revocación remota no bloquea ni puede
      * impedir el cierre local si no hay red.
      */
+    private var cerrandoSesionPush = false
+
     private fun cerrarSesion() {
-        val refreshToken = UserSession.refreshToken(this)
+        if (cerrandoSesionPush) return
+        cerrandoSesionPush = true
         preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
             .remove(claveSeleccion("galpon")).apply()
-        UserSession.clear(this)
-        NotificacionesLocales.cancelar(applicationContext)
-        if (!refreshToken.isNullOrBlank()) {
-            RetrofitClient.cerrarSesionRemota(refreshToken)
+        lifecycleScope.launch {
+            try {
+                com.project.avisensandroid.controller.PushAvisens.desactivar(applicationContext)
+            } finally {
+                val refreshToken = UserSession.refreshToken(this@MainActivity)
+                UserSession.clear(this@MainActivity)
+                androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
+                if (!refreshToken.isNullOrBlank()) RetrofitClient.cerrarSesionRemota(refreshToken)
+                irALogin()
+            }
         }
-        irALogin()
     }
 
     // =========================================================
@@ -906,7 +885,7 @@ class MainActivity : AperturaReanudableActivity() {
     private fun irALogin(sesionExpirada: Boolean = false, adminNoPermitido: Boolean = false) {
 
         if (isFinishing) return
-        NotificacionesLocales.cancelar(applicationContext)
+        androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
 
         // Limpia la tarea para que Atrás no regrese a pantallas sin sesión.
         startActivity(

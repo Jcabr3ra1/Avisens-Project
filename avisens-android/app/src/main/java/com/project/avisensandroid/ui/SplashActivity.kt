@@ -139,7 +139,12 @@ class SplashActivity : AppCompatActivity() {
         }
         navigating = true
         handler.removeCallbacks(fallback)
-        startActivity(Intent(this, LoginActivity::class.java))
+        startActivity(Intent(this, LoginActivity::class.java).apply {
+            com.project.avisensandroid.controller.PushAvisens.copiarAviso(
+                this@SplashActivity.intent,
+                this
+            )
+        })
         finish()
         @Suppress("DEPRECATION")
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)

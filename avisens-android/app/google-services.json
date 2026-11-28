@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "347587427932",
+    "project_id": "avisens-e6a78",
+    "storage_bucket": "avisens-e6a78.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347587427932:android:35aba60b69e5b23128f099",
+        "android_client_info": {
+          "package_name": "com.project.avisensandroid"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5vzyerx27Mdj3Gcld0XVntWiqSH4-6cs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

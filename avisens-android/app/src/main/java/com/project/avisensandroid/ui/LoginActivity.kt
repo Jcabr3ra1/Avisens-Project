@@ -427,7 +427,12 @@ class LoginActivity : AperturaReanudableActivity() {
             Intent(
                 this,
                 MainActivity::class.java
-            )
+            ).apply {
+                com.project.avisensandroid.controller.PushAvisens.copiarAviso(
+                    this@LoginActivity.intent,
+                    this
+                )
+            }
         )
 
         finish()
