@@ -31,8 +31,8 @@
 
             <ImageButton
                 android:id="@+id/btnVolver"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginBottom="28dp"
                 android:background="@drawable/bg_spinner_granja"
                 android:contentDescription="Volver"
@@ -48,7 +48,7 @@
                 android:id="@+id/txtTitulo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Recuperar contraseña"
+                android:text="@string/recuperacion_titulo"
                 android:textColor="#17231F"
                 android:textSize="28sp"
                 android:textStyle="bold" />
@@ -64,7 +64,7 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="28dp"
                 android:lineSpacingExtra="3dp"
-                android:text="Ingresa tu correo electrónico y te enviaremos instrucciones para recuperar el acceso a tu cuenta."
+                android:text="@string/recuperacion_descripcion"
                 android:textColor="#66736D"
                 android:textSize="16sp" />
 
@@ -73,6 +73,7 @@
                  ================================================= -->
 
             <LinearLayout
+                android:id="@+id/formularioRecuperacion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_white"
@@ -80,48 +81,48 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- CORREO -->
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Correo electrónico"
+                    android:labelFor="@id/edtUsuario"
+                    android:text="@string/recuperacion_usuario"
                     android:textColor="#26332E"
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
                 <EditText
-                    android:id="@+id/edtCorreo"
+                    android:id="@+id/edtUsuario"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginTop="8dp"
                     android:background="@drawable/bg_edittext"
-                    android:hint="Ingresa tu correo"
-                    android:inputType="textEmailAddress"
+                    android:autofillHints="username"
+                    android:hint="@string/recuperacion_usuario_ejemplo"
+                    android:inputType="text|textNoSuggestions"
+                    android:maxLength="30"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
                     android:textColor="#26332E"
                     android:textColorHint="#98A49F"
                     android:textSize="16sp" />
 
-                <!-- INFORMACIÓN -->
-
                 <TextView
-                    android:id="@+id/txtInfo"
+                    android:id="@+id/txtError"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="Asegúrate de utilizar el correo asociado a tu cuenta de Avisens."
-                    android:textColor="#7A8580"
-                    android:textSize="14sp" />
+                    android:layout_marginTop="12dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:textColor="#B3261E"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
 
                 <!-- BOTÓN -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnEnviarCorreo"
+                    android:id="@+id/btnEnviarSolicitud"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginTop="24dp"
-                    android:text="Enviar"
+                    android:text="@string/recuperacion_enviar"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
@@ -132,6 +133,28 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/txtConfirmacion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:background="@drawable/bg_card_white"
+                android:padding="20dp"
+                android:textColor="#17231F"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVolverLogin"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/recuperacion_volver_login"
+                android:textAllCaps="false"
+                android:textColor="#145C42"
+                android:visibility="gone" />
 
         </LinearLayout>
 

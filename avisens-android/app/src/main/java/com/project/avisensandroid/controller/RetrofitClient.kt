@@ -76,10 +76,10 @@ object RetrofitClient {
         val path = requestOriginal.url.encodedPath
         val requestBuilder = requestOriginal.newBuilder()
 
-        // El access token NO se agrega a login ni a refresh.
         if (
             !path.endsWith("/v1/auth/login") &&
-            !path.endsWith("/v1/auth/refresh")
+            !path.endsWith("/v1/auth/refresh") &&
+            !path.endsWith("/$RUTA_SOLICITUD_RECUPERACION")
         ) {
             if (::appContext.isInitialized) {
                 val token = UserSession.accessToken(appContext)
@@ -107,11 +107,11 @@ object RetrofitClient {
 
         val requestPath = response.request.url.encodedPath
 
-        // Login, refresh y logout no deben intentar refrescar credenciales.
         if (
             requestPath.endsWith("/v1/auth/login") ||
             requestPath.endsWith("/v1/auth/refresh") ||
-            requestPath.endsWith("/v1/auth/logout")
+            requestPath.endsWith("/v1/auth/logout") ||
+            requestPath.endsWith("/$RUTA_SOLICITUD_RECUPERACION")
         ) {
             return@Authenticator null
         }

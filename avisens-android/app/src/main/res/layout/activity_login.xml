@@ -294,17 +294,39 @@
 
                 <CheckBox
                     android:id="@+id/checkRecordarme"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:buttonTint="@color/adaptive_text_00695c"
                     android:fontFamily="sans-serif-medium"
-                    android:minHeight="40dp"
+                    android:minHeight="48dp"
                     android:text="Recordarme"
                     android:textColor="@color/adaptive_text_4a5d55"
                     android:textSize="13sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/etContrasena" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRecuperarPassword"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:gravity="end|center_vertical"
+                    android:text="@string/recuperacion_olvido_password"
+                    android:textAllCaps="false"
+                    android:textColor="@color/adaptive_text_00695c"
+                    android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/checkRecordarme"
+                    app:layout_constraintTop_toTopOf="@id/checkRecordarme" />
+
+                <androidx.constraintlayout.widget.Barrier
+                    android:id="@+id/accionesCredenciales"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:barrierDirection="bottom"
+                    app:constraint_referenced_ids="checkRecordarme,btnRecuperarPassword" />
 
                 <!-- ===================================================== -->
                 <!-- BOTÓN DE INGRESO                                       -->
@@ -326,7 +348,7 @@
                     app:cornerRadius="12dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/checkRecordarme"
+                    app:layout_constraintTop_toBottomOf="@id/accionesCredenciales"
                     app:rippleColor="#33FFFFFF" />
 
                 <!-- ===================================================== -->
