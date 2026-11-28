@@ -41,6 +41,8 @@ import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.model.RespuestaComandoVoz
 import com.project.avisensandroid.model.RolCatalogoResponse
 import com.project.avisensandroid.model.SensorResponse
+import com.project.avisensandroid.model.SolicitudRecuperacionRequest
+import com.project.avisensandroid.model.SolicitudRecuperacionResponse
 import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.UltimasLecturasResponse
 import com.project.avisensandroid.model.UmbralAmbientalResponse
@@ -59,6 +61,8 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+
+internal const val RUTA_SOLICITUD_RECUPERACION = "v1/recuperaciones-password/solicitudes"
 
 interface ApiService {
 
@@ -130,6 +134,11 @@ interface ApiService {
     suspend fun login(
         @Body request: LoginRequest
     ): Response<LoginResponse>
+
+    @POST(RUTA_SOLICITUD_RECUPERACION)
+    suspend fun solicitarRecuperacion(
+        @Body request: SolicitudRecuperacionRequest
+    ): Response<SolicitudRecuperacionResponse>
 
     // La renovación automática la hace RetrofitClient
     // con su propio cliente.

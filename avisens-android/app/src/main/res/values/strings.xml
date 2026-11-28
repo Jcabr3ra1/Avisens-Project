@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Avisens</string>
+    <string name="recuperacion_olvido_password">¿Olvidaste tu contraseña?</string>
+    <string name="recuperacion_titulo">Recuperar contraseña</string>
+    <string name="recuperacion_descripcion">Escribe el nombre de usuario con el que ingresas a Avisens. Un administrador revisará la solicitud.</string>
+    <string name="recuperacion_usuario">Nombre de usuario</string>
+    <string name="recuperacion_usuario_ejemplo">maria.lopez</string>
+    <string name="recuperacion_usuario_requerido">Ingresa tu nombre de usuario.</string>
+    <string name="recuperacion_usuario_invalido">Usa entre 3 y 30 caracteres. Empieza con una letra o un número. También puedes usar puntos, guiones y guiones bajos.</string>
+    <string name="recuperacion_enviar">Solicitar recuperación</string>
+    <string name="recuperacion_enviando">Enviando solicitud…</string>
+    <string name="recuperacion_confirmacion">Si la cuenta existe, la solicitud será revisada por un administrador.</string>
+    <string name="recuperacion_limite">Hiciste demasiados intentos. Espera unos minutos y vuelve a intentarlo.</string>
+    <string name="recuperacion_error">No pudimos enviar la solicitud. Inténtalo de nuevo.</string>
+    <string name="recuperacion_conexion">Revisa tu conexión a internet e inténtalo de nuevo.</string>
+    <string name="recuperacion_volver_login">Volver a iniciar sesión</string>
 </resources>

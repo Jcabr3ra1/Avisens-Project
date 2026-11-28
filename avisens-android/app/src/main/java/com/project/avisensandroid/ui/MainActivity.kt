@@ -21,7 +21,6 @@ import android.os.Looper
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Patterns
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -37,10 +36,6 @@ import com.project.avisensandroid.controller.Hu56OfflineQueue
 import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.controller.SesionExpirada
-import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
-import com.project.avisensandroid.databinding.Au03VerificarCodigoBinding
-import com.project.avisensandroid.databinding.Au04NuevaContrasenaBinding
-import com.project.avisensandroid.databinding.Au05ConfirmacionContrasenaBinding
 import com.project.avisensandroid.databinding.Co01ConfiguracionOpBinding
 import com.project.avisensandroid.databinding.Co02NotificacionesOpBinding
 import com.project.avisensandroid.databinding.Co03PerfilOpBinding
@@ -102,11 +97,6 @@ class MainActivity : AperturaReanudableActivity() {
     private lateinit var perfilBinding: Co03PerfilOpBinding
     private lateinit var notificacionesBinding: Co02NotificacionesOpBinding
     private lateinit var seguridadBinding: Co04SeguridadOpBinding
-
-    private lateinit var recuperarBinding: Au02RecuperarContrasenaBinding
-    private lateinit var verificarBinding: Au03VerificarCodigoBinding
-    private lateinit var nuevaContrasenaBinding: Au04NuevaContrasenaBinding
-    private lateinit var confirmacionBinding: Au05ConfirmacionContrasenaBinding
 
     // =========================================================
     // COLORES DE SPINNER
@@ -898,217 +888,6 @@ class MainActivity : AperturaReanudableActivity() {
         )
 
         finish()
-    }
-
-    // =========================================================
-    // RECUPERACIÓN DE CONTRASEÑA
-    // =========================================================
-
-    fun mostrarRecuperarContrasena() {
-
-        recuperarBinding =
-            Au02RecuperarContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            recuperarBinding.root
-        )
-
-        recuperarBinding
-            .btnVolver
-            .setOnClickListener {
-
-                irALogin()
-            }
-
-        recuperarBinding
-            .btnEnviarCorreo
-            .setOnClickListener {
-
-                val correo =
-                    recuperarBinding
-                        .edtCorreo
-                        .text
-                        .toString()
-                        .trim()
-
-                when {
-
-                    correo.isEmpty() -> {
-
-                        recuperarBinding
-                            .edtCorreo
-                            .error =
-                            "Ingresa tu correo electrónico"
-                    }
-
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo)
-                        .matches() -> {
-
-                        recuperarBinding
-                            .edtCorreo
-                            .error =
-                            "Ingresa un correo válido"
-                    }
-
-                    else -> {
-
-                        mostrarVerificarCodigo()
-                    }
-                }
-            }
-    }
-
-    private fun mostrarVerificarCodigo() {
-
-        verificarBinding =
-            Au03VerificarCodigoBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            verificarBinding.root
-        )
-
-        verificarBinding
-            .btnVerificarCodigo
-            .setOnClickListener {
-
-                val codigo =
-                    verificarBinding
-                        .edtCodigo
-                        .text
-                        .toString()
-                        .trim()
-
-                when {
-
-                    codigo.isEmpty() -> {
-
-                        verificarBinding
-                            .edtCodigo
-                            .error =
-                            "Ingresa el código"
-                    }
-
-                    codigo.length != 6 ||
-                            codigo.any {
-                                !it.isDigit()
-                            } -> {
-
-                        verificarBinding
-                            .edtCodigo
-                            .error =
-                            "El código debe tener 6 dígitos"
-                    }
-
-                    else -> {
-
-                        mostrarNuevaContrasena()
-                    }
-                }
-            }
-
-        verificarBinding
-            .txtReenviarCodigo
-            .setOnClickListener {
-
-                Toast.makeText(
-                    this,
-                    "Reenvío de código pendiente de conectar con la API",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-    }
-
-    private fun mostrarNuevaContrasena() {
-
-        nuevaContrasenaBinding =
-            Au04NuevaContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            nuevaContrasenaBinding.root
-        )
-
-        nuevaContrasenaBinding
-            .btnCambiarContrasena
-            .setOnClickListener {
-
-                val nueva =
-                    nuevaContrasenaBinding
-                        .edtNuevaContrasena
-                        .text
-                        .toString()
-
-                val confirmar =
-                    nuevaContrasenaBinding
-                        .edtConfirmarContrasena
-                        .text
-                        .toString()
-
-                when {
-
-                    nueva.isEmpty() -> {
-
-                        nuevaContrasenaBinding
-                            .edtNuevaContrasena
-                            .error =
-                            "Ingresa una contraseña"
-                    }
-
-                    nueva.length < 8 -> {
-
-                        nuevaContrasenaBinding
-                            .edtNuevaContrasena
-                            .error =
-                            "Mínimo 8 caracteres"
-                    }
-
-                    confirmar.isEmpty() -> {
-
-                        nuevaContrasenaBinding
-                            .edtConfirmarContrasena
-                            .error =
-                            "Confirma tu contraseña"
-                    }
-
-                    nueva != confirmar -> {
-
-                        nuevaContrasenaBinding
-                            .edtConfirmarContrasena
-                            .error =
-                            "Las contraseñas no coinciden"
-                    }
-
-                    else -> {
-
-                        mostrarConfirmacionContrasena()
-                    }
-                }
-            }
-    }
-
-    private fun mostrarConfirmacionContrasena() {
-
-        confirmacionBinding =
-            Au05ConfirmacionContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            confirmacionBinding.root
-        )
-
-        confirmacionBinding
-            .btnVolverLogin
-            .setOnClickListener {
-
-                irALogin()
-            }
     }
 
     // =========================================================

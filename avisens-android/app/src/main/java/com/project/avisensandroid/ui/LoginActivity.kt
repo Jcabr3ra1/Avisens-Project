@@ -110,6 +110,11 @@ class LoginActivity : AperturaReanudableActivity() {
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
         }
+        binding.btnRecuperarPassword.setOnClickListener {
+            startActivity(Intent(this, RecuperarPasswordActivity::class.java).apply {
+                putExtra(RecuperarPasswordActivity.EXTRA_USERNAME, binding.etCorreo.text.toString())
+            })
+        }
     }
 
     // Animación de entrada escalonada, sin mover la tarjeta del login.
@@ -123,7 +128,7 @@ class LoginActivity : AperturaReanudableActivity() {
             listOf(binding.txtCorreo, binding.etCorreo, binding.iconCorreo),
             listOf(binding.txtContrasena, binding.etContrasena,
                 binding.iconContrasena, binding.btnTogglePassword),
-            listOf(binding.checkRecordarme),
+            listOf(binding.checkRecordarme, binding.btnRecuperarPassword),
             listOf(binding.btnEntrar)
         )
 
@@ -476,6 +481,7 @@ class LoginActivity : AperturaReanudableActivity() {
 
         binding.progressLogin.visibility = View.VISIBLE
         binding.btnEntrar.isEnabled = false
+        binding.btnRecuperarPassword.isEnabled = false
 
         lifecycleScope.launch {
 
@@ -604,6 +610,7 @@ class LoginActivity : AperturaReanudableActivity() {
 
                 binding.progressLogin.visibility = View.GONE
                 binding.btnEntrar.isEnabled = true
+                binding.btnRecuperarPassword.isEnabled = true
             }
         }
     }
