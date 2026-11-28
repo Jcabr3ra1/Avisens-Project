@@ -126,6 +126,12 @@ services:
       # duplicar esa condicion aqui seria una segunda fuente de la misma regla.
       METRICS_TOKEN: ${METRICS_TOKEN}
       UMBRAL_PESAJE_DIAS: ${UMBRAL_PESAJE_DIAS}
+      # Notificaciones push (Firebase Cloud Messaging HTTP v1): opcionales.
+      # Sin ellas, el backend arranca normalmente y solo omite el envío push.
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON}
     ports:
       # Por defecto, el backend solo acepta conexiones del propio equipo.
       # Para una prueba ESP32 en LAN, define AVISENS_BACKEND_BIND con la IPv4
