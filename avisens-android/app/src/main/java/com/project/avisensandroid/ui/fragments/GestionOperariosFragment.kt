@@ -491,11 +491,66 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val info = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(60), dp(12), 0, 0)
+                setPadding(0, dp(14), 0, 0)
             }
-            info.addView(infoRow("✉", usuario.email))
-            info.addView(infoRow("ID", "Cédula: ${usuario.cedula}"))
-            info.addView(infoRow("☎", usuario.telefono ?: "Teléfono no registrado"))
+            info.addView(TextView(requireContext()).apply {
+                text = "DATOS DE LA CUENTA"
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_68756e
+                    )
+                )
+            })
+            val datos = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = GradientDrawable().apply {
+                    setColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            R.color.adaptive_surface_f1f7f4
+                        )
+                    )
+                    cornerRadius = dp(9).toFloat()
+                    setStroke(
+                        dp(1),
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            R.color.adaptive_surface_dde8e2
+                        )
+                    )
+                }
+            }
+            val fila = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                isBaselineAligned = false
+            }
+            fila.addView(
+                datoCuenta("CÉDULA", usuario.cedula),
+                LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    marginEnd = dp(8)
+                })
+            fila.addView(
+                datoCuenta("TELÉFONO", usuario.telefono),
+                LinearLayout.LayoutParams(0, -2, 1f)
+            )
+            datos.addView(fila)
+            datos.addView(
+                datoCuenta("CORREO", usuario.email),
+                LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(10)
+                })
+            datos.addView(
+                datoCuenta("ORGANIZACIÓN", usuario.organizacion?.nombre),
+                LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(10)
+                })
+            info.addView(datos, LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = dp(7)
+            })
             card.addView(info)
 
             card.addView(View(requireContext()).apply {
@@ -593,18 +648,32 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun infoRow(icon: String, value: String): TextView =
-        TextView(requireContext()).apply {
-            text = "$icon   $value"
-            textSize = 12.5f
-            setTextColor(
-                androidx.core.content.ContextCompat.getColor(
-                    context,
-                    R.color.adaptive_text_68756e
+    private fun datoCuenta(etiqueta: String, valor: String?): LinearLayout =
+        LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(requireContext()).apply {
+                text = etiqueta
+                textSize = 10f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_68756e
+                    )
                 )
-            )
-            setPadding(0, dp(3), 0, dp(3))
-            maxLines = 2
+            })
+            addView(TextView(requireContext()).apply {
+                text = valor?.takeIf { it.isNotBlank() } ?: "No registrado"
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context,
+                        R.color.adaptive_text_183c2e
+                    )
+                )
+                setPadding(0, dp(3), 0, 0)
+            }, LinearLayout.LayoutParams(-1, -2))
         }
 
     private fun iniciales(nombre: String): String {

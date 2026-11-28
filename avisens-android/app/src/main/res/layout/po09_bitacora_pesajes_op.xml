@@ -131,6 +131,8 @@
                     android:layout_weight="1"
                     android:background="@drawable/bg_input_event"
                     android:fontFamily="sans-serif"
+                    android:drawableStart="@drawable/ic_buscar_compacto"
+                    android:drawablePadding="8dp"
                     android:hint="Buscar registro..."
                     android:inputType="text"
                     android:letterSpacing="0"

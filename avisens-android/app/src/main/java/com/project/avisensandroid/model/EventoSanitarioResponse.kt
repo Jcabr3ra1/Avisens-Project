@@ -16,7 +16,14 @@ data class EventoSanitarioResponse(
     val observaciones: String?,
     val fecha_registro: String,
     val lote: LoteEventoSanitarioResponse,
-    val insumo: InsumoEventoSanitarioResponse?
+    val insumo: InsumoEventoSanitarioResponse?,
+    val evento_padre_id: Int? = null,
+    val estado: String? = null,
+    val fecha_cierre: String? = null,
+    val observaciones_cierre: String? = null,
+    val cantidad_insumo: Double? = null,
+    val movimiento_inventario_id: Int? = null,
+    val _count: ConteoSeguimientos? = null
 )
 
 data class LoteEventoSanitarioResponse(
@@ -36,5 +43,8 @@ data class GranjaEventoSanitarioResponse(
 
 data class InsumoEventoSanitarioResponse(
     val id: Int,
-    val nombre: String
+    val nombre: String,
+    val unidad_medida: String? = null
 )
+
+data class ConteoSeguimientos(val seguimientos: Int)

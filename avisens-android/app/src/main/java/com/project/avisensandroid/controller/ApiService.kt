@@ -530,8 +530,17 @@ interface ApiService {
     @GET("v1/eventos-sanitarios")
     suspend fun listarEventosSanitarios(
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 100
+        @Query("limit") limit: Int = 100,
+        @Query("lote_id") loteId: Int? = null,
+        @Query("estado") estado: String? = null,
+        @Query("solo_casos") soloCasos: Boolean? = null
     ): Response<PaginatedResponse<EventoSanitarioResponse>>
+
+    @GET("v1/eventos-sanitarios/{id}/seguimientos")
+    suspend fun listarSeguimientosSanitarios(@Path("id") id: Int): Response<List<EventoSanitarioResponse>>
+
+    @PATCH("v1/eventos-sanitarios/{id}/finalizar")
+    suspend fun finalizarCasoSanitario(@Path("id") id: Int, @Body datos: JsonObject): Response<EventoSanitarioResponse>
 
     @GET("v1/eventos-sanitarios/{id}")
     suspend fun obtenerEventoSanitario(

@@ -1,33 +1,51 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_white"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="18dp">
+
+        <TextView
+            android:id="@+id/tituloPesaje"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="Registrar pesaje"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/labelfechaPeso"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
             android:text="Fecha del pesaje"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/fechaPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:clickable="true"
+            android:focusable="false"
+            android:fontFamily="sans-serif-medium"
             android:inputType="date"
             android:maxLength="16"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            android:textColorHint="@color/text_secondary"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/labelpromedioPeso"
@@ -36,18 +54,22 @@
             android:layout_marginTop="10dp"
             android:text="Peso promedio (g)"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/promedioPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
             android:inputType="numberDecimal"
             android:maxLength="16"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            android:textColorHint="@color/text_secondary"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/labelmuestraPeso"
@@ -56,18 +78,22 @@
             android:layout_marginTop="10dp"
             android:text="Aves pesadas (opcional)"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/muestraPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
             android:inputType="number"
             android:maxLength="16"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            android:textColorHint="@color/text_secondary"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/labelminPeso"
@@ -76,19 +102,23 @@
             android:layout_marginTop="10dp"
             android:text="Peso mínimo (opcional)"
             android:textColor="@color/text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:textStyle="bold"
             android:visibility="gone" />
 
         <EditText
             android:id="@+id/minPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
             android:inputType="numberDecimal"
             android:maxLength="16"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"
+            android:textSize="13sp"
             android:visibility="gone" />
 
         <TextView
@@ -98,19 +128,23 @@
             android:layout_marginTop="10dp"
             android:text="Peso máximo (opcional)"
             android:textColor="@color/text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:textStyle="bold"
             android:visibility="gone" />
 
         <EditText
             android:id="@+id/maxPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
             android:inputType="numberDecimal"
             android:maxLength="16"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"
+            android:textSize="13sp"
             android:visibility="gone" />
 
         <TextView
@@ -118,16 +152,21 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="Peso objetivo (g) (opcional)"
-            android:textColor="@color/text_primary" />
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/objetivoManual"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="42dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
             android:inputType="numberDecimal"
-            android:padding="12dp"
-            android:textColor="@color/text_primary" />
+            android:padding="10dp"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/labelobsPeso"
@@ -136,18 +175,25 @@
             android:layout_marginTop="10dp"
             android:text="Observaciones (opcional)"
             android:textColor="@color/text_primary"
-            android:textSize="14sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/obsPeso"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_bitacora_input"
+            android:layout_height="58dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="top|start"
+            android:hint="Escribe una observación..."
             android:inputType="textMultiLine"
             android:maxLength="500"
-            android:padding="12dp"
+            android:minLines="2"
+            android:padding="10dp"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary" />
+            android:textColorHint="@color/text_secondary"
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/previewPeso"
@@ -157,6 +203,59 @@
             android:text="Peso objetivo: —"
             android:textColor="@color/text_primary"
             android:textSize="15sp"
+            android:textStyle="bold"
             android:visibility="gone" />
+        <!-- BOTONES DEL FORMULARIO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <!-- CANCELAR -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCancelarEvento"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_marginEnd="3dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Cancelar"
+                android:textAllCaps="false"
+                android:textColor="@color/cancel_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/cancel_background"
+                app:cornerRadius="9dp"
+                app:strokeColor="@color/cancel_stroke"
+                app:strokeWidth="1dp" />
+
+            <!-- GUARDAR -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGuardarEvento"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="3dp"
+                android:layout_weight="1"
+                android:backgroundTint="#2E8B57"
+                android:gravity="center"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Guardar registro"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                app:cornerRadius="9dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 </ScrollView>

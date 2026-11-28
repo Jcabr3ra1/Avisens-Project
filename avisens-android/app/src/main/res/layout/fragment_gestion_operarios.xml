@@ -60,6 +60,8 @@
                     android:layout_height="48dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_input_event"
+                    android:drawableStart="@drawable/ic_buscar_compacto"
+                    android:drawablePadding="8dp"
                     android:hint="Buscar operario..."
                     android:inputType="text"
                     android:paddingStart="12dp"

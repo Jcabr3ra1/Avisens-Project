@@ -1,13 +1,16 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Avisens.Starting" parent="Theme.Material3.Light.NoActionBar">
-        <item name="android:windowBackground">@color/adaptive_splash_bg</item>
+
+    <style name="Theme.Avisens.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/adaptive_splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_fondo_uniforme</item>
+        <item name="postSplashScreenTheme">@style/Theme.Avisens.Landing</item>
+        <item name="android:windowSplashScreenBackground">@color/adaptive_splash_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_fondo_uniforme</item>
         <item name="android:statusBarColor">@color/adaptive_splash_bg</item>
         <item name="android:navigationBarColor">@color/adaptive_splash_bg</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowSplashScreenBackground">@color/adaptive_splash_bg</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_modelo2_transparente</item>
-        <item name="android:windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>
+
 </resources>

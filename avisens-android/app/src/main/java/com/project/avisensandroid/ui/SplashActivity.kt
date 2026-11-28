@@ -6,13 +6,13 @@ import android.animation.AnimatorListenerAdapter
 import android.content.Context
 import android.content.Intent
 import android.graphics.*
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.Executors
 import android.view.View
 import android.view.animation.LinearInterpolator
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.appcompat.app.AppCompatActivity
 import com.project.avisensandroid.R
 import kotlin.math.min
@@ -30,6 +30,7 @@ class SplashActivity : AppCompatActivity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val launchScreen = installSplashScreen()
         delegate.localNightMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         super.onCreate(savedInstanceState)
         if (!isTaskRoot && intent.action == Intent.ACTION_MAIN &&
@@ -41,10 +42,9 @@ class SplashActivity : AppCompatActivity() {
         val scene = LandingView(this)
         setContentView(scene)
 
-        var systemSplashExited = Build.VERSION.SDK_INT < 31
         var framesReady = false
         fun startLanding() {
-            if (!systemSplashExited || !framesReady || !resumed || pendingNavigation) return
+            if (!framesReady || !resumed || pendingNavigation) return
             if (animator != null || isFinishing || isDestroyed) return
 
             handler.removeCallbacks(fallback)
@@ -73,20 +73,12 @@ class SplashActivity : AppCompatActivity() {
         }
 
         tryStart = { startLanding() }
-        if (Build.VERSION.SDK_INT >= 31) {
-            splashScreen.setOnExitAnimationListener { provider ->
-                provider.remove()
-                systemSplashExited = true
-                scene.post { startLanding() }
-            }
+        // El sistema entrega la pantalla inicial al contenido de Avisens.
+        // No dependemos de un temporizador para simular su salida.
+        launchScreen.setOnExitAnimationListener { provider ->
+            provider.remove()
+            scene.post { startLanding() }
         }
-        // En arranques calientes Android puede no entregar el callback del splash.
-        scene.postDelayed({
-            if (!isDestroyed && !isFinishing) {
-                systemSplashExited = true
-                startLanding()
-            }
-        }, 350L)
         handler.postDelayed(fallback, 8000L)
         decoder.execute {
             try {

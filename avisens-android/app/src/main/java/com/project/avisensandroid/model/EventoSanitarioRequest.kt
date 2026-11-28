@@ -10,5 +10,8 @@ data class EventoSanitarioRequest(
     val dosis: String? = null,
     val via_aplicacion: String? = null,
     val cantidad_aves: Int? = null,
-    val observaciones: String? = null
+    val observaciones: String? = null,
+    val evento_padre_id: Int? = null,
+    val cantidad_insumo: Double? = null,
+    val metodo_registro: String? = "manual"
 )

@@ -393,8 +393,11 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
     private fun mensaje(s: String) = Toast.makeText(requireContext(), s, Toast.LENGTH_LONG).show()
     private fun formulario(p: PesajeResponse?) {
         val l = lote ?: return
-        val f = R09RegistrarPesajeBinding.inflate(layoutInflater).also { aplicarFuente(it.root) }
-        f.fechaPeso.setText(p?.fecha?.take(10) ?: hoy()); f.fechaPeso.isFocusable = false
+        val f = R09RegistrarPesajeBinding.inflate(layoutInflater)
+        var fechaSeleccionada = p?.fecha?.take(10) ?: hoy()
+        fun fechaVisible() = fechaSeleccionada.split("-").reversed().joinToString("/")
+        f.tituloPesaje.text = if (p == null) "Registrar pesaje" else "Editar pesaje"
+        f.fechaPeso.setText(fechaVisible()); f.fechaPeso.isFocusable = false
         f.promedioPeso.setText(
             p?.peso_promedio_g?.toString() ?: ""
         ); f.muestraPeso.setText(p?.cantidad_aves_pesadas?.toString() ?: "")
@@ -407,13 +410,13 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
             f.objetivoManual.setText(runCatching {
                 objetivo(
                     l,
-                    f.fechaPeso.text.toString()
+                    fechaSeleccionada
                 )
             }.getOrNull()?.toString() ?: ""); f.previewPeso.text =
                 "Peso objetivo: " + (runCatching {
                     objetivo(
                         l,
-                        f.fechaPeso.text.toString()
+                        fechaSeleccionada
                     )
                 }.getOrNull()?.let { numero(it) + " g" } ?: "Sin referencia")
         }
@@ -423,15 +426,14 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
             val c = Calendar.getInstance(); DatePickerDialog(
             requireContext(),
             { _, y, m, d ->
-                f.fechaPeso.setText(
-                    String.format(
-                        Locale.US,
-                        "%04d-%02d-%02d",
-                        y,
-                        m + 1,
-                        d
-                    )
-                ); preview()
+                fechaSeleccionada = String.format(
+                    Locale.US,
+                    "%04d-%02d-%02d",
+                    y,
+                    m + 1,
+                    d
+                )
+                f.fechaPeso.setText(fechaVisible()); preview()
             },
             c.get(Calendar.YEAR),
             c.get(Calendar.MONTH),
@@ -439,17 +441,24 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         ).show()
         }
         val dialog = AlertDialog.Builder(requireContext())
-            .setTitle(if (p == null) "Registrar pesaje" else "Editar pesaje").setView(f.root)
-            .setNegativeButton("Cancelar", null).setPositiveButton("Guardar", null).create()
+            .setView(f.root)
+            .create()
         dialog.setOnShowListener {
-            dialog.estiloCancelar()
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            dialog.window?.setLayout(
+                (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+            dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            f.btnCancelarEvento.setOnClickListener { dialog.dismiss() }
+            f.btnGuardarEvento.text = if (p == null) "Guardar registro" else "Guardar cambios"
+            f.btnGuardarEvento.setOnClickListener {
                 fun valor(e: EditText) = e.text.toString().replace(',', '.').toDoubleOrNull()
                 val peso = valor(f.promedioPeso);
                 val muestra = f.muestraPeso.text.toString().toIntOrNull();
                 val min = valor(f.minPeso);
                 val max = valor(f.maxPeso);
-                val fecha = f.fechaPeso.text.toString()
+                val fecha = fechaSeleccionada
                 val valida = runCatching {
                     formato().format(formato().parse(fecha)!!) == fecha && dia(
                         l,
@@ -481,7 +490,7 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
                     if (!OfflineCache.hayInternet(requireContext())) {
                         mensaje("Necesitas conexión para editar"); return@setOnClickListener
                     };
-                    val boton = dialog.getButton(AlertDialog.BUTTON_POSITIVE); boton.isEnabled =
+                    val boton = f.btnGuardarEvento; boton.isEnabled =
                         false; viewLifecycleOwner.lifecycleScope.launch {
                         try {
                             val r = RetrofitClient.api.editarPesaje(
