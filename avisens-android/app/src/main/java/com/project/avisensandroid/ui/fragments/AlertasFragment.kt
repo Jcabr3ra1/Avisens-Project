@@ -1,6 +1,9 @@
 package com.project.avisensandroid.ui.fragments
 
-import android.app.AlertDialog
+import com.project.avisensandroid.ui.estiloCancelar
+
+import com.project.avisensandroid.ui.ColoresAdaptativos
+import androidx.appcompat.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
@@ -31,20 +34,32 @@ import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
+import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
+import com.project.avisensandroid.controller.ApiService
 import java.util.Locale
 
 class AlertasFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po05AlertasOpBinding? = null
     private val binding get() = _binding!!
 
     private var alertas: List<AlertaResponse> = emptyList()
     private var alertasStock: List<InsumoResponse> = emptyList()
-    private var mostrandoHistorial = false
+
+    private enum class Pestana { ACTIVAS, HISTORIAL, ESCALADAS }
+
+    private var pestanaActual = Pestana.ACTIVAS
     private var lotesActivos: List<LoteResponse> = emptyList()
+
+    private var selectorAnimado: SelectorAnimado? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,18 +72,26 @@ class AlertasFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
+        alcanceCarga = null
         configurarBottomNav(R.id.nav_alertas)
         binding.tabActivas.setOnClickListener {
-            mostrandoHistorial = false
-            pintarTabs()
-            mostrarLista()
+            cambiarPestana(Pestana.ACTIVAS)
         }
 
         binding.tabHistorial.setOnClickListener {
-            mostrandoHistorial = true
-            pintarTabs()
-            mostrarLista()
+            cambiarPestana(Pestana.HISTORIAL)
         }
+
+        binding.tabEscaladas.setOnClickListener {
+            cambiarPestana(Pestana.ESCALADAS)
+        }
+        binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        selectorAnimado = SelectorAnimado(
+            binding.tabActivas.parent as android.view.ViewGroup,
+            R.drawable.bg_tab_selected
+        )
+        pintarTabs()
 
         // La carga se hace en onResume, también al regresar de Inicio.
     }
@@ -78,31 +101,50 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (_binding != null) cargarAlertas()
     }
 
-    private fun cargarAlertas() {
-        val mainActivity = activity as? MainActivity ?: return
-        val granjaId = mainActivity.obtenerGranjaSeleccionadaId()
-        val galponId = mainActivity.obtenerGalponSeleccionadoId()
-        binding.tvBadgeActivas.visibility = View.GONE
-        binding.tvBadgeHistorial.visibility = View.GONE
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
-                alertas = if (galponId != null) {
-                    val response = RetrofitClient.api.listarAlertasDeGalpon(
-                        galponId = galponId, page = 1, limit = 100
-                    )
-                    if (!response.isSuccessful) {
-                        throw IllegalStateException("Código ${response.code()}")
+    fun actualizarAlRecuperarInternet() {
+        if (_binding != null && isAdded) cargarAlertas()
+    }
+
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) cargarAlertas(silenciosa = true)
+    }
+
+    private var cargaAlertas: Job? = null
+    private var listaPintada = false
+    private var ultimaPintura = 0L
+    private var alcanceCarga: Pair<Int?, Int?>? = null
+
+    private suspend fun consultarAlertas(api: ApiService, granjaId: Int?, galponId: Int?) =
+        coroutineScope {
+            val consultaAlertas = async {
+                if (galponId != null) {
+                    val todas = mutableListOf<AlertaResponse>()
+                    var paginaAlertas = 1
+                    var hayMasAlertas = true
+                    while (hayMasAlertas) {
+                        val response = api.listarAlertasDeGalpon(
+                            galponId = galponId, page = paginaAlertas, limit = 100
+                        )
+                        if (!response.isSuccessful) {
+                            throw IllegalStateException("Código ${response.code()}")
+                        }
+                        val cuerpo = response.body()
+                            ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
+                        todas.addAll(cuerpo.data)
+                        hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
+                        paginaAlertas++
                     }
-                    response.body()?.data ?: emptyList()
+                    todas
                 } else emptyList()
-                // Los insumos pertenecen a granjas, NO a galpones. Se consultan
-                // con el filtro de acceso que ya aplica el backend por rol.
+            }
+            // Los insumos pertenecen a granjas, NO a galpones. Se consultan
+            // con el filtro de acceso que ya aplica el backend por rol.
+            val consultaStock = async {
                 val stockBajo = mutableListOf<InsumoResponse>()
                 var pagina = 1
                 var continuar = true
                 while (continuar) {
-                    val insumosResponse = RetrofitClient.api.listarInsumos(page = pagina, limit = 100)
+                    val insumosResponse = api.listarInsumos(page = pagina, limit = 100)
                     if (!insumosResponse.isSuccessful) {
                         throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
                     }
@@ -112,21 +154,24 @@ class AlertasFragment : BaseBottomNavFragment() {
                         insumo.activo &&
                                 (granjaId == null || insumo.granja_id == granjaId) &&
                                 (insumo.stock_minimo ?: 0.0) > 0.0 &&
-                                (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
+                                (insumo.stock_actual
+                                    ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
                     })
                     continuar = pagina < cuerpo.meta.totalPages
                     pagina++
                 }
-                alertasStock = stockBajo
-                // El inventario pertenece a la granja. Consultamos los lotes
-                // exclusivamente para identificar el código real cuando no
-                // exista ambigüedad; un error aquí no oculta las alertas.
-                lotesActivos = try {
+                stockBajo
+            }
+            // El inventario pertenece a la granja. Consultamos los lotes
+            // exclusivamente para identificar el código real cuando no
+            // exista ambigüedad; un error aquí no oculta las alertas.
+            val consultaLotes = async {
+                try {
                     val lotes = mutableListOf<LoteResponse>()
                     var paginaLotes = 1
                     var hayMas = true
                     while (hayMas) {
-                        val respuesta = RetrofitClient.api.listarLotesCompletos(
+                        val respuesta = api.listarLotesCompletos(
                             page = paginaLotes, limit = 100
                         )
                         if (!respuesta.isSuccessful) {
@@ -146,80 +191,196 @@ class AlertasFragment : BaseBottomNavFragment() {
                 } catch (_: Exception) {
                     emptyList()
                 }
+            }
+            Triple(consultaAlertas.await(), consultaStock.await(), consultaLotes.await())
+        }
+
+    private fun cargarAlertas(silenciosa: Boolean = false) {
+        val main = activity as? MainActivity ?: return
+        val granjaId = main.obtenerGranjaSeleccionadaId()
+        val galponId = main.obtenerGalponSeleccionadoId()
+        val alcance = granjaId to galponId
+        if (silenciosa && cargaAlertas?.isActive == true && alcanceCarga == alcance) return
+        cargaAlertas?.cancel()
+        if (alcanceCarga != alcance) {
+            alertas = emptyList()
+            alertasStock = emptyList()
+            lotesActivos = emptyList()
+            alcanceCarga = alcance
+            listaPintada = false
+            entradaTarjetas.reiniciar()
+            actualizarResumen()
+            binding.containerAlertas.removeAllViews()
+        }
+        cargaAlertas = viewLifecycleOwner.lifecycleScope.launch {
+            suspend fun pintar(datos: Triple<List<AlertaResponse>, List<InsumoResponse>, List<LoteResponse>>) {
+                if (_binding == null) return
+                if (listaPintada && alertas == datos.first && alertasStock == datos.second && lotesActivos == datos.third) return
+                if (listaPintada) {
+                    val espera = 1600L - (android.os.SystemClock.elapsedRealtime() - ultimaPintura)
+                    if (espera > 0) kotlinx.coroutines.delay(espera)
+                }
+                if (_binding == null) return
+                alertas = datos.first
+                alertasStock = datos.second
+                lotesActivos = datos.third
                 actualizarResumen()
+                pintarTabs()
                 mostrarLista()
+                listaPintada = true
+                ultimaPintura = android.os.SystemClock.elapsedRealtime()
+            }
+
+            var cacheMostrada = false
+            try {
+                if (!silenciosa) {
+                    try {
+                        pintar(consultarAlertas(RetrofitClient.apiCache, granjaId, galponId))
+                        cacheMostrada = true
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
+                }
+                pintar(consultarAlertas(RetrofitClient.api, granjaId, galponId))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (_binding != null) {
+                if (!silenciosa && !cacheMostrada && _binding != null) {
                     binding.tvResumenAlertas.text = "No se pudieron cargar las alertas"
-                    Toast.makeText(
-                        requireContext(),
-                        "Error al cargar alertas: ${e.message ?: "error desconocido"}",
-                        Toast.LENGTH_LONG
-                    ).show()
                 }
             }
         }
     }
 
     private fun actualizarResumen() {
-        val activas = alertas.count { it.estado != "cerrada" } + alertasStock.size
-        val historial = alertas.count { it.estado == "cerrada" }
+        val activas = alertas.count { !estaCerrada(it) } + alertasStock.size
+        val historial = alertas.count { estaCerrada(it) }
         val criticas = alertas.count {
             it.criticidad.equals("alta", true) || it.criticidad.equals("critica", true)
         } + alertasStock.size
         val advertencias = (activas - criticas).coerceAtLeast(0)
 
         binding.tvBadgeActivas.text = activas.toString()
-        binding.tvBadgeActivas.visibility = if (activas > 0) View.VISIBLE else View.GONE
+        binding.tvBadgeActivas.visibility =
+            View.GONE // Al abrir Alertas, el indicador de lectura desaparece
+        val escaladas = alertas.count { it.escalado_a_id != null }
+        binding.tvBadgeEscaladas.text = escaladas.toString()
+        binding.tvBadgeEscaladas.visibility =
+            View.GONE // Se mantienen las alertas escaladas en su pestaña
         binding.tvBadgeHistorial.text = historial.toString()
-        binding.tvBadgeHistorial.visibility = if (historial > 0) View.VISIBLE else View.GONE
+        binding.tvBadgeHistorial.visibility =
+            View.GONE // Historial disponible, sin indicador de no leído
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
-        binding.tvResumenAlertas.text =
-            if (activas == 1) "1 alerta activa en el galpón o la granja seleccionada"
+        actualizarTextoResumen()
+    }
+
+    private fun estaCerrada(alerta: AlertaResponse): Boolean =
+        alerta.estado.trim().equals("cerrada", ignoreCase = true)
+
+    private fun esPropietario(): Boolean =
+        (activity as? MainActivity)?.obtenerRolActual() == UserRole.PROPIETARIO
+
+    private fun actualizarTextoResumen() {
+        if (_binding == null) return
+        val activas = alertas.count { !estaCerrada(it) } + alertasStock.size
+        binding.tvResumenAlertas.text = when (pestanaActual) {
+            Pestana.ACTIVAS -> if (activas == 1)
+                "1 alerta activa en el galpón o la granja seleccionada"
             else "$activas alertas activas en el galpón o la granja seleccionada"
+
+            Pestana.HISTORIAL -> "Alertas cerradas del galpón seleccionado"
+            Pestana.ESCALADAS -> "Alertas escaladas del galpón seleccionado"
+        }
+    }
+
+    private fun cambiarPestana(nueva: Pestana) {
+        if (nueva == pestanaActual) return
+        val direccion = if (nueva.ordinal > pestanaActual.ordinal) 1 else -1
+        pestanaActual = nueva
+        entradaTarjetas.reiniciar()
+        pintarTabs()
+        mostrarLista()
+
+        // Desplazar solo la lista; el selector y los encabezados quedan fijos.
+        val lista = binding.containerAlertas
+        val distancia = lista.width.takeIf { it > 0 }
+            ?: lista.resources.displayMetrics.widthPixels
+        lista.animate().cancel()
+        lista.translationX = direccion * distancia.toFloat()
+        lista.animate().translationX(0f).setStartDelay(0L).setDuration(250L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
     }
 
     private fun pintarTabs() {
-        binding.tabActivas.setBackgroundResource(
-            if (!mostrandoHistorial) R.drawable.bg_tab_selected else R.drawable.bg_tabs
+        if (_binding == null) return
+        if (pestanaActual == Pestana.ESCALADAS && !esPropietario()) {
+            pestanaActual = Pestana.ACTIVAS
+        }
+        binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        val mostrarContadores = pestanaActual == Pestana.ACTIVAS
+        binding.tvCriticas.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
+        binding.tvAdvertencias.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
+        selectorAnimado?.seleccionar(
+            when (pestanaActual) {
+                Pestana.ACTIVAS -> binding.tabActivas
+                Pestana.HISTORIAL -> binding.tabHistorial
+                Pestana.ESCALADAS -> binding.tabEscaladas
+            }
         )
-        binding.tabHistorial.setBackgroundResource(
-            if (mostrandoHistorial) R.drawable.bg_tab_selected else R.drawable.bg_tabs
-        )
-        binding.tvTituloListaAlertas.text =
-            if (mostrandoHistorial) "Historial de alertas" else "Alertas activas"
+        // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
+        val colorSeleccionado = ColoresAdaptativos.texto(requireContext(), "#111111")
+        val colorNoSeleccionado = ColoresAdaptativos.texto(requireContext(), "#808A85")
+        listOf(
+            binding.tabActivas to (pestanaActual == Pestana.ACTIVAS),
+            binding.tabHistorial to (pestanaActual == Pestana.HISTORIAL),
+            binding.tabEscaladas to (pestanaActual == Pestana.ESCALADAS)
+        ).forEach { (tab, seleccionada) ->
+            for (i in 0 until tab.childCount) {
+                (tab.getChildAt(i) as? TextView)?.let { texto ->
+                    if (texto.id != R.id.tvBadgeActivas &&
+                        texto.id != R.id.tvBadgeHistorial &&
+                        texto.id != R.id.tvBadgeEscaladas
+                    ) {
+                        texto.setTextColor(if (seleccionada) colorSeleccionado else colorNoSeleccionado)
+                    }
+                }
+            }
+        }
+        binding.tvTituloListaAlertas.text = when (pestanaActual) {
+            Pestana.ACTIVAS -> "Alertas activas"
+            Pestana.HISTORIAL -> "Historial de alertas"
+            Pestana.ESCALADAS -> "Historial de escaladas"
+        }
+        actualizarTextoResumen()
     }
 
     private fun mostrarLista() {
         if (_binding == null) return
+        entradaTarjetas.comenzar()
         binding.containerAlertas.removeAllViews()
-
-        val filtradas = if (mostrandoHistorial) {
-            alertas.filter { it.estado == "cerrada" }
-        } else {
-            alertas.filter { it.estado != "cerrada" }
+        val filtradas = when (pestanaActual) {
+            Pestana.ACTIVAS -> alertas.filter { !estaCerrada(it) }
+            Pestana.HISTORIAL -> alertas.filter { estaCerrada(it) }
+            Pestana.ESCALADAS -> if (esPropietario())
+                alertas.filter { it.escalado_a_id != null } else emptyList()
         }
-
-        val mostrarStock = !mostrandoHistorial && alertasStock.isNotEmpty()
+        val mostrarStock = pestanaActual == Pestana.ACTIVAS && alertasStock.isNotEmpty()
         if (filtradas.isEmpty() && !mostrarStock) {
-            binding.containerAlertas.addView(
-                texto(
-                    if (mostrandoHistorial) "No hay alertas cerradas para este galpón."
-                    else "No hay alertas activas para este galpón.",
-                    13f,
-                    "#78847E",
-                    false
-                )
-            )
+            val mensaje = when (pestanaActual) {
+                Pestana.ACTIVAS -> "No hay alertas activas para este galpón."
+                Pestana.HISTORIAL -> "No hay alertas cerradas para este galpón."
+                Pestana.ESCALADAS -> "No hay alertas escaladas registradas para este galpón."
+            }
+            binding.containerAlertas.addView(texto(mensaje, 13f, "#111111", false))
             return
         }
-
         if (mostrarStock) {
             alertasStock.forEach { insumo ->
-                binding.containerAlertas.addView(crearTarjetaStockBajo(insumo))
+                val tarjeta = crearTarjetaStockBajo(insumo)
+                binding.containerAlertas.addView(tarjeta)
+                entradaTarjetas.mostrar(tarjeta, "stock:${insumo.id}")
                 binding.containerAlertas.addView(View(requireContext()).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, dp(8)
@@ -227,21 +388,163 @@ class AlertasFragment : BaseBottomNavFragment() {
                 })
             }
         }
-
-        filtradas.forEachIndexed { index, alerta ->
-            binding.containerAlertas.addView(crearTarjetaAlerta(alerta))
-            if (index < filtradas.lastIndex) {
+        // No existe fecha_escalamiento en el API: no se presenta una fecha inventada.
+        // Las escaladas se agrupan por creación, y las cerradas por resolución.
+        val agruparPorCierre = pestanaActual == Pestana.HISTORIAL
+        val ordenadas = filtradas.sortedWith(
+            compareByDescending<AlertaResponse> {
+                if (agruparPorCierre) it.fecha_cierre.orEmpty() else it.fecha_creacion.orEmpty()
+            }.thenByDescending { it.fecha_creacion.orEmpty() }
+        )
+        var fechaAnterior: String? = null
+        ordenadas.forEach { alerta ->
+            val fechaAgrupacion =
+                if (agruparPorCierre) alerta.fecha_cierre else alerta.fecha_creacion
+            val fechaActual = if (agruparPorCierre && fechaAgrupacion.isNullOrBlank())
+                "SIN FECHA DE CIERRE" else fechaEncabezado(fechaAgrupacion)
+            if (fechaActual != fechaAnterior) {
                 binding.containerAlertas.addView(
-                    View(requireContext()).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            dp(8)
-                        )
-                    }
+                    texto(
+                        fechaActual,
+                        13f,
+                        "#52675C",
+                        true,
+                        18
+                    ).apply {
+                        setPadding(dp(4), dp(2), dp(4), dp(8))
+                    })
+                entradaTarjetas.mostrar(
+                    binding.containerAlertas.getChildAt(binding.containerAlertas.childCount - 1),
+                    "fecha:${pestanaActual}:$fechaActual",
+                    true
                 )
+                fechaAnterior = fechaActual
             }
+            val tarjeta = if (pestanaActual == Pestana.ESCALADAS) crearTarjetaEscalada(alerta)
+            else crearTarjetaAlerta(alerta)
+            binding.containerAlertas.addView(tarjeta)
+            entradaTarjetas.mostrar(tarjeta, "alerta:${pestanaActual}:${alerta.id}")
+            binding.containerAlertas.addView(View(requireContext()).apply {
+                layoutParams =
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
+            })
         }
     }
+
+    private fun crearTarjetaEscalada(alerta: AlertaResponse): View {
+        val critica = alerta.criticidad.equals("alta", true) ||
+                alerta.criticidad.equals("critica", true)
+        val tarjeta = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            background = resources.getDrawable(
+                if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning,
+                null
+            )
+            elevation = dp(2).toFloat()
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+        }
+        val encabezado = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        encabezado.addView(
+            texto(
+                "●  ${alerta.galpon?.nombre ?: "Galpón ${alerta.galpon_id}"}",
+                12f, "#111111", true
+            ).apply {
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+        encabezado.addView(crearBadgeEstadoAlerta(alerta.estado))
+        tarjeta.addView(encabezado)
+        tarjeta.addView(texto(etiquetaTipoAlerta(alerta.tipo), 16f, "#111111", true, 8))
+        tarjeta.addView(
+            texto(
+                "Escalada a: ${alerta.escalado_a?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Usuario no disponible"}",
+                12f, "#111111", true, 6
+            ))
+        tarjeta.addView(
+            texto(
+                "Responsable que aceptó: ${alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Sin aceptación registrada"}",
+                12f, "#111111", false, 5
+            ))
+        alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
+            tarjeta.addView(
+                texto(
+                    "Generada: ${formatearFechaAlerta(it)}",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
+        }
+        val aceptacion = alerta.fecha_aceptacion
+        if (!aceptacion.isNullOrBlank()) {
+            tarjeta.addView(
+                texto(
+                    "Aceptada: ${formatearFechaAlerta(aceptacion)}",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
+            val minutos = calcularMinutosRespuesta(alerta.fecha_creacion, aceptacion)
+            if (minutos != null) tarjeta.addView(
+                texto(
+                    "Tiempo hasta aceptación: ${formatearDuracion(minutos)}",
+                    12f, "#111111", true, 5
+                )
+            )
+        } else {
+            tarjeta.addView(
+                texto(
+                    "Tiempo hasta aceptación: No disponible",
+                    12f,
+                    "#111111",
+                    false,
+                    5
+                )
+            )
+        }
+        // No se atribuye al responsable que aceptó el papel de operario original:
+        // ese dato y la fecha del escalamiento no existen en la respuesta del API.
+        tarjeta.addView(
+            texto(
+                "Estado actual: ${
+                    when (alerta.estado.lowercase(Locale.ROOT)) {
+                        "cerrada" -> "Cerrada"
+                        "en_proceso" -> "En proceso"
+                        else -> "Abierta"
+                    }
+                }", 12f, "#111111", true, 6
+            )
+        )
+        alerta.mensaje?.takeIf { it.isNotBlank() }?.let {
+            tarjeta.addView(texto(it, 12f, "#111111", false, 7))
+        }
+        if (alerta.estado == "cerrada") {
+            alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
+                tarjeta.addView(texto("Acción correctiva: $it", 12f, "#111111", false, 8))
+            }
+        }
+        return tarjeta
+    }
+
+    private fun calcularMinutosRespuesta(creacion: String?, aceptacion: String?): Long? {
+        if (creacion.isNullOrBlank() || aceptacion.isNullOrBlank()) return null
+        return try {
+            val inicio = java.time.Instant.parse(creacion)
+            val fin = java.time.Instant.parse(aceptacion)
+            java.time.Duration.between(inicio, fin).toMinutes().takeIf { it >= 0 }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun formatearDuracion(minutos: Long): String =
+        if (minutos < 60) "$minutos min" else "${minutos / 60} h ${minutos % 60} min"
 
     // Esta tarjeta representa un estado actual del inventario, no una Alerta
     // de galpón. No presenta acciones de cerrar/escalar: esas rutas solo
@@ -265,18 +568,30 @@ class AlertasFragment : BaseBottomNavFragment() {
             ?: "Inventario de granja"
         tarjeta.addView(texto("●  Bodega · $ubicacion", 12f, "#5D6862", true))
         tarjeta.addView(texto("Stock bajo: ${insumo.nombre}", 16f, "#183C2E", true, 7))
-        tarjeta.addView(texto(
-            "Disponible: ${formatearValor(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida} · " +
-                    "Mínimo: ${formatearValor(insumo.stock_minimo ?: 0.0)} ${insumo.unidad_medida}",
-            12f, "#C62828", true, 5
-        ))
-        tarjeta.addView(texto("Repón este insumo desde Bodega para resolver la alerta.", 12f, "#78847E", false, 4))
+        tarjeta.addView(
+            texto(
+                "Disponible: ${formatearValor(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida} · " +
+                        "Mínimo: ${formatearValor(insumo.stock_minimo ?: 0.0)} ${insumo.unidad_medida}",
+                12f, "#C62828", true, 5
+            )
+        )
+        tarjeta.addView(
+            texto(
+                "Repón este insumo desde Bodega para resolver la alerta.",
+                12f,
+                "#78847E",
+                false,
+                4
+            )
+        )
         return tarjeta
     }
 
     private fun crearTarjetaAlerta(alerta: AlertaResponse): View {
-        val critica = alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)
-        val fondo = if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning
+        val critica =
+            alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)
+        val fondo =
+            if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning
 
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
@@ -307,10 +622,11 @@ class AlertasFragment : BaseBottomNavFragment() {
             texto(
                 "●  Sensores · $referencia",
                 12f,
-                "#5D6862",
+                "#111111",
                 true
             ).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
         )
         fila.addView(crearBadgeEstadoAlerta(alerta.estado))
@@ -324,11 +640,22 @@ class AlertasFragment : BaseBottomNavFragment() {
             texto(
                 if (valor != null) "$titulo $valor" else titulo,
                 16f,
-                "#183C2E",
+                "#111111",
                 true,
                 7
             )
         )
+
+        // En el historial, el responsable va justo debajo del motivo.
+        if (alerta.estado.equals("cerrada", ignoreCase = true)) {
+            val responsable = alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() }
+                ?: "Responsable no registrado"
+            card.addView(texto("Atendida por: $responsable", 12f, "#111111", true, 6))
+        }
+
+        alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
+            card.addView(texto("Generada: ${formatearFechaAlerta(it)}", 11f, "#111111", false, 5))
+        }
 
         val umbral = alerta.valor_umbral?.let { formatearValor(it) }
         val detalle = when {
@@ -336,75 +663,166 @@ class AlertasFragment : BaseBottomNavFragment() {
             umbral != null -> "Umbral: $umbral"
             else -> "Sin detalle adicional"
         }
-        card.addView(texto(detalle ?: "", 12f, "#78847E", false, 3))
-
+        card.addView(texto(detalle ?: "", 12f, "#111111", false, 6))
         if (umbral != null && alerta.valor_detectado != null) {
             card.addView(
                 texto(
                     "Valor detectado: ${formatearValor(alerta.valor_detectado)} · Umbral: $umbral",
-                    11f,
-                    if (critica) "#E53935" else "#A56B12",
-                    true,
-                    4
+                    11f, if (critica) "#E53935" else "#A56B12", true, 5
                 )
             )
         }
 
-        val fecha = alerta.fecha_creacion?.take(10)
-        if (!fecha.isNullOrBlank()) {
-            card.addView(texto("Fecha: $fecha", 11f, "#78847E", false, 5))
-        }
-
-        if (alerta.estado != "cerrada") {
+        if (alerta.estado.equals("cerrada", ignoreCase = true)) {
+            alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
+                card.addView(View(requireContext()).apply {
+                    setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E5ECE7"))
+                    layoutParams =
+                        LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1))
+                            .apply {
+                                topMargin = dp(12)
+                                bottomMargin = dp(9)
+                            }
+                })
+                card.addView(texto("Acción correctiva", 12f, "#111111", true))
+                card.addView(texto(it, 12f, "#111111", false, 4))
+            }
+        } else {
+            val confirmada = alerta.estado.equals("en_proceso", ignoreCase = true)
             val botones = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(40)
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(40)
                 ).apply { topMargin = dp(10) }
             }
-
-            val btnEscalar = MaterialButton(requireContext()).apply {
-                text = "Escalar"
-                isAllCaps = false
-                textSize = 12f
-                setTextColor(Color.parseColor("#6D4C1D"))
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF0D8"))
-                cornerRadius = dp(9)
-                minWidth = 0
-                minHeight = 0
-                insetTop = 0
-                insetBottom = 0
-                layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
-                setOnClickListener { mostrarDialogEscalar(alerta) }
+            val puedeEscalar = (activity as? MainActivity)?.obtenerRolActual() != UserRole.OPERARIO
+            if (puedeEscalar) {
+                val btnEscalar = MaterialButton(requireContext()).apply {
+                    text = "Escalar"
+                    isAllCaps = false
+                    textSize = 13f
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_6d4c1d
+                        )
+                    )
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(
+                        ColoresAdaptativos.superficie(
+                            requireContext(),
+                            "#FFF0D8"
+                        )
+                    )
+                    cornerRadius = dp(9)
+                    minWidth = 0
+                    minHeight = 0
+                    insetTop = 0
+                    insetBottom = 0
+                    layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
+                    setOnClickListener { mostrarDialogEscalar(alerta) }
+                }
+                botones.addView(btnEscalar)
+                botones.addView(View(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(8), 1)
+                })
             }
-
-            val espacio = View(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(8), 1)
-            }
-
-            val btnCerrar = MaterialButton(requireContext()).apply {
-                text = "Cerrar alerta"
+            val btnAccion = MaterialButton(requireContext()).apply {
+                text = if (confirmada) "Cerrar alerta" else "Confirmar lectura"
                 isAllCaps = false
-                textSize = 12f
+                textSize = 13f
                 setTextColor(Color.WHITE)
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10A86B"))
+                backgroundTintList =
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#10A86B"))
                 cornerRadius = dp(9)
                 minWidth = 0
                 minHeight = 0
                 insetTop = 0
                 insetBottom = 0
                 layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
-                setOnClickListener { mostrarDialogCerrar(alerta) }
+                setOnClickListener {
+                    if (confirmada) mostrarDialogCerrar(alerta)
+                    else confirmarLectura(alerta, this)
+                }
             }
-
-            botones.addView(btnEscalar)
-            botones.addView(espacio)
-            botones.addView(btnCerrar)
+            botones.addView(btnAccion)
             card.addView(botones)
+            if (confirmada) {
+                val responsable = alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() }
+                card.addView(
+                    texto(
+                        if (responsable != null) "Lectura confirmada por: $responsable"
+                        else "Lectura confirmada · En proceso",
+                        11f, "#176747", false, 6
+                    )
+                )
+            }
         }
 
         return card
+    }
+
+    private fun fechaEncabezado(fecha: String?): String {
+        if (fecha.isNullOrBlank()) return "SIN FECHA"
+        return try {
+            val dia = java.time.Instant.parse(fecha)
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM 'de' yyyy", Locale("es", "CO"))
+                .format(dia).replaceFirstChar { it.uppercase() }
+        } catch (_: Exception) {
+            fecha.take(10)
+        }
+    }
+
+    private fun formatearFechaAlerta(fecha: String): String {
+        return try {
+            val instante = java.time.Instant.parse(fecha)
+            val formato = java.time.format.DateTimeFormatter.ofPattern(
+                "dd/MM/yyyy HH:mm",
+                Locale.getDefault()
+            )
+            formato.withZone(java.time.ZoneId.systemDefault()).format(instante)
+        } catch (_: Exception) {
+            fecha.take(16).replace('T', ' ')
+        }
+    }
+
+    private fun confirmarLectura(alerta: AlertaResponse, boton: MaterialButton) {
+        boton.isEnabled = false
+        boton.text = "Confirmando…"
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val respuesta = RetrofitClient.api.aceptarAlerta(alerta.id)
+                if (!respuesta.isSuccessful) {
+                    throw IllegalStateException("El servidor respondió HTTP ${respuesta.code()}")
+                }
+                val confirmada = respuesta.body()
+                    ?: throw IllegalStateException("El servidor no devolvió la alerta confirmada")
+                if (!confirmada.estado.equals("en_proceso", ignoreCase = true)) {
+                    throw IllegalStateException("El servidor no confirmó la lectura")
+                }
+                alertas = alertas.map { if (it.id == alerta.id) confirmada else it }
+                if (_binding != null) {
+                    actualizarResumen()
+                    mostrarLista()
+                }
+                if (isAdded) Toast.makeText(
+                    requireContext(),
+                    "Lectura confirmada. Ya puedes cerrar la alerta.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isAdded) Toast.makeText(
+                    requireContext(),
+                    "No se pudo confirmar: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                boton.isEnabled = true
+                boton.text = "Confirmar lectura"
+            }
+        }
     }
 
     private fun etiquetaTipoAlerta(tipo: String): String {
@@ -427,13 +845,18 @@ class AlertasFragment : BaseBottomNavFragment() {
         val fondo = if (cerrado) "#E2F2E8" else "#FDE8E7"
         val color = if (cerrado) "#1F5C42" else "#C62828"
         return TextView(requireContext()).apply {
-            text = if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
-            setTextColor(Color.parseColor(color))
-            textSize = 11f
+            text =
+                if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
+            setTextColor(ColoresAdaptativos.texto(requireContext(), color))
+            textSize = 12f
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(10), dp(5), dp(10), dp(5))
-            background = roundedBackground(Color.parseColor(fondo), Color.TRANSPARENT, 20)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), fondo),
+                Color.TRANSPARENT,
+                20
+            )
         }
     }
 
@@ -442,7 +865,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         val tarjeta = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(20), dp(20), dp(18))
-            background = roundedBackground(Color.WHITE, Color.parseColor("#D8E7DE"), 20)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#D8E7DE"),
+                20
+            )
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -471,11 +898,20 @@ class AlertasFragment : BaseBottomNavFragment() {
             minLines = 3
             maxLines = 5
             gravity = Gravity.TOP or Gravity.START
-            textSize = 14f
-            setTextColor(Color.parseColor("#183C2E"))
-            setHintTextColor(Color.parseColor("#8A9890"))
+            textSize = 15f
+            setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.adaptive_text_183c2e
+                )
+            )
+            setHintTextColor(ColoresAdaptativos.texto(requireContext(), "#8A9890"))
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = roundedBackground(Color.WHITE, Color.parseColor("#BFD6C7"), 10)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#BFD6C7"),
+                10
+            )
         }
         tarjeta.addView(
             input,
@@ -492,11 +928,21 @@ class AlertasFragment : BaseBottomNavFragment() {
         val botonCancelar = MaterialButton(context).apply {
             text = "Cancelar"
             isAllCaps = false
-            textSize = 13f
-            setTextColor(Color.parseColor("#176747"))
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            setStrokeColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#BFD6C7")))
+            textSize = 14f
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
+            backgroundTintList = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_background
+                )
+            )
             strokeWidth = dp(1)
+            strokeColor = android.content.res.ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.cancel_stroke
+                )
+            )
             cornerRadius = dp(10)
             minWidth = 0
             minHeight = 0
@@ -507,9 +953,10 @@ class AlertasFragment : BaseBottomNavFragment() {
         val botonConfirmar = MaterialButton(context).apply {
             text = "Confirmar cierre"
             isAllCaps = false
-            textSize = 13f
+            textSize = 14f
             setTextColor(Color.WHITE)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
+            backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
             cornerRadius = dp(10)
             minWidth = 0
             minHeight = 0
@@ -602,12 +1049,16 @@ class AlertasFragment : BaseBottomNavFragment() {
 
                 if (dialog.isShowing) dialog.dismiss()
                 if (_binding != null) {
+                    // Conservar la pestaña actual: las escaladas cerradas siguen visibles.
                     actualizarResumen()
+                    pintarTabs()
                     mostrarLista()
+                    // Sincronizar nuevamente con el servidor después del cierre.
+                    cargarAlertas()
                 }
                 Toast.makeText(
                     requireContext(),
-                    "Alerta cerrada correctamente y añadida al historial.",
+                    "Alerta cerrada correctamente.",
                     Toast.LENGTH_LONG
                 ).show()
             } catch (e: CancellationException) {
@@ -636,22 +1087,31 @@ class AlertasFragment : BaseBottomNavFragment() {
                 val usuarios = response.body()?.data.orEmpty().filter { it.activo }
 
                 if (usuarios.isEmpty()) {
-                    Toast.makeText(requireContext(), "No hay usuarios disponibles para escalar", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "No hay usuarios disponibles para escalar",
+                        Toast.LENGTH_LONG
+                    ).show()
                     return@launch
                 }
 
-                val nombres = usuarios.map { "${it.nombre_completo} · ${it.rol.nombre}" }.toTypedArray()
+                val nombres =
+                    usuarios.map { "${it.nombre_completo} · ${it.rol.nombre}" }.toTypedArray()
                 AlertDialog.Builder(requireContext())
                     .setTitle("Escalar alerta")
                     .setItems(nombres) { _, which ->
                         ejecutarEscalar(alerta.id, usuarios[which].id)
                     }
                     .setNegativeButton("Cancelar", null)
-                    .show()
+                    .show().estiloCancelar()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "No se pudo cargar los usuarios: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo cargar los usuarios: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -661,12 +1121,20 @@ class AlertasFragment : BaseBottomNavFragment() {
             try {
                 val response = RetrofitClient.api.escalarAlerta(alertaId, usuarioId)
                 if (!response.isSuccessful) throw IllegalStateException("Código ${response.code()}")
-                Toast.makeText(requireContext(), "Alerta escalada correctamente", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Alerta escalada correctamente",
+                    Toast.LENGTH_SHORT
+                ).show()
                 cargarAlertas()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "No se pudo escalar la alerta: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudo escalar la alerta: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -679,8 +1147,10 @@ class AlertasFragment : BaseBottomNavFragment() {
         marginTop: Int = 0
     ): TextView = TextView(requireContext()).apply {
         text = contenido
-        textSize = tamano
-        setTextColor(Color.parseColor(color))
+        textSize = if (tamano < 16f) tamano + 1f else tamano
+        typeface =
+            android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        setTextColor(ColoresAdaptativos.texto(requireContext(), color))
         if (negrita) setTypeface(typeface, Typeface.BOLD)
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -688,7 +1158,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         ).apply { topMargin = dp(marginTop) }
     }
 
-    private fun roundedBackground(fillColor: Int, strokeColor: Int, radiusDp: Int): GradientDrawable =
+    private fun roundedBackground(
+        fillColor: Int,
+        strokeColor: Int,
+        radiusDp: Int
+    ): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(fillColor)
@@ -697,13 +1171,18 @@ class AlertasFragment : BaseBottomNavFragment() {
         }
 
     private fun formatearValor(valor: Double): String {
-        return if (valor % 1.0 == 0.0) valor.toInt().toString() else String.format(Locale.US, "%.1f", valor)
+        return if (valor % 1.0 == 0.0) valor.toInt().toString() else String.format(
+            Locale.US,
+            "%.1f",
+            valor
+        )
     }
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
+        selectorAnimado = null
         super.onDestroyView()
         _binding = null
     }

@@ -1,51 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/cardInsumo"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/bg_bodega_card"
     android:orientation="vertical"
-    android:padding="14dp"
-    android:background="@drawable/bg_bodega_card">
+    android:padding="14dp">
 
+    <!-- NOMBRE Y ESTADO -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/txtNombreInsumo"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:textColor="#171D1A"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/adaptive_text_171d1a"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="2" />
+            android:textStyle="bold" />
 
+        <!-- ESTADO A LA DERECHA -->
         <TextView
-            android:id="@+id/txtTipoInsumo"
+            android:id="@+id/txtEstadoInsumo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:background="@drawable/bg_bodega_tipo"
+            android:background="@drawable/bg_stock_ok"
             android:gravity="center"
-            android:textColor="#68736E"
-            android:textSize="10sp"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:paddingStart="9dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="9dp"
+            android:paddingBottom="5dp"
+            android:text="Stock OK"
+            android:textColor="@color/adaptive_text_18875a"
+            android:textSize="11sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
+    <!-- TIPO DE INSUMO -->
+    <TextView
+        android:id="@+id/txtTipoInsumo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_bodega_tipo"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/adaptive_text_68736e"
+        android:textSize="11sp" />
+
+    <!-- CANTIDAD Y UNIDAD -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="5dp"
         android:gravity="bottom"
         android:orientation="horizontal">
 
@@ -53,7 +75,7 @@
             android:id="@+id/txtCantidadInsumo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#171D1A"
+            android:textColor="@color/adaptive_text_171d1a"
             android:textSize="30sp"
             android:textStyle="bold" />
 
@@ -63,67 +85,59 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:layout_marginBottom="5dp"
-            android:textColor="#89938E"
-            android:textSize="13sp"
+            android:textColor="@color/adaptive_text_89938e"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
     </LinearLayout>
 
+    <!-- BARRA DE STOCK -->
     <ProgressBar
         android:id="@+id/progressStock"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="8dp"
-        android:layout_marginTop="6dp"
         android:layout_marginStart="14dp"
+        android:layout_marginTop="6dp"
         android:layout_marginEnd="14dp"
+        android:indeterminate="false"
         android:max="100"
-        android:progress="0"
-        android:indeterminate="false" />
+        android:progress="0" />
 
+    <!-- STOCK MÍNIMO -->
     <TextView
         android:id="@+id/txtMinimoAutonomia"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textColor="#89938E"
-        android:textSize="11sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/adaptive_text_89938e"
+        android:textSize="12sp" />
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/txtAutonomiaEstimada"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/text_primary"
+        android:textSize="12sp" />
+
+    <!-- REGISTRAR ENTRADA -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnEntradaInsumo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="9dp"
-        android:orientation="horizontal"
-        android:gravity="end|center_vertical">
-
-        <TextView
-            android:id="@+id/txtEstadoInsumo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="9dp"
-            android:paddingEnd="9dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            android:background="@drawable/bg_stock_ok"
-            android:gravity="center"
-            android:textColor="#18875A"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/btnMovimientoInsumo"
-            android:layout_width="wrap_content"
-            android:layout_height="34dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_bodega_nuevo"
-            android:gravity="center"
-            android:paddingStart="9dp"
-            android:paddingEnd="9dp"
-            android:text="Movimiento"
-            android:textColor="@android:color/white"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
+        android:layout_marginTop="12dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:minHeight="44dp"
+        android:text="Registrar entrada"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="#18875A"
+        app:cornerRadius="10dp" />
 
 </LinearLayout>

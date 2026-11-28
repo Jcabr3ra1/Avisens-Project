@@ -1,41 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true"
-    android:background="@android:color/transparent">
+    android:background="@android:color/transparent"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_white"
         android:orientation="vertical"
-        android:padding="18dp"
-        android:background="@drawable/bg_dialog_white">
+        android:padding="18dp">
 
         <!-- TÍTULO -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
             android:text="Registrar tratamiento"
-            android:textSize="20sp"
-            android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="10dp" />
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <!-- LOTE -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
             android:text="Lote"
-            android:textSize="11sp"
-            android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="5dp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -44,14 +43,14 @@
 
             <Spinner
                 android:id="@+id/spinnerLoteEnfermo"
-                android:dropDownWidth="match_parent"
-                android:dropDownHorizontalOffset="0dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
                 android:paddingStart="0dp"
-                android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
-                />
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
 
         </FrameLayout>
 
@@ -60,8 +59,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="10dp"
+            android:orientation="horizontal"
             android:weightSum="2">
 
             <!-- CANTIDAD -->
@@ -69,31 +68,32 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginEnd="4dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
                     android:text="Cantidad de aves"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="5dp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <EditText
                     android:id="@+id/edtCantidadAvesEnfermo"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
+                    android:fontFamily="sans-serif-medium"
                     android:hint="Ej: 35"
-                    android:textSize="12sp"
-                    android:textColor="@color/black"
+                    android:inputType="number"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
-                    android:inputType="number"
-                    android:singleLine="true" />
+                    android:singleLine="true"
+                    android:textColor="@color/adaptive_text_000000"
+                    android:textSize="13sp" />
 
             </LinearLayout>
 
@@ -102,32 +102,33 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="4dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
                     android:text="Fecha"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="5dp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <EditText
                     android:id="@+id/edtFechaEnfermo"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
+                    android:clickable="true"
+                    android:focusable="false"
+                    android:fontFamily="sans-serif-medium"
                     android:hint="28/08/2026"
-                    android:textSize="12sp"
-                    android:textColor="@color/black"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:singleLine="true"
-                    android:focusable="false"
-                    android:clickable="true" />
+                    android:textColor="@color/adaptive_text_000000"
+                    android:textSize="13sp" />
 
             </LinearLayout>
 
@@ -138,12 +139,12 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Insumo utilizado"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
             android:layout_marginTop="10dp"
-            android:layout_marginBottom="5dp" />
+            android:layout_marginBottom="5dp"
+            android:text="Insumo utilizado"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -152,14 +153,14 @@
 
             <Spinner
                 android:id="@+id/spinnerInsumoEnfermo"
-                android:dropDownWidth="match_parent"
-                android:dropDownHorizontalOffset="0dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
                 android:paddingStart="0dp"
-                android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
-                />
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
 
         </FrameLayout>
 
@@ -168,8 +169,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="10dp"
+            android:orientation="horizontal"
             android:weightSum="2">
 
             <!-- DOSIS -->
@@ -177,30 +178,31 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginEnd="4dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
                     android:text="Dosis"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="5dp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <EditText
                     android:id="@+id/edtDosisEnfermo"
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
+                    android:fontFamily="sans-serif-medium"
                     android:hint="Ej: 0.5 ml por ave"
-                    android:textSize="12sp"
-                    android:textColor="@color/black"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
-                    android:singleLine="true" />
+                    android:singleLine="true"
+                    android:textColor="@color/adaptive_text_000000"
+                    android:textSize="13sp" />
 
             </LinearLayout>
 
@@ -209,18 +211,18 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="4dp">
+                android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="5dp"
                     android:text="Vía de aplicación"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="5dp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <FrameLayout
                     android:layout_width="match_parent"
@@ -229,14 +231,14 @@
 
                     <Spinner
                         android:id="@+id/spinnerViaAplicacionEnfermo"
-                        android:dropDownWidth="match_parent"
-                        android:dropDownHorizontalOffset="0dp"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="@android:color/transparent"
+                        android:dropDownWidth="match_parent"
+                        android:dropDownHorizontalOffset="0dp"
                         android:paddingStart="0dp"
-                        android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
-                        />
+                        android:paddingEnd="0dp"
+                        android:popupBackground="@drawable/bg_spinner_dropdown" />
 
                 </FrameLayout>
 
@@ -249,34 +251,35 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Observaciones"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
             android:layout_marginTop="10dp"
-            android:layout_marginBottom="5dp" />
+            android:layout_marginBottom="5dp"
+            android:text="Observaciones"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <EditText
             android:id="@+id/edtObservacionesEnfermo"
             android:layout_width="match_parent"
             android:layout_height="58dp"
             android:background="@drawable/bg_observaciones"
+            android:fontFamily="sans-serif-medium"
             android:gravity="top|start"
             android:hint="Escribe una observación..."
-            android:padding="10dp"
-            android:textSize="12sp"
-            android:textColor="@color/black"
             android:inputType="textMultiLine"
-            android:overScrollMode="ifContentScrolls" />
+            android:overScrollMode="ifContentScrolls"
+            android:padding="10dp"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
 
         <!-- BOTONES -->
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
             android:gravity="center"
-            android:layout_marginTop="10dp">
+            android:orientation="horizontal">
 
             <!-- CANCELAR -->
 
@@ -284,22 +287,22 @@
                 android:id="@+id/btnCancelarEnfermo"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginEnd="3dp"
                 android:layout_weight="1"
-                android:text="Cancelar"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:backgroundTint="@color/white"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginEnd="3dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Cancelar"
+                android:textAllCaps="false"
+                android:textColor="@color/cancel_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/cancel_background"
                 app:cornerRadius="9dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9" />
+                app:strokeColor="@color/cancel_stroke"
+                app:strokeWidth="1dp" />
 
             <!-- GUARDAR -->
 
@@ -307,19 +310,19 @@
                 android:id="@+id/btnGuardarEnfermo"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginStart="3dp"
                 android:layout_weight="1"
-                android:text="Guardar tratamiento"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
                 android:backgroundTint="#2E8B57"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginStart="3dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Guardar tratamiento"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
                 app:cornerRadius="9dp" />
 
         </LinearLayout>

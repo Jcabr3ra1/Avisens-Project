@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { EstadoRecuperacionPassword, type Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -13,6 +14,7 @@ import { ROLES } from '../../common/auth/roles';
 import { esPropietario, type Solicitante } from '../../common/auth/acceso';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { PushService } from '../notificaciones/push.service';
 
 const RESPUESTA_SOLICITUD = {
   mensaje:
@@ -21,7 +23,10 @@ const RESPUESTA_SOLICITUD = {
 
 @Injectable()
 export class RecuperacionesPasswordService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private push?: PushService,
+  ) {}
 
   private selectSolicitud = {
     id: true,
@@ -139,16 +144,32 @@ export class RecuperacionesPasswordService {
         });
 
         if (destinatarios.length > 0) {
+          const titulo = 'Solicitud de recuperación de contraseña';
+          const mensaje = `${usuario.nombre_completo} solicitó restablecer su contraseña.`;
           await tx.notificacion.createMany({
             data: destinatarios.map((destinatario) => ({
               usuario_id: destinatario.id,
               tipo: 'recuperacion_password',
-              titulo: 'Solicitud de recuperación de contraseña',
-              mensaje: `${usuario.nombre_completo} solicitó restablecer su contraseña.`,
+              titulo,
+              mensaje,
               referencia_tipo: 'recuperacion_password',
               referencia_id: solicitud.id,
             })),
           });
+          if (this.push) {
+            void this.push
+              .enviarAUsuarios(
+                destinatarios.map((d) => d.id),
+                {
+                  titulo,
+                  mensaje,
+                  tipo: 'recuperacion_password',
+                  referencia_tipo: 'recuperacion_password',
+                  referencia_id: solicitud.id,
+                },
+              )
+              .catch(() => undefined);
+          }
         }
       });
     } catch (error) {

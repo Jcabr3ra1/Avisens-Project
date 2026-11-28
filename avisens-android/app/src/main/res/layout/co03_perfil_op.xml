@@ -1,296 +1,249 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#EAF4EF"
+    android:background="@color/adaptive_surface_eaf4ef"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
-
-        <!-- ========================================= -->
-        <!-- BOTÓN CERRAR -->
-        <!-- ========================================= -->
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp">
 
         <ImageButton
             android:id="@+id/btnCerrarPerfil"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginBottom="8dp"
-            android:background="@android:color/transparent"
-            android:contentDescription="Cerrar perfil"
-            android:padding="8dp"
-            android:src="@drawable/ic_close"
-            app:tint="#66736D" />
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_edit_profile_button"
+            android:contentDescription="Volver a configuración"
+            android:padding="12dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/adaptive_text_183c2e" />
 
-        <!-- ========================================= -->
-        <!-- ENCABEZADO -->
-        <!-- ========================================= -->
+        <FrameLayout
+            android:layout_width="116dp"
+            android:layout_height="116dp"
+            android:layout_gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/txtInicialPerfil"
+                android:layout_width="104dp"
+                android:layout_height="104dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_avatar_perfil"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="34sp" />
+
+            <ImageView
+                android:id="@+id/imgFotoPerfil"
+                android:layout_width="104dp"
+                android:layout_height="104dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_avatar_perfil"
+                android:clipToOutline="true"
+                android:contentDescription="Foto de perfil"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/btnCambiarFotoPerfil"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/bg_avatar_perfil"
+                android:contentDescription="Editar foto de perfil"
+                android:padding="9dp"
+                android:src="@drawable/ic_edit"
+                app:tint="@android:color/white" />
+        </FrameLayout>
 
         <TextView
+            android:id="@+id/txtNombrePerfil"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Mi perfil"
-            android:textColor="#18231F"
-            android:textSize="25sp"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textColor="@color/adaptive_text_183c2e"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/txtDetallePerfil"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Gestiona tu información personal"
-            android:textColor="#66736D"
-            android:textSize="14sp" />
-
-        <!-- ========================================= -->
-        <!-- TARJETA PERFIL -->
-        <!-- ========================================= -->
+            android:gravity="center"
+            android:textColor="@color/adaptive_text_2f8b5e"
+            android:textSize="15sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="30dp"
             android:background="@drawable/bg_card_white"
-            android:elevation="2dp"
             android:orientation="vertical"
-            android:padding="20dp">
-
-            <!-- AVATAR + NOMBRE -->
+            android:padding="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:minHeight="64dp"
+                android:orientation="horizontal"
+                android:paddingVertical="10dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_person_outline"
+                    app:tint="@color/adaptive_text_2f8b5e" />
 
                 <TextView
-                    android:id="@+id/txtInicialPerfil"
-                    android:layout_width="58dp"
-                    android:layout_height="58dp"
-                    android:background="@drawable/bg_avatar_perfil"
-                    android:gravity="center"
-                    android:text="C"
-                    android:textColor="@android:color/white"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="Usuario"
+                    android:textColor="@color/adaptive_text_183c2e"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:id="@+id/txtNombrePerfil"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Cristian Lubo"
-                        android:textColor="#18231F"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="3dp"
-                        android:text="Información personal"
-                        android:textColor="#89948F"
-                        android:textSize="12sp" />
-
-                </LinearLayout>
-
+                <TextView
+                    android:id="@+id/txtUsuarioPerfil"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.3"
+                    android:gravity="end"
+                    android:text="No disponible"
+                    android:textColor="@color/adaptive_text_78847e"
+                    android:textSize="14sp" />
             </LinearLayout>
-
-            <!-- ========================================= -->
-            <!-- DIVISOR -->
-            <!-- ========================================= -->
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="6dp"
-                android:background="#E3EAE6" />
-
-            <!-- ========================================= -->
-            <!-- NOMBRE -->
-            <!-- ========================================= -->
+                android:background="@color/adaptive_surface_e1e9e5" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
+                android:minHeight="64dp"
                 android:orientation="horizontal"
-                android:paddingVertical="12dp">
+                android:paddingVertical="10dp">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_email"
+                    app:tint="@color/adaptive_text_2f8b5e" />
+
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="Correo electrónico"
+                    android:textColor="@color/adaptive_text_183c2e"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Nombre completo"
-                        android:textColor="#89948F"
-                        android:textSize="11sp" />
-
-                    <EditText
-                        android:id="@+id/edtNombrePerfil"
-                        android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:background="@android:color/transparent"
-                        android:enabled="false"
-                        android:padding="0dp"
-                        android:text="Cristian Lubo"
-                        android:textColor="#26332E"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/btnEditarNombre"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_edit_profile_button"
-                    android:contentDescription="Editar nombre"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_edit"
-                    app:tint="#2E9B6F" />
-
+                <TextView
+                    android:id="@+id/edtCorreoPerfil"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.3"
+                    android:gravity="end"
+                    android:text="No disponible"
+                    android:textColor="@color/adaptive_text_78847e"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- ========================================= -->
-            <!-- CORREO -->
-            <!-- ========================================= -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/adaptive_surface_e1e9e5" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
+                android:minHeight="64dp"
                 android:orientation="horizontal"
-                android:paddingVertical="12dp">
+                android:paddingVertical="10dp">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_phone"
+                    app:tint="@color/adaptive_text_2f8b5e" />
+
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="Teléfono"
+                    android:textColor="@color/adaptive_text_183c2e"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Correo electrónico"
-                        android:textColor="#89948F"
-                        android:textSize="11sp" />
-
-                    <EditText
-                        android:id="@+id/edtCorreoPerfil"
-                        android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:background="@android:color/transparent"
-                        android:enabled="false"
-                        android:inputType="textEmailAddress"
-                        android:padding="0dp"
-                        android:text="cristian@ejemplo.com"
-                        android:textColor="#26332E"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/btnEditarCorreo"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_edit_profile_button"
-                    android:contentDescription="Editar correo"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_edit"
-                    app:tint="#2E9B6F" />
-
+                <TextView
+                    android:id="@+id/edtTelefonoPerfil"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.3"
+                    android:gravity="end"
+                    android:text="No disponible"
+                    android:textColor="@color/adaptive_text_78847e"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- ========================================= -->
-            <!-- TELÉFONO -->
-            <!-- ========================================= -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/adaptive_surface_e1e9e5" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
+                android:minHeight="64dp"
                 android:orientation="horizontal"
-                android:paddingVertical="12dp">
+                android:paddingVertical="10dp">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_location_on"
+                    app:tint="@color/adaptive_text_2f8b5e" />
+
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:text="Organización"
+                    android:textColor="@color/adaptive_text_183c2e"
+                    android:textSize="15sp" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Teléfono"
-                        android:textColor="#89948F"
-                        android:textSize="11sp" />
-
-                    <EditText
-                        android:id="@+id/edtTelefonoPerfil"
-                        android:layout_width="match_parent"
-                        android:layout_height="40dp"
-                        android:background="@android:color/transparent"
-                        android:enabled="false"
-                        android:inputType="phone"
-                        android:padding="0dp"
-                        android:text="300 000 0000"
-                        android:textColor="#26332E"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/btnEditarTelefono"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@drawable/bg_edit_profile_button"
-                    android:contentDescription="Editar teléfono"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_edit"
-                    app:tint="#2E9B6F" />
-
+                <TextView
+                    android:id="@+id/txtOrganizacionPerfil"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.3"
+                    android:gravity="end"
+                    android:text="No disponible"
+                    android:textColor="@color/adaptive_text_78847e"
+                    android:textSize="14sp" />
             </LinearLayout>
-
-            <!-- ========================================= -->
-            <!-- GUARDAR CAMBIOS -->
-            <!-- ========================================= -->
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnGuardarPerfil"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="14dp"
-                android:text="Guardar cambios"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:visibility="gone"
-                app:backgroundTint="#2E9B6F"
-                app:cornerRadius="25dp" />
 
         </LinearLayout>
-
     </LinearLayout>
-
 </ScrollView>

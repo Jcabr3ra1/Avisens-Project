@@ -122,7 +122,8 @@ data class EstimacionAlimentoApiResponse(
     val plan_vigente: PlanVigenteAlimentoApi? = null,
     val desactualizado: Boolean = false,
     val motivos_desactualizacion: List<String> = emptyList(),
-    val alimento_estimado: AlimentoEstimadoApi? = null
+    val alimento_estimado: AlimentoEstimadoApi? = null,
+    val desglose: DesgloseGuiaApi? = null
 )
 
 data class PlanEstimacionAlimentoApi(
@@ -151,3 +152,17 @@ fun List<PuntoCurvaGeneticaApi>.valorCurvaEnDia(
     val proporcion = (dia - inferior.dia) / (superior.dia - inferior.dia)
     return valorInferior + ((valorSuperior - valorInferior) * proporcion)
 }
+
+
+data class DesgloseGuiaApi(
+    val no_disponible: Boolean = false,
+    val renglones: List<RenglonGuiaApi>? = null
+)
+
+data class RenglonGuiaApi(
+    val tipo_alimento_nombre_snapshot: String? = null,
+    val etapa: String? = null,
+    val dia_inicio: Int = 0,
+    val dia_fin: Int = 0,
+    val consumo_total_kg: Double? = null
+)

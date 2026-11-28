@@ -1,0 +1,14 @@
+meta {
+  name: [Admin · Propietario · Operario] Listar seguimientos de un caso sanitario
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/v1/eventos-sanitarios/1/seguimientos
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Colores de Guía de peso -->
+    <color name="guia_236b4e">#A4D9B7</color>
+    <color name="guia_40564c">#B8C9BF</color>
+    <color name="guia_1b3028">#F0F6F2</color>
+    <color name="guia_64736b">#B8C9BF</color>
+    <color name="guia_28664e">#A4D9B7</color>
+    <color name="guia_718078">#B8C9BF</color>
+    <color name="guia_426bc0">#A9C6FF</color>
+    <color name="guia_1d2d26">#F0F6F2</color>
+    <color name="guia_728078">#B8C9BF</color>
+    <color name="guia_287c5a">#A4D9B7</color>
+    <color name="guia_b97718">#F4CB80</color>
+    <color name="guia_a77a18">#F4CB80</color>
+    <color name="guia_263b31">#F0F6F2</color>
+    <color name="guia_1e3027">#F0F6F2</color>
+    <color name="guia_758078">#B8C9BF</color>
+    <color name="guia_24372e">#F0F6F2</color>
+    <color name="guia_2a7757">#A4D9B7</color>
+    <color name="guia_20342a">#F0F6F2</color>
+    <color name="guia_65746b">#B8C9BF</color>
+    <color name="guia_95a19a">#B8C9BF</color>
+    <color name="guia_43564b">#B8C9BF</color>
+    <color name="guia_216b4c">#A4D9B7</color>
+    <color name="guia_765213">#F4CB80</color>
+
+    <!-- Gráfica de crecimiento y pesajes -->
+    <color name="guia_chart_real">#83D5A6</color>
+    <color name="guia_chart_target">#B7C8BE</color>
+    <color name="guia_chart_alert">#FF8989</color>
+
+</resources>

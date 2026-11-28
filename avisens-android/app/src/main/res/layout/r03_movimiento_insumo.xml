@@ -1,149 +1,214 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog_redondeado"
     android:orientation="vertical"
-    android:padding="18dp"
-    android:background="@drawable/bg_dialog_redondeado">
+    android:padding="20dp">
 
+    <!-- TÍTULO -->
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Registrar movimiento"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#171D1A" />
+        android:text="Registrar entrada"
+        android:textColor="@color/adaptive_text_171d1a"
+        android:textSize="20sp"
+        android:textStyle="bold" />
 
+    <!-- NOMBRE DEL INSUMO -->
     <TextView
         android:id="@+id/txtNombreMovimiento"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="7dp"
-        android:textColor="#171D1A"
-        android:textSize="15sp"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/adaptive_text_171d1a"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
+    <!-- STOCK ACTUAL -->
     <TextView
         android:id="@+id/txtStockMovimiento"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
-        android:textColor="#68736E"
-        android:textSize="12sp"
-        android:layout_marginBottom="14dp" />
+        android:layout_marginTop="5dp"
+        android:textColor="@color/adaptive_text_68736e"
+        android:textSize="14sp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Tipo de movimiento"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:textColor="#171D1A"
-        android:layout_marginBottom="5dp" />
-
-    <FrameLayout
+    <!-- CONTENIDO DESPLAZABLE -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="@drawable/bg_input_verde"
-        android:layout_marginBottom="11dp">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="vertical">
 
-        <Spinner
-            android:id="@+id/spinnerTipoMovimiento"
-            android:dropDownWidth="match_parent"
-            android:dropDownHorizontalOffset="-8dp"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@android:color/transparent"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
-    </FrameLayout>
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Cantidad"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:textColor="#171D1A"
-        android:layout_marginBottom="5dp" />
+            <!-- TIPO DE MOVIMIENTO -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tipo de movimiento: Entrada"
+                android:textColor="@color/adaptive_text_176a4b"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
-    <EditText
-        android:id="@+id/edtCantidadMovimiento"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="@drawable/bg_input_verde"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:singleLine="true"
-        android:textSize="12sp"
-        android:textColor="@color/black"
-        android:hint="Ej. 50"
-        android:inputType="numberDecimal"
-        android:layout_marginBottom="11dp" />
+            <!-- UNIDAD DE MEDIDA -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Unidad de medida de la entrada"
+                android:textColor="@color/adaptive_text_171d1a"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Motivo (opcional)"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:textColor="#171D1A"
-        android:layout_marginBottom="5dp" />
+            <Spinner
+                android:id="@+id/spinnerUnidadMovimiento"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_spinner_avisens"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:spinnerMode="dropdown" />
 
-    <EditText
-        android:id="@+id/edtMotivoMovimiento"
-        android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:background="@drawable/bg_input_verde"
-        android:padding="12dp"
-        android:textSize="12sp"
-        android:textColor="@color/black"
-        android:hint="Ej. Compra, entrega, consumo..."
-        android:gravity="top|start"
-        android:inputType="textCapSentences|textMultiLine"
-        android:layout_marginBottom="14dp" />
+            <!-- CANTIDAD -->
+            <TextView
+                android:id="@+id/txtCantidadMovimiento"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Cantidad a ingresar"
+                android:textColor="@color/adaptive_text_171d1a"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
+            <EditText
+                android:id="@+id/edtCantidadMovimiento"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_input_verde"
+                android:hint="Ej. 100"
+                android:inputType="numberDecimal"
+                android:minHeight="52dp"
+                android:padding="12dp"
+                android:singleLine="true"
+                android:textColor="@color/adaptive_text_171d1a"
+                android:textColorHint="@color/adaptive_text_68736e"
+                android:textSize="16sp" />
+
+            <!-- PESO POR BULTO -->
+            <LinearLayout
+                android:id="@+id/contenedorPesoBulto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Peso por bulto (kg)"
+                    android:textColor="@color/adaptive_text_171d1a"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/edtPesoBulto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp"
+                    android:background="@drawable/bg_input_verde"
+                    android:hint="Ej. 40"
+                    android:inputType="numberDecimal"
+                    android:minHeight="52dp"
+                    android:padding="12dp"
+                    android:singleLine="true"
+                    android:textColor="@color/adaptive_text_171d1a"
+                    android:textColorHint="@color/adaptive_text_68736e"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/txtAyudaBulto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/adaptive_text_68736e"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <!-- VISTA PREVIA -->
+            <TextView
+                android:id="@+id/txtVistaPreviaMovimiento"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/bg_input_verde"
+                android:gravity="center_vertical"
+                android:minHeight="65dp"
+                android:padding="12dp"
+                android:text="Ingresa la cantidad para calcular el nuevo stock."
+                android:textColor="@color/adaptive_text_176a4b"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!-- BOTONES -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:orientation="horizontal"
-        android:gravity="end">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelarMovimiento"
-            android:layout_width="100dp"
-            android:layout_height="40dp"
-            android:text="Cancelar"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="#171D1A"
-            android:textAllCaps="false"
-            android:background="@drawable/bg_boton_cancelar"
-            android:layout_marginEnd="6dp"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:minWidth="0dp"
-            android:minHeight="0dp"
-            app:backgroundTint="@null"
-            app:cornerRadius="9dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="Cancelar"
+            android:textAllCaps="false"
+            android:textColor="@color/cancel_text"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/cancel_background"
+            app:strokeColor="@color/cancel_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardarMovimiento"
-            android:layout_width="145dp"
-            android:layout_height="40dp"
-            android:text="Guardar movimiento"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:textAllCaps="false"
-            android:background="@drawable/bg_boton_verde"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:minWidth="0dp"
-            android:minHeight="0dp"
-            app:backgroundTint="@null"
-            app:cornerRadius="9dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="Guardar entrada"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            app:backgroundTint="#18875A" />
+
     </LinearLayout>
+
 </LinearLayout>

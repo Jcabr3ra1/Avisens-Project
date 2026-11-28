@@ -1,0 +1,15 @@
+<resources>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#E1E8E3</color>
+    <color name="bg_app">#18241E</color>
+    <color name="bg_main">#18241E</color>
+    <color name="nav_selected">#A4D9B7</color>
+    <color name="nav_indicator_bg">#35483D</color>
+    <color name="nav_unselected">#C3D4C9</color>
+    <color name="tab_container_bg">#303D35</color>
+    <color name="tab_selected_bg">#405347</color>
+    <color name="tab_text_selected">#FFFFFF</color>
+    <color name="tab_text_unselected">#D0DCD3</color>
+    <color name="ring_track">#46554B</color>
+    <color name="progress_track">#46554B</color>
+</resources>

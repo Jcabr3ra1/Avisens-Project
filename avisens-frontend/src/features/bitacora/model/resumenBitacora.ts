@@ -18,6 +18,7 @@ export type FilaRegistro = {
   principal: string
   detalle: string
   tieneFoto?: boolean
+  puedeFinalizar?: boolean
 }
 
 export type EventoRecienteBitacora = {
@@ -118,12 +119,31 @@ export function crearFilasRegistro(
   }
 
   if (vista === 'sanitario') {
-    return sanitarios.map((registro) => ({
-      id: registro.id,
-      fecha: registro.fecha,
-      principal: registro.tipo,
-      detalle: registro.producto || registro.diagnostico || 'Sin detalle',
-    }))
+    return sanitarios.map((registro) => {
+      const partes: string[] = []
+      if (registro.evento_padre_id) {
+        partes.push(`Seguimiento de caso #${registro.evento_padre_id}`)
+      } else if (registro.estado === 'finalizado') {
+        partes.push('Caso finalizado')
+      } else if ((registro._count?.seguimientos ?? 0) > 0) {
+        const n = registro._count?.seguimientos ?? 0
+        partes.push(`${n} ${n === 1 ? 'seguimiento' : 'seguimientos'}`)
+      }
+      if (registro.producto || registro.diagnostico) {
+        partes.push(registro.producto || registro.diagnostico || '')
+      }
+      if (registro.cantidad_insumo) {
+        const unidad = registro.insumo?.unidad_medida ? ` ${registro.insumo.unidad_medida}` : ''
+        partes.push(`-${Number(registro.cantidad_insumo).toLocaleString('es-CO')}${unidad} bodega`)
+      }
+      return {
+        id: registro.id,
+        fecha: registro.fecha,
+        principal: registro.tipo,
+        detalle: partes.join(' · ') || 'Sin detalle',
+        puedeFinalizar: !registro.evento_padre_id && registro.estado !== 'finalizado',
+      }
+    })
   }
 
   return []

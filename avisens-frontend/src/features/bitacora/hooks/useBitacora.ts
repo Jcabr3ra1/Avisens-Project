@@ -3,7 +3,7 @@ import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { listarConsumosDiarios, type ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
 import { calcularIndicadores } from '@features/indicadores/api/indicadores'
 import { mensajeDeError } from '@shared/utils/errores'
-import { actualizarEventoSanitario, actualizarMortalidad, actualizarPesaje, crearEventoSanitario, crearMortalidad, crearPesaje, eliminarEventoSanitario, eliminarMortalidad, eliminarPesaje, listarEventosSanitarios, listarMortalidad, listarPesajes } from '../api/bitacora'
+import { actualizarEventoSanitario, actualizarMortalidad, actualizarPesaje, crearEventoSanitario, crearMortalidad, crearPesaje, eliminarEventoSanitario, eliminarMortalidad, eliminarPesaje, finalizarCasoSanitario, listarEventosSanitarios, listarMortalidad, listarPesajes } from '../api/bitacora'
 import type { EventoSanitario, Mortalidad, Pesaje, TipoRegistro } from '../model/bitacora'
 
 export function useBitacora() {
@@ -114,5 +114,16 @@ export function useBitacora() {
     }
   }
 
-  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, actualizar, eliminar, marcarFotoMortalidad }
+  const finalizarSanitario = useCallback(async (id: number, observaciones_cierre?: string) => {
+    const actualizado = await finalizarCasoSanitario(
+      id,
+      observaciones_cierre ? { observaciones_cierre } : {},
+    )
+    setSanitarios((actuales) =>
+      actuales.map((item) => (item.id === id ? actualizado : item)),
+    )
+    return actualizado
+  }, [])
+
+  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, actualizar, eliminar, marcarFotoMortalidad, finalizarSanitario }
 }

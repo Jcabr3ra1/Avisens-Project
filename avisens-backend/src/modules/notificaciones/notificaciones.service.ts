@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { CreateNotificacionDto } from './dto/create-notificacion.dto';
+import { PushService } from './push.service';
 
 const NOTIFICACION_SELECT = {
   id: true,
@@ -19,10 +20,13 @@ const NOTIFICACION_SELECT = {
 
 @Injectable()
 export class NotificacionesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private push?: PushService,
+  ) {}
 
   async crear(dto: CreateNotificacionDto) {
-    return this.prisma.notificacion.create({
+    const creada = await this.prisma.notificacion.create({
       data: {
         usuario_id: dto.usuario_id,
         tipo: dto.tipo,
@@ -33,6 +37,20 @@ export class NotificacionesService {
       },
       select: NOTIFICACION_SELECT,
     });
+
+    if (this.push) {
+      void this.push
+        .enviarAUsuarios([dto.usuario_id], {
+          titulo: dto.titulo,
+          mensaje: dto.mensaje,
+          tipo: dto.tipo,
+          referencia_tipo: dto.referencia_tipo,
+          referencia_id: dto.referencia_id,
+        })
+        .catch(() => undefined);
+    }
+
+    return creada;
   }
 
   async listar(usuarioId: number, { page, limit }: PaginationQueryDto) {

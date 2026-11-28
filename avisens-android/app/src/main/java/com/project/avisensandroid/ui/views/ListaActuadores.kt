@@ -46,20 +46,20 @@ object ListaActuadores {
 
         fila.addView(TextView(contexto).apply {
             text = listOfNotNull(vista.nombre, vista.rele).joinToString(" · ")
-            textSize = 14f
+            textSize = 15f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(color(R.color.text_primary))
         })
         fila.addView(TextView(contexto).apply {
             text = "Código: ${vista.sensor.codigo}"
-            textSize = 12f
+            textSize = 13f
             setTextColor(color(R.color.text_secondary))
         })
 
         val (textoEstado, fondo, colorTexto) = estado(vista)
         fila.addView(TextView(contexto).apply {
             text = textoEstado
-            textSize = 12f
+            textSize = 13f
             setTypeface(typeface, Typeface.BOLD)
             setBackgroundResource(fondo)
             setTextColor(color(colorTexto))
@@ -73,7 +73,7 @@ object ListaActuadores {
         detalle(vista)?.let { linea ->
             fila.addView(TextView(contexto).apply {
                 text = linea
-                textSize = 12f
+                textSize = 13f
                 setTextColor(color(R.color.text_secondary))
                 setPadding(0, dp(4), 0, 0)
             })
@@ -95,11 +95,25 @@ object ListaActuadores {
         }
         return when (vista.salida) {
             SalidaActuador.ENCENDIDA ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_green, R.color.badge_green_text)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_green,
+                    R.color.badge_green_text
+                )
+
             SalidaActuador.APAGADA ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_regular, R.color.text_secondary)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_regular,
+                    R.color.text_secondary
+                )
+
             SalidaActuador.VALOR_NO_RECONOCIDO, SalidaActuador.SIN_REPORTE ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_orange, R.color.orange_badge_text)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_orange,
+                    R.color.orange_badge_text
+                )
         }
     }
 
