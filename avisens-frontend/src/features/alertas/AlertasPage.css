@@ -1271,3 +1271,91 @@
   object-fit: cover;
   border-radius: var(--radius-sm);
 }
+
+/* Historial de escalamientos (HU-23) */
+.ale-escalamientos {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ale-esc-regla {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.ale-esc-tabla-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.ale-esc-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+}
+
+.ale-esc-tabla th,
+.ale-esc-tabla td {
+  padding: 0.72rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.ale-esc-tabla th {
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ale-esc-tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ale-esc-celda-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ale-esc-tabla td small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.ale-esc-tipo {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.ale-esc-tipo--automatico {
+  background: var(--danger-soft);
+  color: var(--danger3);
+}
+
+.ale-esc-tipo--manual {
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+}
+
+.ale-esc-btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+}

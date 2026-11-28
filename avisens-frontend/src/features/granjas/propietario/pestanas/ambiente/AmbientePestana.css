@@ -849,3 +849,152 @@
   .amb-sensor,
   .amb-boton { transition: none; }
 }
+
+/* Históricos ambientales (HU-20) */
+.amb-hist-controles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.amb-hist-campo {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.amb-hist-campo span {
+  font-weight: 600;
+}
+
+.amb-hist-campo select,
+.amb-hist-campo input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.amb-hist-atajos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.amb-hist-atajo {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.amb-hist-atajo:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.amb-hist-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.amb-hist-kpi {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.amb-hist-kpi span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.amb-hist-kpi strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.amb-hist-grafico {
+  width: 100%;
+  min-width: 0;
+}
+
+.amb-hist-tooltip {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.amb-hist-tooltip strong {
+  color: var(--text-primary);
+}
+
+.amb-hist-vacio {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.amb-hist-sugerencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.amb-hist-pdf-marco {
+  width: 100%;
+  height: 70vh;
+  min-height: 440px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-tinted);
+}
+
+.amb-hist-pdf-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .amb-hist-controles,
+  .amb-hist-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .amb-hist-controles,
+  .amb-hist-kpis {
+    grid-template-columns: 1fr;
+  }
+}

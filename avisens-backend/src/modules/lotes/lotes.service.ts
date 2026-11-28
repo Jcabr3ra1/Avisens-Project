@@ -76,6 +76,7 @@ const LOTE_SELECT = {
     select: {
       id: true,
       nombre: true,
+      capacidad_aves: true,
       granja: { select: { id: true, nombre: true, propietario_id: true } },
     },
   },
@@ -90,7 +91,12 @@ export class LotesService {
   private async validarGalpon(galponId: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id: galponId },
-      select: { id: true, granja: { select: { propietario_id: true } } },
+      select: {
+        id: true,
+        activo: true,
+        capacidad_aves: true,
+        granja: { select: { propietario_id: true } },
+      },
     });
 
     if (!galpon) throw new NotFoundException(`Galpon no encontrado`);
@@ -99,6 +105,27 @@ export class LotesService {
       galpon.granja.propietario_id,
       'Solo puedes gestionar lotes de tus propios galpones',
     );
+    if (galpon.activo === false) {
+      throw new BadRequestException(
+        'El galpón está inactivo. Actívalo antes de iniciar un lote.',
+      );
+    }
+    return galpon;
+  }
+
+  private validarCapacidadGalpon(
+    cantidadAves: number,
+    capacidadAves: number | null | undefined,
+  ) {
+    if (
+      typeof capacidadAves === 'number' &&
+      capacidadAves > 0 &&
+      cantidadAves > capacidadAves
+    ) {
+      throw new BadRequestException(
+        `La cantidad de aves (${cantidadAves}) supera la capacidad máxima del galpón (${capacidadAves} aves).`,
+      );
+    }
   }
 
   /**
@@ -130,9 +157,20 @@ export class LotesService {
   }
 
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
-    await this.validarGalpon(dto.galpon_id, solicitante);
+    const galpon = await this.validarGalpon(dto.galpon_id, solicitante);
+    this.validarCapacidadGalpon(dto.cantidad_inicial, galpon.capacidad_aves);
 
     return this.prisma.$transaction(async (transaccion) => {
+      const loteActivo = await transaccion.lote.findFirst({
+        where: { galpon_id: dto.galpon_id, estado: 'activo' },
+        select: { id: true, codigo: true },
+      });
+      if (loteActivo) {
+        throw new ConflictException(
+          `Este galpón ya tiene un lote activo (${loteActivo.codigo ?? `#${loteActivo.id}`}). Debes cerrar el lote vigente antes de iniciar uno nuevo.`,
+        );
+      }
+
       if (
         dto.linea_genetica_id !== undefined &&
         dto.linea_genetica_id !== null
@@ -216,7 +254,30 @@ export class LotesService {
       );
     }
 
+    if (dto.cantidad_inicial !== undefined) {
+      this.validarCapacidadGalpon(
+        dto.cantidad_inicial,
+        actual.galpon.capacidad_aves,
+      );
+    }
+
     return this.prisma.$transaction(async (transaccion) => {
+      if (dto.estado === 'activo') {
+        const otroActivo = await transaccion.lote.findFirst({
+          where: {
+            galpon_id: actual.galpon.id,
+            estado: 'activo',
+            id: { not: id },
+          },
+          select: { id: true, codigo: true },
+        });
+        if (otroActivo) {
+          throw new ConflictException(
+            `Este galpón ya tiene un lote activo (${otroActivo.codigo ?? `#${otroActivo.id}`}). Debes cerrar el lote vigente antes de activar otro.`,
+          );
+        }
+      }
+
       if (
         dto.linea_genetica_id !== undefined &&
         dto.linea_genetica_id !== null
@@ -263,7 +324,21 @@ export class LotesService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
+    const otroActivo = await this.prisma.lote.findFirst({
+      where: {
+        galpon_id: actual.galpon.id,
+        estado: 'activo',
+        id: { not: id },
+      },
+      select: { id: true, codigo: true },
+    });
+    if (otroActivo) {
+      throw new ConflictException(
+        `Este galpón ya tiene un lote activo (${otroActivo.codigo ?? `#${otroActivo.id}`}). Debes cerrar el lote vigente antes de activar otro.`,
+      );
+    }
+
     return this.prisma.lote.update({
       where: { id },
       data: { estado: 'activo' },

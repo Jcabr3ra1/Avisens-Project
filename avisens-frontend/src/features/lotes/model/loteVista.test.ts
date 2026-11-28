@@ -29,6 +29,23 @@ describe('evaluarAltaDeLote', () => {
     const resultado = evaluarAltaDeLote([])
     expect(resultado.motivoBloqueo).toContain('galpón')
   })
+
+  it('bloquea cuando todos los galpones activos ya tienen un lote vigente', () => {
+    const resultado = evaluarAltaDeLote(
+      [{ id: 10, activo: true }],
+      [{ estado: 'activo', galpon: { id: 10, nombre: 'G1', granja: { id: 1, nombre: 'F1', propietario_id: 2 } } }],
+    )
+    expect(resultado.puedeCrear).toBe(false)
+    expect(resultado.motivoBloqueo).toContain('cerrar el lote vigente')
+  })
+
+  it('permite crear cuando al menos un galpón activo no tiene lote vigente', () => {
+    const resultado = evaluarAltaDeLote(
+      [{ id: 10, activo: true }, { id: 11, activo: true }],
+      [{ estado: 'activo', galpon: { id: 10, nombre: 'G1', granja: { id: 1, nombre: 'F1', propietario_id: 2 } } }],
+    )
+    expect(resultado.puedeCrear).toBe(true)
+  })
 })
 
 describe('calcularResumenLotes', () => {

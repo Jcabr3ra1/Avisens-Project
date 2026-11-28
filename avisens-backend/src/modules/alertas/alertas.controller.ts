@@ -25,6 +25,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/auth/roles';
 import { AlertasService } from './alertas.service';
+import { AlertasEscalamientoService } from './alertas-escalamiento.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { CerrarAlertaDto } from './dto/cerrar-alerta.dto';
@@ -44,7 +45,10 @@ interface AuthRequest extends Request {
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('alertas')
 export class AlertasController {
-  constructor(private alertasService: AlertasService) {}
+  constructor(
+    private alertasService: AlertasService,
+    private escalamientoService: AlertasEscalamientoService,
+  ) {}
 
   // ============================================================
   // CRUD BÁSICO
@@ -159,6 +163,15 @@ export class AlertasController {
   @ApiOperation({ summary: 'Obtener estadísticas de alertas' })
   obtenerEstadisticas(@Req() req: AuthRequest) {
     return this.alertasService.obtenerEstadisticas(req.user);
+  }
+
+  @Get('escalamientos/historial')
+  @ApiOperation({
+    summary:
+      'Historial de alertas escaladas automáticamente o manualmente con tiempos y responsables',
+  })
+  historialEscalamientos(@Req() req: AuthRequest) {
+    return this.escalamientoService.listarHistorialEscalamientos(req.user);
   }
 
   @Get(':id')

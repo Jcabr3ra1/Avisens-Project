@@ -13,11 +13,16 @@ describe('MedicionesService', () => {
   let service: MedicionesService;
 
   const prisma = {
+    galpon: { findUnique: jest.fn() },
+    zonaGalpon: { findMany: jest.fn() },
+    lote: { findFirst: jest.fn() },
+    umbralAmbiental: { findMany: jest.fn() },
     sensor: { findUnique: jest.fn(), findMany: jest.fn() },
     medicion: {
       create: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
+      aggregate: jest.fn(),
     },
     $transaction: jest.fn(),
     $queryRaw: jest.fn(),
@@ -310,6 +315,137 @@ describe('MedicionesService', () => {
         [{ take: number }]
       >;
       expect(llamadas[0][0].take).toBe(501);
+    });
+  });
+
+  describe('historico', () => {
+    const queryBase = {
+      galpon_id: 1,
+      variable: 'temperatura' as const,
+      desde: '2026-10-01T00:00:00.000Z',
+      hasta: '2026-11-27T23:59:59.999Z',
+    };
+
+    beforeEach(() => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        nombre: 'Galpón Norte',
+        codigo: 'G-01',
+        granja: { nombre: 'Granja Sol', propietario_id: 5 },
+      });
+      prisma.zonaGalpon.findMany.mockResolvedValue([
+        { id: 10, nombre: 'Zona A', codigo: 'ZA' },
+      ]);
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 3, tipo: 'temperatura', unidad_medida: '°C' },
+        { id: 4, tipo: 'humedad', unidad_medida: '%' },
+      ]);
+      prisma.lote.findFirst.mockResolvedValue({
+        fecha_ingreso: new Date('2026-10-15T00:00:00.000Z'),
+      });
+      prisma.umbralAmbiental.findMany.mockResolvedValue([
+        { semana_vida: 0, valor_minimo: 30, valor_maximo: 33 },
+        { semana_vida: 1, valor_minimo: 28, valor_maximo: 30 },
+      ]);
+      prisma.medicion.aggregate.mockResolvedValue({
+        _min: { fecha_hora: new Date('2026-09-10T00:00:00.000Z') },
+        _max: { fecha_hora: new Date('2026-11-27T12:00:00.000Z') },
+      });
+    });
+
+    it('rechaza (400) cuando el rango supera 12 meses', async () => {
+      await expect(
+        service.historico(
+          {
+            ...queryBase,
+            desde: '2025-01-01T00:00:00.000Z',
+            hasta: '2026-11-27T23:59:59.999Z',
+          },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rechaza (400) cuando desde es mayor que hasta', async () => {
+      await expect(
+        service.historico(
+          {
+            ...queryBase,
+            desde: '2026-11-27T00:00:00.000Z',
+            hasta: '2026-11-01T00:00:00.000Z',
+          },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rechaza (403) si el propietario no es dueño del galpón', async () => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        nombre: 'Galpón Ajeno',
+        codigo: 'G-99',
+        granja: { nombre: 'Otra', propietario_id: 999 },
+      });
+
+      await expect(service.historico(queryBase, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('retorna serie agregada con línea objetivo por semana de vida y resumen', async () => {
+      prisma.$queryRaw.mockResolvedValue([
+        {
+          bucket: new Date('2026-10-16T05:00:00.000Z'),
+          promedio: 31.2,
+          minimo: 30.1,
+          maximo: 32.4,
+          lecturas: 24,
+        },
+        {
+          bucket: new Date('2026-10-25T05:00:00.000Z'),
+          promedio: 32.5,
+          minimo: 31.0,
+          maximo: 33.8,
+          lecturas: 12,
+        },
+      ]);
+
+      const res = await service.historico(queryBase, propietario);
+
+      expect(res.sin_datos).toBe(false);
+      expect(res.granularidad).toBe('dia');
+      expect(res.unidad_medida).toBe('°C');
+      expect(res.serie).toHaveLength(2);
+      expect(res.serie[0]).toMatchObject({
+        promedio: 31.2,
+        objetivo_min: 30,
+        objetivo_max: 33,
+      });
+      expect(res.serie[1]).toMatchObject({
+        promedio: 32.5,
+        objetivo_min: 28,
+        objetivo_max: 30,
+      });
+      expect(res.resumen.total_lecturas).toBe(36);
+      expect(res.resumen.puntos_fuera_de_rango).toBe(1);
+    });
+
+    it('devuelve mensaje y rango sugerido cuando el rango no tiene registros', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      const res = await service.historico(
+        {
+          ...queryBase,
+          desde: '2025-12-01T00:00:00.000Z',
+          hasta: '2026-01-15T00:00:00.000Z',
+        },
+        propietario,
+      );
+
+      expect(res.sin_datos).toBe(true);
+      expect(res.mensaje).toBe('No existen registros para el rango seleccionado');
+      expect(res.rango_sugerido).not.toBeNull();
+      expect(res.serie).toEqual([]);
     });
   });
 });

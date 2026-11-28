@@ -1093,10 +1093,10 @@ describe('Núcleo multi-tenant (e2e)', () => {
     };
 
     describe('por HTTP', () => {
-      it('POST /lotes permite crear un segundo lote activo en el mismo galpón sin desactivar el anterior', async () => {
+      it('POST /lotes rechaza (409) crear un segundo lote activo en el mismo galpón', async () => {
         const activo = await crearLoteDirecto('activo');
 
-        const respuesta = await request(servidor)
+        await request(servidor)
           .post('/v1/lotes')
           .set('Authorization', `Bearer ${tokenAdminLotes}`)
           .send({
@@ -1104,39 +1104,36 @@ describe('Núcleo multi-tenant (e2e)', () => {
             fecha_ingreso: '2026-02-01',
             cantidad_inicial: 200,
           })
-          .expect(201);
-        const creado = JSON.parse(respuesta.text) as { id: number; estado: string };
-        idsLotesCreados.push(creado.id);
+          .expect(409);
 
         const activosEnGalpon = await prisma.lote.count({
           where: { galpon_id: ids.galpones[0], estado: 'activo' },
         });
-        expect(activosEnGalpon).toBe(2);
+        expect(activosEnGalpon).toBe(1);
         const sigueActivo = await prisma.lote.findUnique({
           where: { id: activo.id },
         });
         expect(sigueActivo?.estado).toBe('activo');
-        expect(creado.estado).toBe('activo');
       });
 
-      it('PATCH /lotes/:id/activar permite activar otro lote en un galpón que ya tiene uno activo', async () => {
+      it('PATCH /lotes/:id/activar rechaza (409) activar otro lote en un galpón que ya tiene uno activo', async () => {
         const activo = await crearLoteDirecto('activo');
         const candidato = await crearLoteDirecto('inactivo');
 
         await request(servidor)
           .patch(`/v1/lotes/${candidato.id}/activar`)
           .set('Authorization', `Bearer ${tokenAdminLotes}`)
-          .expect(200);
+          .expect(409);
 
         const [activoTrasCambio, candidatoTrasCambio] = await Promise.all([
           prisma.lote.findUnique({ where: { id: activo.id } }),
           prisma.lote.findUnique({ where: { id: candidato.id } }),
         ]);
         expect(activoTrasCambio?.estado).toBe('activo');
-        expect(candidatoTrasCambio?.estado).toBe('activo');
+        expect(candidatoTrasCambio?.estado).toBe('inactivo');
       });
 
-      it('PATCH /lotes/:id con estado activo permite activar otro lote aunque el galpón ya tenga uno activo', async () => {
+      it('PATCH /lotes/:id con estado activo rechaza (409) activar otro lote aunque el galpón ya tenga uno activo', async () => {
         const activo = await crearLoteDirecto('activo');
         const candidato = await crearLoteDirecto('inactivo');
 
@@ -1144,14 +1141,14 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .patch(`/v1/lotes/${candidato.id}`)
           .set('Authorization', `Bearer ${tokenAdminLotes}`)
           .send({ estado: 'activo' })
-          .expect(200);
+          .expect(409);
 
         const [activoTrasCambio, candidatoTrasCambio] = await Promise.all([
           prisma.lote.findUnique({ where: { id: activo.id } }),
           prisma.lote.findUnique({ where: { id: candidato.id } }),
         ]);
         expect(activoTrasCambio?.estado).toBe('activo');
-        expect(candidatoTrasCambio?.estado).toBe('activo');
+        expect(candidatoTrasCambio?.estado).toBe('inactivo');
       });
 
       it('activar el propio lote ya activo no se rechaza por encontrarse a sí mismo', async () => {

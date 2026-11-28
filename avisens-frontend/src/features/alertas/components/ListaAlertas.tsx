@@ -67,6 +67,9 @@ function ListaAlertas({
                 <div><dt>Límite</dt><dd>{alerta.valor_umbral ?? '—'}</dd></div>
                 <div><dt>Sensor</dt><dd>{alerta.sensor?.codigo ?? 'Sin sensor'}</dd></div>
                 <div><dt>Responsable</dt><dd>{alerta.responsable?.nombre_completo ?? 'Sin asignar'}</dd></div>
+                {alerta.escalado_a && (
+                  <div><dt>Escalada a</dt><dd>{alerta.escalado_a.nombre_completo}</dd></div>
+                )}
               </dl>
             </div>
             <div className="ale-card-acciones">

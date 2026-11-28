@@ -7,16 +7,78 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
+import {
+  QueryHistoricoMedicionesDto,
+  type VariableHistorico,
+} from './dto/query-historico-mediciones.dto';
 import { paginate } from '../../common/pagination/paginate';
 import type { Solicitante } from '../../common/auth/acceso';
 import {
   filtroSensores,
+  verificarAccesoGalpon,
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
+import { diaDeVida, semanaDeVida } from '../../common/fechas/dias-de-vida';
 import { AlertasService } from '../alertas/alertas.service';
 import { EstadoSensor, Prisma } from '@prisma/client';
 import { clasificarFalloAlerta } from '../../common/errores/clasificar-error';
 import { SENSOR_VIGENTE } from '../sensores/sensor-vigente';
+
+const MAX_DIAS_HISTORICO = 366;
+const MS_POR_DIA = 86_400_000;
+
+const UNIDADES_DEFECTO: Record<VariableHistorico, string> = {
+  temperatura: '°C',
+  humedad: '%',
+  co2: 'ppm',
+  nh3: 'ppm',
+  luminosidad: 'lux',
+};
+
+function coincideVariableSensor(
+  tipoSensor: string,
+  variable: VariableHistorico,
+): boolean {
+  const t = tipoSensor.toLowerCase();
+  if (variable === 'temperatura') return t.includes('temp');
+  if (variable === 'humedad') return t.includes('hum');
+  if (variable === 'co2') return t.includes('co2') || t.includes('gas');
+  if (variable === 'nh3') return t.includes('nh3') || t.includes('amon');
+  if (variable === 'luminosidad') return t.includes('luz') || t.includes('lum');
+  return false;
+}
+
+export interface PuntoHistorico {
+  fecha: string;
+  promedio: number;
+  minimo: number;
+  maximo: number;
+  lecturas: number;
+  objetivo_min: number | null;
+  objetivo_max: number | null;
+}
+
+export interface HistoricoMedicionesResponse {
+  galpon: { id: number; nombre: string; codigo: string; granja: string };
+  variable: VariableHistorico;
+  unidad_medida: string;
+  zona_id: number | null;
+  zonas: Array<{ id: number; nombre: string; codigo: string | null }>;
+  granularidad: 'hora' | 'dia';
+  desde: string;
+  hasta: string;
+  sin_datos: boolean;
+  mensaje: string | null;
+  rango_sugerido: { desde: string; hasta: string } | null;
+  resumen: {
+    promedio_general: number | null;
+    minimo_general: number | null;
+    maximo_general: number | null;
+    total_lecturas: number;
+    puntos_fuera_de_rango: number;
+  };
+  serie: PuntoHistorico[];
+}
 
 const MEDICION_SELECT = {
   id: true,
@@ -235,5 +297,254 @@ export class MedicionesService {
     });
 
     return { generado_en: generadoEn, sensores: sensoresConLectura };
+  }
+
+  async historico(
+    query: QueryHistoricoMedicionesDto,
+    solicitante: Solicitante,
+  ): Promise<HistoricoMedicionesResponse> {
+    const desdeDate = new Date(query.desde);
+    const hastaDate = new Date(query.hasta);
+
+    if (
+      Number.isNaN(desdeDate.getTime()) ||
+      Number.isNaN(hastaDate.getTime()) ||
+      desdeDate > hastaDate
+    ) {
+      throw new BadRequestException(
+        'La fecha inicial debe ser anterior o igual a la fecha final.',
+      );
+    }
+
+    const duracionMs = hastaDate.getTime() - desdeDate.getTime();
+    if (duracionMs > MAX_DIAS_HISTORICO * MS_POR_DIA) {
+      throw new BadRequestException(
+        'El rango máximo de consulta histórica es de 12 meses (366 días).',
+      );
+    }
+
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id: query.galpon_id },
+      select: {
+        id: true,
+        nombre: true,
+        codigo: true,
+        granja: { select: { nombre: true, propietario_id: true } },
+      },
+    });
+    if (!galpon) {
+      throw new NotFoundException('Galpón no encontrado');
+    }
+
+    await verificarAccesoGalpon(
+      this.prisma,
+      galpon.id,
+      solicitante,
+      'No tienes acceso al historial de este galpón',
+      galpon.granja.propietario_id,
+    );
+
+    const [zonas, sensoresGalpon] = await Promise.all([
+      this.prisma.zonaGalpon.findMany({
+        where: { galpon_id: galpon.id, activa: true },
+        select: { id: true, nombre: true, codigo: true },
+        orderBy: { nombre: 'asc' },
+      }),
+      this.prisma.sensor.findMany({
+        where: {
+          AND: [
+            { galpon_id: galpon.id },
+            query.zona_id !== undefined ? { zona_id: query.zona_id } : {},
+            SENSOR_VIGENTE,
+          ],
+        },
+        select: { id: true, tipo: true, unidad_medida: true },
+      }),
+    ]);
+
+    const sensoresFiltrados = sensoresGalpon.filter((s) =>
+      coincideVariableSensor(s.tipo, query.variable),
+    );
+    const unidadMedida =
+      sensoresFiltrados[0]?.unidad_medida ?? UNIDADES_DEFECTO[query.variable];
+    const granularidad: 'hora' | 'dia' =
+      duracionMs <= 7 * MS_POR_DIA ? 'hora' : 'dia';
+
+    const baseRespuesta = {
+      galpon: {
+        id: galpon.id,
+        nombre: galpon.nombre,
+        codigo: galpon.codigo,
+        granja: galpon.granja.nombre,
+      },
+      variable: query.variable,
+      unidad_medida: unidadMedida,
+      zona_id: query.zona_id ?? null,
+      zonas,
+      granularidad,
+      desde: desdeDate.toISOString(),
+      hasta: hastaDate.toISOString(),
+    };
+
+    if (sensoresFiltrados.length === 0) {
+      return {
+        ...baseRespuesta,
+        sin_datos: true,
+        mensaje: 'No existen registros para el rango seleccionado',
+        rango_sugerido: null,
+        resumen: {
+          promedio_general: null,
+          minimo_general: null,
+          maximo_general: null,
+          total_lecturas: 0,
+          puntos_fuera_de_rango: 0,
+        },
+        serie: [],
+      };
+    }
+
+    const sensorIds = sensoresFiltrados.map((s) => s.id);
+    const truncado = granularidad === 'hora' ? 'hour' : 'day';
+
+    const [filas, rangoDisponible, loteReferencia, umbrales] =
+      await Promise.all([
+        this.prisma.$queryRaw<
+          Array<{
+            bucket: Date;
+            promedio: number;
+            minimo: number;
+            maximo: number;
+            lecturas: number;
+          }>
+        >(Prisma.sql`
+          SELECT (date_trunc(${truncado}, fecha_hora AT TIME ZONE 'America/Bogota') AT TIME ZONE 'America/Bogota') AS bucket,
+                 ROUND(AVG(valor)::numeric, 2)::float8 AS promedio,
+                 ROUND(MIN(valor)::numeric, 2)::float8 AS minimo,
+                 ROUND(MAX(valor)::numeric, 2)::float8 AS maximo,
+                 COUNT(*)::int AS lecturas
+            FROM mediciones
+           WHERE sensor_id = ANY(ARRAY[${Prisma.join(sensorIds)}]::int[])
+             AND fecha_hora >= ${desdeDate}
+             AND fecha_hora <= ${hastaDate}
+           GROUP BY bucket
+           ORDER BY bucket ASC
+        `),
+        this.prisma.medicion.aggregate({
+          where: { sensor_id: { in: sensorIds } },
+          _min: { fecha_hora: true },
+          _max: { fecha_hora: true },
+        }),
+        this.prisma.lote.findFirst({
+          where: { galpon_id: galpon.id },
+          orderBy: [{ estado: 'asc' }, { fecha_ingreso: 'desc' }],
+          select: { fecha_ingreso: true },
+        }),
+        this.prisma.umbralAmbiental.findMany({
+          where: {
+            galpon_id: galpon.id,
+            variable: query.variable,
+            vigente: true,
+          },
+          orderBy: { semana_vida: 'asc' },
+          select: {
+            semana_vida: true,
+            valor_minimo: true,
+            valor_maximo: true,
+          },
+        }),
+      ]);
+
+    const minDisp = rangoDisponible._min.fecha_hora;
+    const maxDisp = rangoDisponible._max.fecha_hora;
+    const rangoSugerido =
+      minDisp && maxDisp
+        ? {
+            desde: new Date(
+              Math.max(
+                minDisp.getTime(),
+                maxDisp.getTime() - 30 * MS_POR_DIA,
+              ),
+            ).toISOString(),
+            hasta: maxDisp.toISOString(),
+          }
+        : null;
+
+    if (filas.length === 0) {
+      return {
+        ...baseRespuesta,
+        sin_datos: true,
+        mensaje: 'No existen registros para el rango seleccionado',
+        rango_sugerido: rangoSugerido,
+        resumen: {
+          promedio_general: null,
+          minimo_general: null,
+          maximo_general: null,
+          total_lecturas: 0,
+          puntos_fuera_de_rango: 0,
+        },
+        serie: [],
+      };
+    }
+
+    const buscarUmbralParaFecha = (fecha: Date) => {
+      if (umbrales.length === 0) return { min: null, max: null };
+      const semana = loteReferencia
+        ? semanaDeVida(diaDeVida(loteReferencia.fecha_ingreso, fecha))
+        : umbrales[0].semana_vida;
+      let elegido = umbrales[0];
+      for (const item of umbrales) {
+        if (item.semana_vida <= semana) elegido = item;
+        else break;
+      }
+      return { min: elegido.valor_minimo, max: elegido.valor_maximo };
+    };
+
+    let sumaPonderada = 0;
+    let totalLecturas = 0;
+    let minimoGeneral = Infinity;
+    let maximoGeneral = -Infinity;
+    let fueraDeRango = 0;
+
+    const serie: PuntoHistorico[] = filas.map((fila) => {
+      const fecha = new Date(fila.bucket);
+      const objetivo = buscarUmbralParaFecha(fecha);
+      sumaPonderada += fila.promedio * fila.lecturas;
+      totalLecturas += fila.lecturas;
+      if (fila.minimo < minimoGeneral) minimoGeneral = fila.minimo;
+      if (fila.maximo > maximoGeneral) maximoGeneral = fila.maximo;
+      if (
+        (objetivo.min !== null && fila.promedio < objetivo.min) ||
+        (objetivo.max !== null && fila.promedio > objetivo.max)
+      ) {
+        fueraDeRango += 1;
+      }
+      return {
+        fecha: fecha.toISOString(),
+        promedio: fila.promedio,
+        minimo: fila.minimo,
+        maximo: fila.maximo,
+        lecturas: fila.lecturas,
+        objetivo_min: objetivo.min,
+        objetivo_max: objetivo.max,
+      };
+    });
+
+    return {
+      ...baseRespuesta,
+      sin_datos: false,
+      mensaje: null,
+      rango_sugerido: null,
+      resumen: {
+        promedio_general:
+          totalLecturas > 0
+            ? Number((sumaPonderada / totalLecturas).toFixed(2))
+            : null,
+        minimo_general: Number.isFinite(minimoGeneral) ? minimoGeneral : null,
+        maximo_general: Number.isFinite(maximoGeneral) ? maximoGeneral : null,
+        total_lecturas: totalLecturas,
+        puntos_fuera_de_rango: fueraDeRango,
+      },
+      serie,
+    };
   }
 }

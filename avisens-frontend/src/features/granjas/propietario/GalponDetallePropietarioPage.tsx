@@ -56,7 +56,7 @@ const cargarAlertas = () => import('@features/alertas/AlertasPage')
 const AlertasPage = lazy(cargarAlertas)
 
 type PestanaPrincipal = 'resumen' | 'lotes' | 'bitacora' | 'ambiente' | 'alertas' | 'datos'
-type SubPestanaAmbiente = 'sensores' | 'clima' | 'actuadores' | 'umbrales'
+type SubPestanaAmbiente = 'sensores' | 'clima' | 'actuadores' | 'umbrales' | 'historicos'
 
 const entero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
 
@@ -70,9 +70,10 @@ function resolverPestana(parametro: string | null, subParam: string | null): {
   if (parametro === 'datos' || parametro === 'equipos') return { principal: 'datos', subAmbiente: 'sensores' }
   if (parametro === 'actuadores') return { principal: 'ambiente', subAmbiente: 'actuadores' }
   if (parametro === 'umbrales') return { principal: 'ambiente', subAmbiente: 'umbrales' }
+  if (parametro === 'historicos') return { principal: 'ambiente', subAmbiente: 'historicos' }
   if (parametro === 'ambiente') {
     const sub: SubPestanaAmbiente =
-      subParam === 'clima' || subParam === 'actuadores' || subParam === 'umbrales'
+      subParam === 'clima' || subParam === 'actuadores' || subParam === 'umbrales' || subParam === 'historicos'
         ? subParam
         : 'sensores'
     return { principal: 'ambiente', subAmbiente: sub }
@@ -695,6 +696,15 @@ function GalponDetallePropietarioPage() {
                   >
                     Umbrales
                   </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={subAmbiente === 'historicos'}
+                    className={`gp-subtab${subAmbiente === 'historicos' ? ' is-activa' : ''}`}
+                    onClick={() => cambiarPestana('ambiente', { sub: 'historicos' })}
+                  >
+                    Históricos
+                  </button>
                 </div>
 
                 {subAmbiente === 'sensores' ? (
@@ -711,6 +721,12 @@ function GalponDetallePropietarioPage() {
                     revision={revision}
                     modo="clima"
                     onCompletarUbicacion={puedeEditar ? () => setDatos({ tipo: 'granja', granja }) : undefined}
+                  />
+                ) : subAmbiente === 'historicos' ? (
+                  <AmbientePestana
+                    galpon={galpon}
+                    revision={revision}
+                    modo="historicos"
                   />
                 ) : subAmbiente === 'actuadores' ? (
                   <ActuadoresGalpon

@@ -15,6 +15,7 @@ interface Props {
   form: FormularioLoteDatos
   modoEdicion: boolean
   galpones: Galpon[]
+  lotesActivosPorGalpon?: Map<number, string>
   lineasGeneticas: LineaGenetica[]
   errorLineasGeneticas: string
   guardando: boolean
@@ -37,6 +38,7 @@ function FormularioLote({
   form,
   modoEdicion,
   galpones,
+  lotesActivosPorGalpon,
   lineasGeneticas,
   errorLineasGeneticas,
   guardando,
@@ -51,16 +53,31 @@ function FormularioLote({
     () => opcionesLineaGenetica(lineasGeneticas, form.linea_genetica_id),
     [lineasGeneticas, form.linea_genetica_id],
   )
+  const galponSeleccionado = useMemo(
+    () => galpones.find((g) => g.id === form.galpon_id) ?? null,
+    [galpones, form.galpon_id],
+  )
+  const codigoLoteActivo = !modoEdicion
+    ? (lotesActivosPorGalpon?.get(form.galpon_id) ?? null)
+    : null
+  const capacidadMaxima =
+    galponSeleccionado?.capacidad_aves && galponSeleccionado.capacidad_aves > 0
+      ? galponSeleccionado.capacidad_aves
+      : null
 
   function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     let problema = ''
-    if (
+    if (codigoLoteActivo) {
+      problema = `Este galpón ya tiene un lote activo (${codigoLoteActivo}). Debes cerrar el lote vigente antes de iniciar uno nuevo.`
+    } else if (
       form.cantidad_inicial === '' ||
       !Number.isInteger(form.cantidad_inicial) ||
       form.cantidad_inicial < 1 ||
       form.cantidad_inicial > 500_000
     ) {
       problema = 'La cantidad inicial debe ser un entero entre 1 y 500.000 aves.'
+    } else if (capacidadMaxima !== null && form.cantidad_inicial > capacidadMaxima) {
+      problema = `La cantidad de aves (${form.cantidad_inicial.toLocaleString('es-CO')}) supera la capacidad máxima del galpón (${capacidadMaxima.toLocaleString('es-CO')} aves). Ajusta la cantidad para continuar.`
     } else if (
       form.costo_pollito_unitario !== '' &&
       (form.costo_pollito_unitario < 0 || form.costo_pollito_unitario > 10_000_000_000)
@@ -101,7 +118,7 @@ function FormularioLote({
             type="submit"
             form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            disabled={guardando}
+            disabled={guardando || Boolean(codigoLoteActivo)}
           >
             {guardando ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Crear lote'}
           </button>
@@ -147,7 +164,7 @@ function FormularioLote({
             <input
               type="number"
               min="1"
-              max="500000"
+              max={capacidadMaxima ?? 500000}
               step="1"
               value={form.cantidad_inicial}
               onChange={(evento) =>
@@ -158,8 +175,19 @@ function FormularioLote({
               }
               required
             />
+            {capacidadMaxima !== null && (
+              <small className="modal-ayuda">
+                Capacidad máxima del galpón: {capacidadMaxima.toLocaleString('es-CO')} aves.
+              </small>
+            )}
           </label>
         </div>
+
+        {codigoLoteActivo && (
+          <p className="modal-error" role="alert">
+            Este galpón ya tiene un lote activo ({codigoLoteActivo}). Debes cerrar el lote vigente antes de iniciar uno nuevo.
+          </p>
+        )}
 
         <button
           type="button"

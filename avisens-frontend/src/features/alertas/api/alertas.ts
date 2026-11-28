@@ -171,3 +171,41 @@ export async function contarGalponesVisibles(): Promise<number> {
   })
   return data.meta.total
 }
+
+export interface EscalamientoHistorialItem {
+  alerta_id: number
+  galpon: {
+    id: number
+    nombre: string
+    codigo: string
+    granja: { id: number; nombre: string }
+  }
+  tipo: string
+  criticidad: string
+  valor_detectado: number | null
+  valor_umbral: number | null
+  estado_final: EstadoAlerta
+  tipo_escalamiento: 'automatico' | 'manual'
+  responsable_original: string
+  escalado_a: { id: number; nombre_completo: string; email: string | null } | null
+  fecha_creacion: string
+  fecha_escalamiento: string
+  fecha_aceptacion: string | null
+  fecha_cierre: string | null
+  tiempo_escalamiento_min: number
+  tiempo_respuesta_min: number | null
+  resumen_previo: string
+}
+
+export interface HistorialEscalamientosResponse {
+  config: {
+    limite_critica_min: number
+    limite_general_min: number
+  }
+  data: EscalamientoHistorialItem[]
+}
+
+export async function listarHistorialEscalamientos(): Promise<HistorialEscalamientosResponse> {
+  const { data } = await api.get<HistorialEscalamientosResponse>('/alertas/escalamientos/historial')
+  return data
+}

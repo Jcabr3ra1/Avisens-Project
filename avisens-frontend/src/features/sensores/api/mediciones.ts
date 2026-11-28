@@ -70,3 +70,54 @@ export async function listarUltimasLecturas(): Promise<UltimaLecturaSensor[]> {
   const { data } = await api.get<RespuestaUltimasLecturas>('/mediciones/ultimas')
   return data.sensores
 }
+
+export type VariableHistorico = 'temperatura' | 'humedad' | 'co2' | 'nh3' | 'luminosidad'
+
+export interface PuntoHistorico {
+  fecha: string
+  promedio: number
+  minimo: number
+  maximo: number
+  lecturas: number
+  objetivo_min: number | null
+  objetivo_max: number | null
+}
+
+export interface HistoricoMedicionesQuery {
+  galpon_id: number
+  variable: VariableHistorico
+  zona_id?: number
+  desde: string
+  hasta: string
+}
+
+export interface HistoricoMedicionesResponse {
+  galpon: { id: number; nombre: string; codigo: string; granja: string }
+  variable: VariableHistorico
+  unidad_medida: string
+  zona_id: number | null
+  zonas: Array<{ id: number; nombre: string; codigo: string | null }>
+  granularidad: 'hora' | 'dia'
+  desde: string
+  hasta: string
+  sin_datos: boolean
+  mensaje: string | null
+  rango_sugerido: { desde: string; hasta: string } | null
+  resumen: {
+    promedio_general: number | null
+    minimo_general: number | null
+    maximo_general: number | null
+    total_lecturas: number
+    puntos_fuera_de_rango: number
+  }
+  serie: PuntoHistorico[]
+}
+
+export async function consultarHistoricoMediciones(
+  query: HistoricoMedicionesQuery,
+): Promise<HistoricoMedicionesResponse> {
+  const { data } = await api.get<HistoricoMedicionesResponse>('/mediciones/historico', {
+    params: query,
+  })
+  return data
+}

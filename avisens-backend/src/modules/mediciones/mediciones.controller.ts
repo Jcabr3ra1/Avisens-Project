@@ -22,6 +22,7 @@ import { MedicionesService } from './mediciones.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
 import { QueryUltimasLecturasDto } from './dto/query-ultimas-lecturas.dto';
+import { QueryHistoricoMedicionesDto } from './dto/query-historico-mediciones.dto';
 import { MedicionRegistradaDto } from './dto/medicion-registrada.dto';
 
 interface AuthRequest extends Request {
@@ -63,5 +64,17 @@ export class MedicionesController {
   })
   ultimas(@Query() query: QueryUltimasLecturasDto, @Req() req: AuthRequest) {
     return this.medicionesService.ultimasPorSensores(req.user, query.galpon_id);
+  }
+
+  @Get('historico')
+  @ApiOperation({
+    summary:
+      'Serie histórica agregada por variable, zona y rango (hasta 12 meses) con línea objetivo',
+  })
+  historico(
+    @Query() query: QueryHistoricoMedicionesDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.medicionesService.historico(query, req.user);
   }
 }

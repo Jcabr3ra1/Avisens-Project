@@ -51,8 +51,15 @@ function LotesPage() {
   const formulario = useFormularioLote(gestion.guardar)
   const [loteConPlan, setLoteConPlan] = useState<Lote | null>(null)
 
-  const galponActivo = galponesDisponibles.find((galpon) => galpon.activo)
-  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(galponesDisponibles)
+  const lotesActivosPorGalpon = new Map(
+    gestion.lotes
+      .filter((lote) => lote.estado === 'activo')
+      .map((lote) => [lote.galpon.id, lote.codigo] as const),
+  )
+  const galponActivo =
+    galponesDisponibles.find((galpon) => galpon.activo && !lotesActivosPorGalpon.has(galpon.id)) ??
+    galponesDisponibles.find((galpon) => galpon.activo)
+  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(galponesDisponibles, gestion.lotes)
 
   const migas: Miga[] = galponSeleccionado
     ? [
@@ -175,6 +182,7 @@ function LotesPage() {
           form={formulario.form}
           modoEdicion={formulario.modoEdicion}
           galpones={galponesDisponibles}
+          lotesActivosPorGalpon={lotesActivosPorGalpon}
           lineasGeneticas={gestion.lineasGeneticas}
           errorLineasGeneticas={gestion.lineasGeneticasError}
           guardando={formulario.guardando}

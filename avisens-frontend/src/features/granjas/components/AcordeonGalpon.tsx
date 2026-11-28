@@ -178,7 +178,7 @@ function AcordeonGalpon({
           )}
           <div className="gr-lotes-cabecera">
             <h4>Lotes</h4>
-            {permisos.crear && (
+            {permisos.crear && galpon.lotesEnCurso.length === 0 && (
               <button
                 type="button"
                 className="gr-accion-suave"
@@ -193,7 +193,7 @@ function AcordeonGalpon({
           {galpon.lotes.length === 0 ? (
             <div className="gr-vacio gr-vacio--anidado">
               <p>Este galpón todavía no tiene lotes registrados.</p>
-              {permisos.crear && (
+              {permisos.crear && galpon.lotesEnCurso.length === 0 && (
                 <button
                   type="button"
                   className="gr-btn gr-btn--suave"

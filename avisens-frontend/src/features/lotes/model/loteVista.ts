@@ -52,17 +52,36 @@ export type AltaDeLote = {
 }
 
 export function evaluarAltaDeLote(
-  galponesDisponibles: { activo: boolean }[],
+  galponesDisponibles: { id?: number; activo: boolean }[],
+  lotes?: Pick<Lote, 'estado' | 'galpon'>[],
 ): AltaDeLote {
-  const hayGalponActivo = galponesDisponibles.some((galpon) => galpon.activo)
+  const galponesActivos = galponesDisponibles.filter((galpon) => galpon.activo)
 
-  if (!hayGalponActivo) {
+  if (galponesActivos.length === 0) {
     return {
       puedeCrear: false,
       motivoBloqueo:
         galponesDisponibles.length > 0
           ? 'El galpón está inactivo. Actívalo desde Galpones para poder registrarle lotes.'
           : 'Necesitas un galpón activo antes de registrar lotes.',
+    }
+  }
+
+  if (lotes) {
+    const galponesConActivo = new Set(
+      lotes.filter((lote) => lote.estado === 'activo').map((lote) => lote.galpon.id),
+    )
+    const disponiblesSinLote = galponesActivos.filter(
+      (galpon) => galpon.id === undefined || !galponesConActivo.has(galpon.id),
+    )
+    if (disponiblesSinLote.length === 0) {
+      return {
+        puedeCrear: false,
+        motivoBloqueo:
+          galponesActivos.length === 1
+            ? 'Este galpón ya tiene un lote activo. Debes cerrar el lote vigente antes de iniciar uno nuevo.'
+            : 'Todos los galpones activos ya tienen un lote vigente. Cierra un lote antes de iniciar uno nuevo.',
+      }
     }
   }
 

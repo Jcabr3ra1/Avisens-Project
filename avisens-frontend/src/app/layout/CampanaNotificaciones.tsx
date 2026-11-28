@@ -85,7 +85,7 @@ function CampanaNotificaciones() {
     navigate(
       notificacion.tipo === 'recuperacion_password'
         ? '/recuperaciones-password'
-        : notificacion.tipo === 'alerta'
+        : notificacion.tipo === 'alerta' || notificacion.tipo === 'alerta_escalada'
           ? '/alertas'
         : '/notificaciones',
     )

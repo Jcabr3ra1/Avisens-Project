@@ -319,6 +319,11 @@ function EstructuraOrganizacion({ detalle, granjaActivaId, onSeleccionarGranja, 
           form={formLote.form}
           modoEdicion={formLote.modoEdicion}
           galpones={estructura.galpones}
+          lotesActivosPorGalpon={new Map(
+            estructura.lotes
+              .filter((lote) => lote.estado === 'activo')
+              .map((lote) => [lote.galpon.id, lote.codigo] as const),
+          )}
           lineasGeneticas={estructura.lineasGeneticas}
           errorLineasGeneticas={estructura.errorLineas}
           guardando={formLote.guardando}
@@ -408,14 +413,9 @@ function TarjetaGalpon({
               })}
             </div>
             <div className="est-card-lote-pie">
-              <button
-                type="button"
-                className="est-boton est-boton--suave"
-                onClick={onIniciarLote}
-                disabled={!habilitado}
-              >
-                <IcPlus size={14} aria-hidden="true" /> Nuevo lote
-              </button>
+              <small className="est-vacio">
+                Cierra el lote activo para iniciar un nuevo ciclo en este galpón.
+              </small>
             </div>
           </>
         ) : (

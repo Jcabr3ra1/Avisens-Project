@@ -1,12 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import { IcAlert, IcBarn, IcBell, IcChevronDown } from '@shared/ui/icons/icons'
+import { mensajeDeError } from '@shared/utils/errores'
+import {
+  listarHistorialEscalamientos,
+  type EscalamientoHistorialItem,
+} from './api/alertas'
 import AvisoStockBajo from './components/AvisoStockBajo'
 import BannerAlertaCritica from './components/BannerAlertaCritica'
+import HistorialEscalamientos from './components/HistorialEscalamientos'
 import ListaAlertas from './components/ListaAlertas'
 import PanelAlerta from './components/PanelAlerta'
 import ResumenAlertas, { type TarjetaResumenAlerta } from './components/ResumenAlertas'
@@ -54,8 +60,48 @@ function AlertasPage({ galponFijo }: Props = {}) {
   )
   const [filtros, setFiltros] = useState<FiltrosAlertasModel>(FILTROS_INICIALES)
   const [seleccionada, setSeleccionada] = useState<Alerta | null>(null)
+  const [vistaEscalamientos, setVistaEscalamientos] = useState(false)
+  const [escalamientos, setEscalamientos] = useState<EscalamientoHistorialItem[]>([])
+  const [configEscalamiento, setConfigEscalamiento] = useState<{
+    limite_critica_min: number
+    limite_general_min: number
+  } | null>(null)
+  const [cargandoEscalamientos, setCargandoEscalamientos] = useState(false)
+  const [errorEscalamientos, setErrorEscalamientos] = useState('')
+
+  const cargarEscalamientos = useCallback(async () => {
+    setCargandoEscalamientos(true)
+    setErrorEscalamientos('')
+    try {
+      const res = await listarHistorialEscalamientos()
+      setEscalamientos(res.data)
+      setConfigEscalamiento(res.config)
+    } catch (err) {
+      setErrorEscalamientos(
+        mensajeDeError(err, 'No se pudo cargar el historial de escalamientos.'),
+      )
+    } finally {
+      setCargandoEscalamientos(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void cargarEscalamientos()
+  }, [cargarEscalamientos])
+
   const resumen = useMemo(() => obtenerResumenAlertas(alertas), [alertas])
   const alertasFiltradas = useMemo(() => filtrarAlertas(alertas, filtros), [alertas, filtros])
+  const alertasPorId = useMemo(
+    () => new Map(alertas.map((item) => [item.id, item])),
+    [alertas],
+  )
+  const escalamientosVisibles = useMemo(() => {
+    return escalamientos.filter((item) => {
+      if (embebida) return item.galpon.id === galponFijo
+      if (filtros.galponId !== 'todos') return item.galpon.id === Number(filtros.galponId)
+      return true
+    })
+  }, [escalamientos, embebida, galponFijo, filtros.galponId])
 
   const galponesConAlertas = useMemo(
     () => [...new Map(alertas.map((alerta) => [alerta.galpon_id, alerta.galpon])).values()],
@@ -86,6 +132,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
   }
 
   function seleccionarResumen(tarjeta: TarjetaResumenAlerta) {
+    setVistaEscalamientos(false)
     setFiltros((actual) => {
       if (tarjeta === 'todas') return { ...actual, estado: 'todas', criticidad: 'todas' }
       if (tarjeta === 'abierta') return { ...actual, estado: 'abierta', criticidad: 'todas' }
@@ -105,20 +152,35 @@ function AlertasPage({ galponFijo }: Props = {}) {
   const vistaPildoras = (
     <div className="ale-pildoras" role="group" aria-label="Filtrar alertas por estado">
       {pildorasEstado.map((opcion) => {
-        const activa = filtros.estado === opcion.id && filtros.criticidad === 'todas'
+        const activa = !vistaEscalamientos && filtros.estado === opcion.id && filtros.criticidad === 'todas'
         return (
           <button
             key={opcion.id}
             type="button"
             className={`ale-pildora${activa ? ' is-activa' : ''}`}
             aria-pressed={activa}
-            onClick={() => setFiltros((actual) => ({ ...actual, estado: opcion.id, criticidad: 'todas' }))}
+            onClick={() => {
+              setVistaEscalamientos(false)
+              setFiltros((actual) => ({ ...actual, estado: opcion.id, criticidad: 'todas' }))
+            }}
           >
             <span>{opcion.etiqueta}</span>
             <span className="ale-pildora-conteo">{opcion.conteo}</span>
           </button>
         )
       })}
+      <button
+        type="button"
+        className={`ale-pildora${vistaEscalamientos ? ' is-activa' : ''}`}
+        aria-pressed={vistaEscalamientos}
+        onClick={() => {
+          setVistaEscalamientos(true)
+          void cargarEscalamientos()
+        }}
+      >
+        <span>Escalamientos</span>
+        <span className="ale-pildora-conteo">{escalamientosVisibles.length}</span>
+      </button>
     </div>
   )
 
@@ -162,8 +224,18 @@ function AlertasPage({ galponFijo }: Props = {}) {
             filtros={filtros}
             onSeleccionar={seleccionarResumen}
           />
-          {alertas.length > 0 && vistaPildoras}
-          {cargando ? (
+          {(alertas.length > 0 || escalamientosVisibles.length > 0) && vistaPildoras}
+          {vistaEscalamientos ? (
+            <HistorialEscalamientos
+              items={escalamientosVisibles}
+              config={configEscalamiento}
+              cargando={cargandoEscalamientos}
+              error={errorEscalamientos}
+              alertasPorId={alertasPorId}
+              onReintentar={() => void cargarEscalamientos()}
+              onVerAlerta={setSeleccionada}
+            />
+          ) : cargando ? (
             <Cargando texto="Cargando alertas registradas…" />
           ) : (
             <ListaAlertas
@@ -361,7 +433,17 @@ function AlertasPage({ galponFijo }: Props = {}) {
 
               <AvisoStockBajo insumos={stock.porReponer} />
 
-              {cargando ? (
+              {vistaEscalamientos ? (
+                <HistorialEscalamientos
+                  items={escalamientosVisibles}
+                  config={configEscalamiento}
+                  cargando={cargandoEscalamientos}
+                  error={errorEscalamientos}
+                  alertasPorId={alertasPorId}
+                  onReintentar={() => void cargarEscalamientos()}
+                  onVerAlerta={setSeleccionada}
+                />
+              ) : cargando ? (
                 <Cargando texto="Cargando alertas registradas…" />
               ) : (
                 <ListaAlertas
@@ -381,8 +463,16 @@ function AlertasPage({ galponFijo }: Props = {}) {
       <PanelAlerta
         alerta={seleccionada}
         cerrando={actualizandoId === seleccionada?.id}
-        onCerrar={cerrar}
-        onEscalar={escalar}
+        onCerrar={async (id, accion) => {
+          const cerrada = await cerrar(id, accion)
+          if (cerrada) void cargarEscalamientos()
+          return cerrada
+        }}
+        onEscalar={async (id, usuarioId) => {
+          const ok = await escalar(id, usuarioId)
+          if (ok) void cargarEscalamientos()
+          return ok
+        }}
         onSalir={() => setSeleccionada(null)}
       />
     </div>

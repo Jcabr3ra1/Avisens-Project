@@ -618,6 +618,11 @@ function GranjasAdministracion() {
           form={formularioLote.form}
           modoEdicion={formularioLote.modoEdicion}
           galpones={seleccionada.galpones.map((galpon) => galpon.origen)}
+          lotesActivosPorGalpon={new Map(
+            seleccionada.galpones
+              .filter((galpon) => galpon.lotesEnCurso.length > 0)
+              .map((galpon) => [galpon.id, galpon.lotesEnCurso[0].codigo] as const),
+          )}
           lineasGeneticas={lineasGeneticas}
           errorLineasGeneticas={lineasGeneticasError}
           guardando={formularioLote.guardando}

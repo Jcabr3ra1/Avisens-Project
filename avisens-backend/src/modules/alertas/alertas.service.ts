@@ -1,7 +1,8 @@
 // alertas.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AlertasEscalamientoService } from './alertas-escalamiento.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
@@ -95,7 +96,10 @@ const ALERTA_SELECT = {
 
 @Injectable()
 export class AlertasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private escalamientoService?: AlertasEscalamientoService,
+  ) {}
 
   async evaluarLectura(sensorId: number, valor: number, fecha = new Date()) {
     const sensor = await this.prisma.sensor.findUnique({
@@ -593,7 +597,7 @@ export class AlertasService {
     // Validar que el usuario a escalar existe
     await this.validarUsuario(escalado_a_id);
 
-    return this.prisma.alerta.update({
+    const actualizada = await this.prisma.alerta.update({
       where: { id },
       data: {
         escalado_a_id,
@@ -601,6 +605,13 @@ export class AlertasService {
       },
       select: ALERTA_SELECT,
     });
+
+    await this.escalamientoService?.registrarEscalamientoManual(
+      actualizada,
+      solicitante,
+    );
+
+    return actualizada;
   }
 
   async eliminar(id: number, solicitante: Solicitante) {

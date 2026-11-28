@@ -91,6 +91,14 @@ class EnvironmentVariables {
   @MinLength(32)
   @IsOptional()
   METRICS_TOKEN: string;
+
+  @IsNumberString()
+  @IsOptional()
+  ALERTA_ESCALAMIENTO_CRITICA_MIN: string;
+
+  @IsNumberString()
+  @IsOptional()
+  ALERTA_ESCALAMIENTO_MIN: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

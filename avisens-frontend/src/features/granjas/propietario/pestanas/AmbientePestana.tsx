@@ -8,12 +8,13 @@ import type { GalponConLotes } from '../../hooks/useEstructuraGranjas'
 import { sensoresReportando } from '../explorador'
 import { useRiesgoCalor } from '../useRiesgoCalor'
 import AhoraGalpon from './ambiente/AhoraGalpon'
+import HistoricosGalpon from './ambiente/HistoricosGalpon'
 import { MapaTermicoGalpon } from './ambiente/MapaTermicoGalpon'
 import PronosticoDias from './ambiente/PronosticoDias'
 import SensoresGalpon from './ambiente/SensoresGalpon'
 import './ambiente/AmbientePestana.css'
 
-type ModoAmbiente = 'sensores' | 'clima' | 'completo'
+type ModoAmbiente = 'sensores' | 'clima' | 'historicos' | 'completo'
 
 type Props = {
   galpon: GalponConLotes
@@ -101,6 +102,14 @@ function AmbientePestana({
           revision={revision}
           onCompletarUbicacion={onCompletarUbicacion}
         />
+      </div>
+    )
+  }
+
+  if (modo === 'historicos') {
+    return (
+      <div className="amb">
+        <HistoricosGalpon galpon={galpon} />
       </div>
     )
   }
